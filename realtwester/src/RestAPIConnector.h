@@ -1,8 +1,11 @@
 #pragma once
 
 #include "digitwester_global.h"
+#include "Data/DataPoint.h"
+
 #include <string>
 #include <memory>
+#include <vector>
 #include <curl/curl.h>
 
 namespace REALTWESTER {
@@ -40,9 +43,30 @@ namespace REALTWESTER {
 		 */
 		virtual ~RestAPIConnector();
 
+        /**
+         *
+         */
         void receiveProjects();
+
+        /**
+         *
+         * @param UID
+         */
         void receiveSysMDModelsOfProject(std::string UID);
 
+        /**
+         *
+         * @param UID
+         * @param dataPoint
+         */
+        void uploadSingleDatapoint(std::string UID, DATA::DataPoint dataPoint);
+
+        /**
+         *
+         * @param UID
+         * @param dataPoints
+         */
+        void uploadManyDataPoints(std::string UID,std::vector<DATA::DataPoint> dataPoints);
 	private:
         void loginIntoTheAgilaBackend();
 

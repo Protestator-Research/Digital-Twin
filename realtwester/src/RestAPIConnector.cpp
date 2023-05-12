@@ -48,4 +48,12 @@ namespace REALTWESTER {
 
     }
 
+    void RestAPIConnector::uploadSingleDatapoint(std::string UID, DATA::DataPoint dataPoint) {
+
+    }
+
+    void RestAPIConnector::uploadManyDataPoints(std::string UID, std::vector<DATA::DataPoint> dataPoints) {
+
+    }
+
 }
