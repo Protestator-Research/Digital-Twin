@@ -5,10 +5,11 @@
 #ifndef DIGITWESTER_PROJECT_H
 #define DIGITWESTER_PROJECT_H
 
+#include "IDataBase.h"
+
 namespace REALTWESTER {
     namespace DATA {
-
-        class Project {
+        class Project : public IDataBase {
 
         };
 

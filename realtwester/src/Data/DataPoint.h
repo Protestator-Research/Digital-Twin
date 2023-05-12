@@ -5,11 +5,19 @@
 #ifndef DIGITWESTER_DATAPOINT_H
 #define DIGITWESTER_DATAPOINT_H
 
+#include "IDataBase.h"
+
 namespace REALTWESTER {
     namespace DATA {
 
-        class DataPoint {
+        class DataPoint : public IDataBase {
+        public:
+            DataPoint()=default;
+            ~DataPoint() override =default;
 
+            void * fromJsonString(std::string jsonString) override;
+
+            std::string toJsonString() override;
         };
 
     } // REALTWESTER
