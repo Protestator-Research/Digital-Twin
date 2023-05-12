@@ -5,7 +5,7 @@
 #include <memory>
 #include <curl/curl.h>
 
-namespace DIGITWESTER {
+namespace REALTWESTER {
 	class DIGITWESTER_EXPORT RestAPIConnector
 	{
 	public:
@@ -22,14 +22,33 @@ namespace DIGITWESTER {
 		 */
 		RestAPIConnector(std::string url, std::string username, std::string password);
 
+        /**
+         * Copy Constructor
+         * @param other Other RestAPIConnector that is to be copied
+         */
+        RestAPIConnector(RestAPIConnector& other);
+
+        /**
+         * Equals Operator
+         * @param other
+         * @return
+         */
+        RestAPIConnector& operator=(RestAPIConnector const &other) = default;
+
 		/**
 		 * Using Default destructor.
 		 */
 		virtual ~RestAPIConnector();
 
+        void receiveProjects();
+        void receiveSysMDModelsOfProject(std::string UID);
+
 	private:
+        void loginIntoTheAgilaBackend();
+
 		std::string Username;
 		std::string Password;
+        std::string URL;
 		CURL* ServerConnection;
 	};
 }

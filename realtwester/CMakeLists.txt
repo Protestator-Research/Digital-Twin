@@ -4,12 +4,12 @@ project(digitwester CXX)
 find_package(CURL REQUIRED)
 
 add_executable(digitwester
-               src/digitwester.cpp
-               src/digitwester.h
+        src/RealTwester.cpp
+        src/RealTwester.h
                src/RestAPIConnector.h
                src/RestAPIConnector.cpp
                src/main.cpp
-               src/digitwester_global.h)
+               src/digitwester_global.h src/Exceptions/ServerNotReachableException.cpp src/Exceptions/ServerNotReachableException.h)
 
 target_link_libraries(${PROJECT_NAME} CURL::libcurl)
 

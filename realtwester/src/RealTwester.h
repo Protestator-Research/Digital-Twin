@@ -2,11 +2,11 @@
 
 #include "digitwester_global.h"
 
-namespace DIGITWESTER {
-    class DIGITWESTER_EXPORT Digitwester {
+namespace REALTWESTER {
+    class DIGITWESTER_EXPORT RealTwester {
     public:
-        Digitwester();
-        virtual ~Digitwester()=default;
+        RealTwester();
+        virtual ~RealTwester()=default;
 
         void tryDetectingTheProbe();
 

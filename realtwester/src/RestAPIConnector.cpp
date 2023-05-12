@@ -1,26 +1,51 @@
 #include "RestAPIConnector.h"
 
+#include <exception>
+#include <utility>
 
-namespace DIGITWESTER {
+#include "Exceptions/ServerNotReachableException.h"
+
+
+namespace REALTWESTER {
 	RestAPIConnector::RestAPIConnector(std::string url, std::string username, std::string password) :
-		Username(username),
-		Password(password)
+		Username(std::move(username)),
+		Password(std::move(password)),
+        URL(std::move(url))
 	{
 		ServerConnection = curl_easy_init();
 		if (ServerConnection == NULL)
-			throw new std::exception("Curl could not initialize.");
+            throw new std::bad_alloc();
 
-		curl_easy_setopt(ServerConnection, CURLOPT_URL, url);
+		curl_easy_setopt(ServerConnection, CURLOPT_URL, URL.c_str());
 		curl_easy_setopt(ServerConnection, CURLOPT_FOLLOWLOCATION, 1L);
 
 		auto res = curl_easy_perform(ServerConnection);
 		if (res != CURLE_OK)
-			throw new std::exception("Could not connect to given Server, is it switched on?");
+			throw new EXCEPTIONS::ServerNotReachableException();
 	}
 
 	RestAPIConnector::~RestAPIConnector()
 	{
 		curl_easy_cleanup(ServerConnection);
 	}
+
+    RestAPIConnector::RestAPIConnector(RestAPIConnector &other) {
+        URL = other.URL;
+        Username = other.Username;
+        Password = other.Password;
+        ServerConnection = other.ServerConnection;
+    }
+
+    void RestAPIConnector::loginIntoTheAgilaBackend() {
+
+    }
+
+    void RestAPIConnector::receiveProjects() {
+
+    }
+
+    void RestAPIConnector::receiveSysMDModelsOfProject(std::string UID) {
+
+    }
 
 }
