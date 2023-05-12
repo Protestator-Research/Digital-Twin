@@ -2,8 +2,8 @@
 
 #include "digitwester_global.h"
 
-namespace DIGITWESTER_EXPORT DIGITWESTER {
-    class Digitwester {
+namespace DIGITWESTER {
+    class DIGITWESTER_EXPORT Digitwester {
     public:
         Digitwester();
         virtual ~Digitwester()=default;
