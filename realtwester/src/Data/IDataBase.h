@@ -21,7 +21,12 @@ namespace REALTWESTER {
              * @param jsonString The json string that is to be parsed
              * @return Pointer to an Object to IDataBase
              */
-            virtual void* fromJsonString(std::string jsonString) = 0;
+			static void* fromJsonString(std::string jsonString) {
+
+			};
+
+		protected:
+			virtual void* importDataFromJsonString(std::string jsonString) = 0;
         };
     }
 }
