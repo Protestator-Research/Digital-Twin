@@ -23,6 +23,7 @@ class digitwesterRecipe(ConanFile):
     def requirements(self):
         self.requires("openssl/1.1.1t")
         self.requires("libcurl/7.79.1")
+        self.requires("nlohmann_json/3.11.2")
     
     def layout(self):
         cmake_layout(self)
