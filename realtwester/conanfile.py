@@ -21,7 +21,8 @@ class digitwesterRecipe(ConanFile):
     exports_sources = "CMakeLists.txt", "src/*"
 
     def requirements(self):
-        self.requires("libcurl/8.0.1")
+        self.requires("openssl/1.1.1t")
+        self.requires("libcurl/7.79.1")
     
     def layout(self):
         cmake_layout(self)
