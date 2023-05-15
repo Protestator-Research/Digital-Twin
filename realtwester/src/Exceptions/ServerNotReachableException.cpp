@@ -4,12 +4,14 @@
 
 #include "ServerNotReachableException.h"
 
-namespace REALTWESTER::EXCEPTIONS {
-    ServerNotReachableException::ServerNotReachableException()
-            : std::exception() {
-    }
+namespace REALTWESTER {
+	namespace EXCEPTIONS {
+		ServerNotReachableException::ServerNotReachableException()
+			: std::exception() {
+		}
 
-    const char *ServerNotReachableException::what() const noexcept {
-        return "Given Server could not be reached. Please give a correct ip-adress or domain.";
-    }
+		const char* ServerNotReachableException::what() const noexcept {
+			return "Given Server could not be reached. Please give a correct ip-adress or domain.";
+		}
+	}
 }
