@@ -1,0 +1,3 @@
+[submodule "caiman"]
+	path = caiman
+	url = https://github.com/ARM-software/caiman.git
