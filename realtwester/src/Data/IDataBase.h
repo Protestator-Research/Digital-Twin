@@ -22,7 +22,7 @@ namespace REALTWESTER {
              * @return Pointer to an Object to IDataBase
              */
 			static void* fromJsonString(std::string jsonString) {
-
+                return nullptr;
 			};
 
 		protected:

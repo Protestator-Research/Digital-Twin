@@ -6,12 +6,12 @@
 
 namespace REALTWESTER {
     namespace DATA {
-        void *DataPoint::fromJsonString(std::string jsonString) {
-            return nullptr;
-        }
-
         std::string DataPoint::toJsonString() {
             return std::string();
+        }
+
+        void *DataPoint::importDataFromJsonString(std::string jsonString) {
+            return nullptr;
         }
     } // REALTWESTER
 } // DATA

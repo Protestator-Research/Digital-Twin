@@ -15,9 +15,12 @@ namespace REALTWESTER {
             DataPoint()=default;
             ~DataPoint() override =default;
 
-            void * fromJsonString(std::string jsonString) override;
+//            void * fromJsonString(std::string jsonString);
 
             std::string toJsonString() override;
+
+        protected:
+            void * importDataFromJsonString(std::string jsonString) override;
         };
 
     } // REALTWESTER
