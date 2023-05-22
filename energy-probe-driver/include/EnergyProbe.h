@@ -18,45 +18,45 @@
 #define ENERGYPROBE_H
 
 #include "Device.h"
+namespace ENERGY_PROBE_DRIVER {
+	class EnergyProbe : public Device
+	{
+	public:
+		EnergyProbe(const char* outputPath, FILE* binfile, Fifo* fifo);
+		virtual ~EnergyProbe();
 
-class EnergyProbe : public Device
-{
-public:
-    EnergyProbe(const char *outputPath, FILE *binfile, Fifo *fifo);
-    virtual ~EnergyProbe();
+		virtual void prepareChannels();
+		virtual void init(const char* devicename);
+		virtual void start();
+		virtual void stop();
+		virtual void processBuffer();
 
-    virtual void prepareChannels();
-    virtual void init(const char *devicename);
-    virtual void start();
-    virtual void stop();
-    virtual void processBuffer();
+	private:
+		int readAll(char* ptr, size_t size); // returns number of bytes read
+		void readAck();
+		void readString(char* buffer, int limit);
+		int writeAll(char* ptr, size_t size); // returns num bytes written
+		void writeChar(char c);
+		void syncToDevice();
+		void enableChannels();
 
-private:
-    int readAll(char *ptr, size_t size); // returns number of bytes read
-    void readAck();
-    void readString(char *buffer, int limit);
-    int writeAll(char *ptr, size_t size); // returns num bytes written
-    void writeChar(char c);
-    void syncToDevice();
-    void enableChannels();
+		// Returns pointer to device string
+		char* autoDetectDevice();
 
-    // Returns pointer to device string
-    char* autoDetectDevice();
+		// OS-specific device autodetect function
+		void autoDetectDevice_OS(char* comport, int buffersize);
 
-    // OS-specific device autodetect function
-    void autoDetectDevice_OS(char *comport, int buffersize);
+		// Initialized on construction
+		bool mIsRunning;
 
-    // Initialized on construction
-    bool mIsRunning;
+		// Initialized on init()
+		DEVICE mStream;
+		const char* mComport;
+		char mFields[MAX_EPROBE_CHANNELS];
 
-    // Initialized on init()
-    DEVICE mStream;
-    const char *mComport;
-    char mFields[MAX_EPROBE_CHANNELS];
-
-    // Intentionally unimplemented
-    EnergyProbe(const EnergyProbe &);
-    EnergyProbe &operator=(const EnergyProbe &);
-};
-
+		// Intentionally unimplemented
+		EnergyProbe(const EnergyProbe&);
+		EnergyProbe& operator=(const EnergyProbe&);
+	};
+}
 #endif // ENERGYPROBE_H

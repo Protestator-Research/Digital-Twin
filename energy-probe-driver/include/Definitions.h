@@ -15,6 +15,21 @@
 #define MAX_STRING_LEN 80
 #define MAX_DESCRIPTION_LEN 400
 
+#define CAIMAN_VERSION 850
+
+#ifdef WIN32
+#include <stdio.h>
+#define PATH_SEPARATOR '\\'
+#define CAIMAN_PATH_MAX MAX_PATH
+#if !defined(_MSC_VER) || _MSC_VER < 1900
+#define snprintf _snprintf
+#endif
+#else
+#include <limits.h>
+#define PATH_SEPARATOR '/'
+#define CAIMAN_PATH_MAX PATH_MAX
+#endif
+
 // Fields
 static const char * const field_title_names[] = { "", "Power", "Voltage", "", "Current" };
 enum

@@ -36,46 +36,51 @@
 
 #include "Definitions.h"
 
-class Fifo;
+namespace ENERGY_PROBE_DRIVER {
+	class DriverSessionManager;
+	class Fifo;
+}
 
 #define EMETER_DATA_SIZE    4
+namespace ENERGY_PROBE_DRIVER {
+	class Device
+	{
+	public:
+		// Constructed with an output path, which must stay allocated by the caller
+		// for the life of this object ..
+		Device(const char* output_path, FILE* binfile, Fifo* fifo);
+		virtual ~Device();
 
-class Device
-{
-public:
-    // Constructed with an output path, which must stay allocated by the caller
-    // for the life of this object ..
-    Device(const char *output_path, FILE *binfile, Fifo *fifo);
-    virtual ~Device();
+		virtual void prepareChannels() = 0;
+		virtual void init(const char* devicename) = 0;
+		virtual void start() = 0;
+		virtual void stop() = 0;
+		virtual void processBuffer() = 0;
 
-    virtual void prepareChannels() = 0;
-    virtual void init(const char *devicename) = 0;
-    virtual void start() = 0;
-    virtual void stop() = 0;
-    virtual void processBuffer() = 0;
+		char* getXML(int* const length) const;
+		void writeXML() const;
 
-    char *getXML(int * const length) const;
-    void writeXML() const;
+	protected:
+		void writeData(void* buf, size_t size);
 
-protected:
-    void writeData(void *buf, size_t size);
+		static const unsigned int mSampleRate = 10000;
+		int mNumFields;
+		const char* mVendor;
+		int mDatasize;
 
-    static const unsigned int mSampleRate = 10000;
-    int mNumFields;
-    const char *mVendor;
-    int mDatasize;
+		DriverSessionManager* gSessionData;
 
-private:
-    const char *mOutputPath;
-    FILE * const mBinfile;
-    Fifo * const mFifo;
-    char *mBuffer;
+	private:
+		const char* mOutputPath;
+		FILE* const mBinfile;
+		Fifo* const mFifo;
+		char* mBuffer;
 
-    // Intentionally unimplemented
-    Device(const Device &);
-    Device &operator=(const Device &);
-};
-
+		// Intentionally unimplemented
+		Device(const Device&);
+		Device& operator=(const Device&);
+	};
+}
 #endif
 
 
