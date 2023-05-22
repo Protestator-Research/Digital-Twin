@@ -57,7 +57,7 @@ using namespace std;
 #define DYNAMIC_LINK_UDEV 1
 
 // Main.cpp defines Quit. It's ugly, but it's true
-extern volatile bool gQuit;
+//extern volatile bool gQuit;
 
 // Defines for Energy Probe.
 
@@ -282,7 +282,7 @@ namespace ENERGY_PROBE_DRIVER {
 	int EnergyProbe::readAll(char* ptr, size_t size)
 	{
 		int remain = size, n;
-		while (!gQuit && remain > 0) {
+		while ( remain > 0) {
 			if (!READ_DEVICE(mStream, ptr, remain, n)) {
 				//            logg.logError("Error reading from the energy probe; data will be incomplete");
 				//            handleException();
@@ -332,7 +332,7 @@ namespace ENERGY_PROBE_DRIVER {
 	{
 		int remain = size, n;
 
-		while (!gQuit && remain > 0) {
+		while ( remain > 0) {
 			if (!WRITE_DEVICE(mStream, ptr, remain, n)) {
 				//            logg.logError("Write failure when communicating with the energy probe");
 				//            handleException();

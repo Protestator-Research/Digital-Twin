@@ -1,5 +1,6 @@
-#include "EnergyProbeDriver.h"
+#include <include/DriverSessionManager.h>
 
 int main() {
-    EnergyProbeDriver();
+    ENERGY_PROBE_DRIVER::DriverSessionManager::getSessionManager();
+    return 0;
 }
