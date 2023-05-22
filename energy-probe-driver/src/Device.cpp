@@ -17,6 +17,7 @@
 #include "Device.h"
 
 #include <stdlib.h>
+#include <cstring>
 
 #include "Fifo.h"
 #include "DriverSessionManager.h"
@@ -92,7 +93,7 @@ namespace ENERGY_PROBE_DRIVER {
 			}
 		}
 		else {
-			memcpy(mBuffer, buf, size);
+			std::memcpy(mBuffer, buf, size);
 			mBuffer = mFifo->write(size);
 		}
 	}
