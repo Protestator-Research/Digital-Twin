@@ -22,6 +22,7 @@
 
 #if defined(WIN32)
 #include <setupapi.h>
+using namespace std;
 #else
 #include <unistd.h>
 #include <fcntl.h>
@@ -426,7 +427,7 @@ namespace ENERGY_PROBE_DRIVER {
 
 #if defined(WIN32)
 
-	inline void EnergyProbe::autoDetectDevice_OS(char* comport, int buffersize) {
+	void EnergyProbe::autoDetectDevice_OS(char* comport, int buffersize) {
 		HDEVINFO devInfo = SetupDiGetClassDevs(NULL, "USB", NULL, DIGCF_ALLCLASSES | DIGCF_PRESENT);
 		if (devInfo == INVALID_HANDLE_VALUE) {
 			//logg.logError("Detection of COM port failed, please verify the device is attached or specify the COM port on the command line to override auto detection");
