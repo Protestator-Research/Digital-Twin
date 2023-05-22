@@ -6,10 +6,15 @@
 #define ENERGYPROBEDRIVER_ENERGY_PROBE_DRIVER_GLOBAL_H
 
 #ifdef _WIN32
+#ifdef ENERGY_PROBE_DRIVER_EXPORT
 #define DIGITWESTER_EXPORT __declspec(dllexport)
+#else
+#define DIGITWESTER_EXPORT __declspec(dllimport)
+#endif
 #else
 #define DIGITWESTER_EXPORT
 #endif
+
 
 
 #endif //ENERGYPROBEDRIVER_ENERGY_PROBE_DRIVER_GLOBAL_H

@@ -7,6 +7,7 @@
 
 #include "Definitions.h"
 #include "energy_probe_driver_global.h"
+
 namespace ENERGY_PROBE_DRIVER {
     class DIGITWESTER_EXPORT DriverSessionManager {
     public:
