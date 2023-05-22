@@ -3,7 +3,7 @@ from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 
 
 class EnergyProbeDriverRecipe(ConanFile):
-    name = "EnergyProbeDriver"
+    name = "energyprobedriver"
     version = "2305"
 
     # Optional metadata
