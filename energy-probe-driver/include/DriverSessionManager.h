@@ -25,8 +25,21 @@ namespace ENERGY_PROBE_DRIVER {
 		int getCounterSourceWithIndex(int index);
 		bool getEnableStateForCounter(int index);
 		float getSourceScaleFactor(int index);
-		int getShuntResistorWithIndex(int index);
+	    /**
+	     * \brief Returns the shunt resistor of the channel in milli Ohm, dependend on the index.
+	     * \param index The index of the Channel.
+	     * \return Shunt resistor in milli ohm.
+	     */
+	    int getShuntResistorWithIndex(int index);
 		int getMaxEnabledChannels();
+
+		void toggleEnableStateForCcounter(int index);
+	    /**
+	     * \brief Sets the shunt resistor of a specific index in milli ohm
+	     * \param index Index of the channel
+	     * \param resistance Resistance of the shunt resistor in milli ohm 
+	     */
+	    void setShuntResotorForChannel(int index, int resistance);
 
     private:
 		static DriverSessionManager* PointerToItself;

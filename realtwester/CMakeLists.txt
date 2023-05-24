@@ -3,6 +3,7 @@ project(digitwester CXX)
 
 find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(energyprobedriver REQUIRED)
 
 add_executable(digitwester
         src/RealTwester.cpp
@@ -19,7 +20,7 @@ add_executable(digitwester
         src/Data/DataPoint.h
         src/Data/IDataBase.h)
 
-target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json)
+target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json energyprobedriver::energyprobedriver)
 
 install(TARGETS digitwester DESTINATION "."
         RUNTIME DESTINATION bin

@@ -43,7 +43,7 @@ namespace REALTWESTER {
 		j["email"] = Username;
 		j["password"] = Password;
 		curl_easy_setopt(ServerConnection, CURLOPT_URL, (URL + "/users/login"));
-		curl_easy_setopt(ServerConnection, CURLOPT_POSTFIELDS, "sessionid=1");
+		curl_easy_setopt(ServerConnection, CURLOPT_POSTFIELDS, "sessionid=1"); // TODO SessionID von Server Erhalten
 //		curl_easy_set
 //		auto result =
 

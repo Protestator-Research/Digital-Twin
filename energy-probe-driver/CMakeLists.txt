@@ -17,7 +17,8 @@ set(HEADER_FILES
         include/Definitions.h
         include/DriverSessionManager.h
         include/energy_probe_driver_global.h
-        include/MeasurePoint.h)
+        include/MeasurePoint.h
+        include/DataPointObserver.h)
 
 add_library(EnergyProbeDriver 
         src/EnergyProbe.cpp
@@ -25,7 +26,9 @@ add_library(EnergyProbeDriver
         src/Fifo.cpp
         src/DriverSessionManager.cpp
         src/MeasurePoint.cpp
+        src/DataPointObserver.cpp
         ${HEADER_FILES})
+
 
 include(GenerateExportHeader)
 generate_export_header(EnergyProbeDriver)
@@ -43,7 +46,7 @@ install(TARGETS ${PROJECT_NAME} DESTINATION lib/)
 # install(EXPORT ${PROJECT_NAME}_targets DESTINATION lib/)
 # install(FILES HEADER_FILES DESTINATION include/)
 install(DIRECTORY "${EnergyProbeDriver_SOURCE_DIR}/include" # source directory
-        DESTINATION "include" # target directory
+        DESTINATION "epd" # target directory
         FILES_MATCHING # install only matched files
         PATTERN "*.h" # select header files
 )

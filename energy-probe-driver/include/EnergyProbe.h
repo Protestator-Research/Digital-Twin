@@ -55,8 +55,9 @@ namespace ENERGY_PROBE_DRIVER {
 		char mFields[MAX_EPROBE_CHANNELS];
 
 		// Intentionally unimplemented
-		EnergyProbe(const EnergyProbe&);
-		EnergyProbe& operator=(const EnergyProbe&);
+		//TODO Singleton Pattern?!
+		EnergyProbe(const EnergyProbe&) = delete;
+		EnergyProbe& operator=(const EnergyProbe&) = delete;
 	};
 }
 #endif // ENERGYPROBE_H

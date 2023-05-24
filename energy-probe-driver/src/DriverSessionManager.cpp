@@ -76,4 +76,14 @@ namespace ENERGY_PROBE_DRIVER {
     {
 		return mMaxEnabledChannel;
     }
+
+    void DriverSessionManager::toggleEnableStateForCcounter(int index)
+    {
+        mCounterEnabled[index] = !mCounterEnabled[index];
+    }
+
+    void DriverSessionManager::setShuntResotorForChannel(int index, int resistance)
+    {
+        mResistors[index] = resistance;
+    }
 }
