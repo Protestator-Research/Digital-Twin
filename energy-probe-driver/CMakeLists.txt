@@ -46,7 +46,7 @@ install(TARGETS ${PROJECT_NAME} DESTINATION lib/)
 # install(EXPORT ${PROJECT_NAME}_targets DESTINATION lib/)
 # install(FILES HEADER_FILES DESTINATION include/)
 install(DIRECTORY "${EnergyProbeDriver_SOURCE_DIR}/include" # source directory
-        DESTINATION "epd" # target directory
+        DESTINATION "include" # target directory
         FILES_MATCHING # install only matched files
         PATTERN "*.h" # select header files
 )
