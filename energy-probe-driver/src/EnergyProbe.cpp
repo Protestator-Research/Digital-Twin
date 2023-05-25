@@ -27,9 +27,8 @@ using namespace std;
 #else
 #include <unistd.h>
 #include <fcntl.h>
-#if defined(__linux__) && defined(SUPPORT_UDEV)
 #include <libudev.h>
-#endif
+#include <semaphore.h>
 #endif
 
  //#include "Dll.h"
