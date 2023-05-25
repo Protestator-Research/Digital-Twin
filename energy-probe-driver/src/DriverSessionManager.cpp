@@ -7,6 +7,9 @@
 #include "Definitions.h"
 #include "Fifo.h"
 
+#include <cstring>
+#include <unistd.h>
+
 namespace ENERGY_PROBE_DRIVER {
 	DriverSessionManager* DriverSessionManager::PointerToItself = nullptr;
 
