@@ -5,7 +5,7 @@
 #include <include/DriverSessionManager.h>
 
 namespace REALTWESTER {
-    class DIGITWESTER_EXPORT RealTwester {
+    class RealTwester {
     public:
         RealTwester();
         virtual ~RealTwester();
