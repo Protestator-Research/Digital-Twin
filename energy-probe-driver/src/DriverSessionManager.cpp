@@ -7,7 +7,10 @@
 #include "Definitions.h"
 #include "Fifo.h"
 
-#ifndef(WIN32)
+#include <stdio.h>
+#include <stdlib.h>
+
+#ifndef WIN32 
 #include <cstring>
 #include <unistd.h>
 #endif
