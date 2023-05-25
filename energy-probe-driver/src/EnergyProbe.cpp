@@ -81,8 +81,8 @@ using namespace std;
 
 // Public interface implementation
 namespace ENERGY_PROBE_DRIVER {
-	EnergyProbe::EnergyProbe(Fifo* fifo)
-		: Device(fifo)
+	EnergyProbe::EnergyProbe(Fifo* fifo, DriverSessionManager* session)
+		: Device(fifo, session)
 	{
 		mIsRunning = false;
 	}

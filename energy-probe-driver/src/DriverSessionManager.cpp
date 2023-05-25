@@ -40,12 +40,12 @@ namespace ENERGY_PROBE_DRIVER {
 		mMaxEnabledChannel = -1;
 
 		//TODO Needs to be fittet
-
 		static sem_t senderSem;
-		Fifo* fifo = new Fifo(1 << 15, 1 << 20, &senderSem);
+        sem_init(&senderSem, 0, 0);
+        Fifo* fifo = new Fifo(1 << 15, 1 << 20, &senderSem);
 		
 
-		EnergyProbeObject = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo);
+		EnergyProbeObject = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo, this);
 	}
 
 	DriverSessionManager* DriverSessionManager::getSessionManager()

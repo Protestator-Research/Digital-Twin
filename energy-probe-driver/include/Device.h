@@ -46,9 +46,7 @@ namespace ENERGY_PROBE_DRIVER {
 	class Device
 	{
 	public:
-		// Constructed with an output path, which must stay allocated by the caller
-		// for the life of this object ..
-		Device(Fifo* fifo);
+		Device(Fifo* fifo, DriverSessionManager* session);
 		virtual ~Device();
 
 		virtual void prepareChannels() = 0;

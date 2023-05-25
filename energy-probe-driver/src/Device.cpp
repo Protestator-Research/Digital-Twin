@@ -25,14 +25,15 @@
 
 
 namespace ENERGY_PROBE_DRIVER {
-	Device::Device(Fifo* fifo)
+	Device::Device(Fifo* fifo, DriverSessionManager* session)
 		: mFifo(fifo),
-	gSessionData(DriverSessionManager::getSessionManager())
+        gSessionData(session)
 	{
 		if (fifo != NULL) {
 			mBuffer = fifo->start();
 		}
 	}
+
 
 	Device::~Device()
 	{
