@@ -8,6 +8,8 @@ if(UNIX)
 find_package(UDev)
 endif(UNIX)
 
+find_package(Threads)
+
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 set(HEADER_FILES 
@@ -37,9 +39,9 @@ target_include_directories(EnergyProbeDriver PUBLIC include)
 target_compile_definitions(EnergyProbeDriver PRIVATE ENERGY_PROBE_DRIVER_EXPORT)
 
 if(UNIX)
-target_link_libraries(${PROJECT_NAME} ${UDEV_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${UDEV_LIBRARIES} Threads::Threads)
 else(UNIX)
-target_link_libraries(${PROJECT_NAME} ws2_32.lib setupapi.lib)
+target_link_libraries(${PROJECT_NAME} ws2_32.lib setupapi.lib Threads::Threads)
 endif(UNIX)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION lib/)
