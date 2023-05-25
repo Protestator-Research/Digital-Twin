@@ -79,7 +79,7 @@ namespace ENERGY_PROBE_DRIVER {
 
 
 		std::vector<std::shared_ptr<DataPointObserver>> Observers;
-		std::unique_ptr<EnergyProbe> EnergyProbe;
+		std::unique_ptr<EnergyProbe> EnergyProbeObject;
     };
 }
 

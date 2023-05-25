@@ -7,8 +7,10 @@
 #include "Definitions.h"
 #include "Fifo.h"
 
+#ifndef(WIN32)
 #include <cstring>
 #include <unistd.h>
+#endif
 
 namespace ENERGY_PROBE_DRIVER {
 	DriverSessionManager* DriverSessionManager::PointerToItself = nullptr;
@@ -71,7 +73,7 @@ namespace ENERGY_PROBE_DRIVER {
 			//}
 		}
 		fifo = new Fifo(1 << 15, 1 << 20, &senderSem);
-		EnergyProbe = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(outputPath, binfile, fifo);
+		EnergyProbeObject = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(outputPath, binfile, fifo);
 	}
 
 	DriverSessionManager* DriverSessionManager::getSessionManager()
