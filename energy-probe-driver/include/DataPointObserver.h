@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 
 #include "energy_probe_driver_global.h"
 #include "MeasurePoint.h"
@@ -18,11 +19,11 @@ namespace ENERGY_PROBE_DRIVER
 		 * \brief Constuctor to setup functionality of DataPoint Observer
 		 * \param functionToCall
 		 */
-		DataPointObserver(std::function<void(MeasurePoint)> functionToCall);
+		DataPointObserver(std::function<void(std::shared_ptr<MeasurePoint>)> functionToCall);
 
-		void setNewMeasurePoint(MeasurePoint measurement);
+		void setNewMeasurePoint(std::shared_ptr<MeasurePoint> measurement);
 
 	private:
-		std::function<void(MeasurePoint)> FunctionToCall;
+		std::function<void(std::shared_ptr<MeasurePoint>)> FunctionToCall;
 	};
 }

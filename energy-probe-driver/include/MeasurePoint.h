@@ -7,7 +7,7 @@ namespace ENERGY_PROBE_DRIVER {
 	{
 	public:
 		MeasurePoint() = delete;
-		MeasurePoint(char* buffer);
+		MeasurePoint(int buffer);
 
 		virtual ~MeasurePoint() = default;
 

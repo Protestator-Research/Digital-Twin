@@ -5,8 +5,14 @@
 #ifndef ENERGYPROBEDRIVER_DRIVERSESSIONMANAGER_H
 #define ENERGYPROBEDRIVER_DRIVERSESSIONMANAGER_H
 
+#include <memory>
+#include <vector>
+
 #include "Definitions.h"
 #include "energy_probe_driver_global.h"
+#include "DataPointObserver.h"
+#include "EnergyProbe.h"
+
 
 namespace ENERGY_PROBE_DRIVER {
     class DIGITWESTER_EXPORT DriverSessionManager {
@@ -33,20 +39,22 @@ namespace ENERGY_PROBE_DRIVER {
 	    int getShuntResistorWithIndex(int index);
 		int getMaxEnabledChannels();
 
-		void toggleEnableStateForCcounter(int index);
+		void toggleEnableStateForCounter(int index);
 	    /**
 	     * \brief Sets the shunt resistor of a specific index in milli ohm
 	     * \param index Index of the channel
 	     * \param resistance Resistance of the shunt resistor in milli ohm 
 	     */
-	    void setShuntResotorForChannel(int index, int resistance);
+	    void setShuntResistorForChannel(int index, int resistance);
+
+		void registerObserver(std::shared_ptr<DataPointObserver>);
+		void informObserver(std::shared_ptr<MeasurePoint> measurement);
 
     private:
 		static DriverSessionManager* PointerToItself;
 		DriverSessionManager();
         void detectAllProbes();
-
-
+			   
 		// Counters
 		// one of power, voltage, or current
 		int mCounterField[MAX_COUNTERS];
@@ -68,7 +76,10 @@ namespace ENERGY_PROBE_DRIVER {
 		int mResistors[MAX_CHANNELS];
 
 		int mMaxEnabledChannel;
-		
+
+
+		std::vector<std::shared_ptr<DataPointObserver>> Observers;
+		std::unique_ptr<EnergyProbe> EnergyProbe;
     };
 }
 

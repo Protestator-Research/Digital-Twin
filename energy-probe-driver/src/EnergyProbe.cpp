@@ -16,6 +16,7 @@
 
 #include "EnergyProbe.h"
 
+#include <iostream>
 #include <stdlib.h>
 
 #include "DriverSessionManager.h"
@@ -31,8 +32,8 @@ using namespace std;
 #endif
 #endif
 
-//#include "Dll.h"
-//#include "Logging.h"
+ //#include "Dll.h"
+ //#include "Logging.h"
 
 #if defined(WIN32)
 #define DEVICE                  HANDLE
@@ -106,20 +107,20 @@ namespace ENERGY_PROBE_DRIVER {
 		char command[80];
 		snprintf(command, sizeof(command) - 1, "stty -F %s raw -echo", mComport);
 		if (system(command) != 0) {
-			//        logg.logError("Unable to set %s to raw mode, please verify the device exists", mComport);
+			printf("Unable to set %s to raw mode, please verify the device exists \r\n", mComport);
 			//        handleException();
 		}
 #endif
 
 		if (mComport == NULL || *mComport == 0) {
-			//        logg.logError("Unable to detect the energy probe. Verify that it is attached to the computer and properly enumerated with the OS. If it is enumerated, you can override auto-detection by specifying the 'Device' in the options dialog.");
+			printf("Unable to detect the energy probe. Verify that it is attached to the computer and properly enumerated with the OS. If it is enumerated, you can override auto-detection by specifying the 'Device' in the options dialog. \r\n");
 			//        handleException();
 		}
 
 		// Make connection to the energy metering device
 		mStream = OPEN_DEVICE(mComport);
 		if (mStream == INVALID_HANDLE_VALUE) {
-			//        logg.logError("Unable to open the energy probe at %s - consider overriding auto-detection by specifying the 'Device' in the options dialog.", mComport);
+			printf("Unable to open the energy probe at %s - consider overriding auto-detection by specifying the 'Device' in the options dialog. \r\n", mComport);
 			//        handleException();
 		}
 
@@ -130,10 +131,10 @@ namespace ENERGY_PROBE_DRIVER {
 		unsigned int version;
 		writeChar(CMD_VERSION);
 		readAll((char*)& version, 4);
-		//    logg.logMessage("energy probe version is %d", version);
+		printf("energy probe version is %d \r\n", version);
 		if (version != ENERGY_PROBE_VERSION) {
 			// Version mismatch
-	//        logg.logError("energy probe version '%d' is different than the supported version '%d'.\n>> Please upgrade the caiman app and energy probe firmware to the latest versions.", version, ENERGY_PROBE_VERSION);
+	        printf("energy probe version '%d' is different than the supported version '%d'.\n>> Please upgrade the caiman app and energy probe firmware to the latest versions. \r\n", version, ENERGY_PROBE_VERSION);
 	//        handleException();
 		}
 
@@ -141,15 +142,15 @@ namespace ENERGY_PROBE_DRIVER {
 		char vendor[80];
 		writeChar(CMD_VENDOR);
 		readString(vendor, sizeof(vendor));
-		//    logg.logMessage("energy probe vendor is %s", vendor);
+		printf("energy probe vendor is %s \r\n", vendor);
 
 			// Get the sample rate
 		unsigned int sampleRate;
 		writeChar(CMD_RATE);
 		readAll((char*)& sampleRate, 4);
-		//    logg.logMessage("energy probe sample rate is %d", sampleRate);
+		printf("energy probe sample rate is %d \r\n", sampleRate);
 		if (sampleRate != mSampleRate) {
-			//        logg.logError("Unexpected sample rate %i, expected %i\n", sampleRate, mSampleRate);
+			printf("Unexpected sample rate %i, expected %i\r\n", sampleRate, mSampleRate);
 			//        handleException();
 		}
 
@@ -207,7 +208,7 @@ namespace ENERGY_PROBE_DRIVER {
 				inframe = (unsigned char)data1 + ((unsigned char)data2 << 8);
 				// output missing frames
 				if (outframe != inframe) {
-					//                logg.logMessage("Missing frames %d-%d (%d frames)", outframe, inframe, inframe-outframe);
+					printf("Missing frames %d-%d (%d frames) \r\n", outframe, inframe, inframe-outframe);
 				}
 				while (outframe != inframe) {
 					outframe++;
@@ -242,9 +243,12 @@ namespace ENERGY_PROBE_DRIVER {
 					static bool neverOverflowed = true;
 					if (neverOverflowed) {
 						neverOverflowed = false;
-						//                    logg.logMessage("Power overflow detected");
+						printf("Power overflow detected \r\n");
 					}
 				}
+
+				gSessionData->informObserver(std::make_shared<MeasurePoint>(value));
+
 				data1 = value & 0xFF;
 				data2 = (value >> 8) & 0xFF;
 				data3 = (value >> 16) & 0xFF;
@@ -272,7 +276,7 @@ namespace ENERGY_PROBE_DRIVER {
 		}
 
 		if (location != inLength) {
-			//        logg.logMessage("INVESTIGATE: misaligned length");
+			printf("INVESTIGATE: misaligned length \r\n");
 		}
 
 		// write data
@@ -282,10 +286,10 @@ namespace ENERGY_PROBE_DRIVER {
 	int EnergyProbe::readAll(char* ptr, size_t size)
 	{
 		int remain = size, n;
-		while ( remain > 0) {
+		while (remain > 0) {
 			if (!READ_DEVICE(mStream, ptr, remain, n)) {
-				//            logg.logError("Error reading from the energy probe; data will be incomplete");
-				//            handleException();
+				printf("Error reading from the energy probe; data will be incomplete\r\n");
+				//handleException();
 			}
 			remain -= n;
 			ptr += n;
@@ -309,7 +313,7 @@ namespace ENERGY_PROBE_DRIVER {
 				found = true;
 			}
 			else {
-				//            logg.logError("Expected an ack from device but received %02x", ack);
+				printf("Expected an ack from device but received %02x \r\n", ack);
 				//            handleException();
 			}
 		}
@@ -332,9 +336,9 @@ namespace ENERGY_PROBE_DRIVER {
 	{
 		int remain = size, n;
 
-		while ( remain > 0) {
+		while (remain > 0) {
 			if (!WRITE_DEVICE(mStream, ptr, remain, n)) {
-				//            logg.logError("Write failure when communicating with the energy probe");
+				printf("Write failure when communicating with the energy probe \r\n");
 				//            handleException();
 			}
 			remain -= n;
@@ -363,7 +367,7 @@ namespace ENERGY_PROBE_DRIVER {
 		writeAll((char*)sync, sizeof(sync));
 
 		// Repeat until eight 0xFFs are found in a row
-	//    logg.logMessage("Read the energy probe for the magic sequence");
+	    printf("Read the energy probe for the magic sequence \r\n");
 		while (1) {
 			readAll((char*)& byte, sizeof(byte));
 
@@ -376,7 +380,7 @@ namespace ENERGY_PROBE_DRIVER {
 				found = 0;
 			}
 		}
-		//    logg.logMessage("Sync successful and magic detected on the energy probe");
+		printf("Sync successful and magic detected on the energy probe \r\n");
 	}
 
 	void EnergyProbe::prepareChannels()
@@ -386,8 +390,7 @@ namespace ENERGY_PROBE_DRIVER {
 		// Energy Probe supports fewer channels than are permitted in configuration
 		// Check user hasn't over-configured.
 		if (gSessionData->getMaxEnabledChannels() >= MAX_EPROBE_CHANNELS) {
-			//        logg.logError("Incorrect configuration: channel %d is configured, but Arm Energy Probe supports ch0-ch%d.",
-			//                      gSessionData.mMaxEnabledChannel, MAX_EPROBE_CHANNELS-1);
+			printf("Incorrect configuration: channel %d is configured, but Arm Energy Probe supports ch0-ch%d. v\r\n", gSessionData->getMaxEnabledChannels(), MAX_EPROBE_CHANNELS-1);
 			//        handleException();
 		}
 
@@ -430,7 +433,7 @@ namespace ENERGY_PROBE_DRIVER {
 	void EnergyProbe::autoDetectDevice_OS(char* comport, int buffersize) {
 		HDEVINFO devInfo = SetupDiGetClassDevs(NULL, "USB", NULL, DIGCF_ALLCLASSES | DIGCF_PRESENT);
 		if (devInfo == INVALID_HANDLE_VALUE) {
-			//logg.logError("Detection of COM port failed, please verify the device is attached or specify the COM port on the command line to override auto detection");
+			printf("Detection of COM port failed, please verify the device is attached or specify the COM port on the command line to override auto detection \r\n");
 			//handleException();
 		}
 
@@ -441,7 +444,7 @@ namespace ENERGY_PROBE_DRIVER {
 			char buf[MAX_PATH];
 
 			if (!SetupDiGetDeviceInstanceId(devInfo, &spDevInfoData, buf, sizeof(buf), (PDWORD)& size)) {
-				//logg.logMessage("SetupDiGetDeviceInstanceId() error");
+				printf("SetupDiGetDeviceInstanceId() error\r\n");
 				continue;
 			}
 
@@ -455,7 +458,7 @@ namespace ENERGY_PROBE_DRIVER {
 			int data;
 			if (SetupDiGetDeviceRegistryProperty(devInfo, &spDevInfoData, SPDRP_FRIENDLYNAME, (PDWORD)& data, (PBYTE)comport, buffersize, (PDWORD)& buffersize) == 0) {
 				SetupDiDestroyDeviceInfoList(devInfo);
-				//logg.logError("Property listing of device failed, please verify the device is attached or specify the COM port on the command line to override auto detection");
+				printf("Property listing of device failed, please verify the device is attached or specify the COM port on the command line to override auto detection \r\n");
 				//handleException();
 			}
 
@@ -464,7 +467,7 @@ namespace ENERGY_PROBE_DRIVER {
 			char* end = strstr(start, ")");
 			*end = 0;
 			snprintf(comport, buffersize, "\\\\.\\%s", start + 1);// Required to support comports > 9, see http://msdn.microsoft.com/en-us/library/aa363858%28v=vs.85%29.aspx
-			//logg.logMessage("Device detected on %s", comport);
+			printf("Device detected on %s \r\n", comport);
 			break;
 		}
 
@@ -544,16 +547,16 @@ namespace ENERGY_PROBE_DRIVER {
 			(udev_unref_ptr = (udev_unref_func)load_symbol(udev_handle, "udev_unref")) == NULL ||
 			false)
 		{
-			logg.logError("Please specify the tty device with -d. E.g. -d /dev/ttyACM0.");
-			handleException();
+			printf("Please specify the tty device with -d. E.g. -d /dev/ttyACM0. \r\n");
+			//handleException();
 		}
 #endif
 
 		// initialize udev
 		udev = udev_new();
 		if (!udev) {
-			logg.logError("Accessing the udev library failed, please verify the device is attached or specify the tty device on the command line to override auto detection");
-			handleException();
+			printf("Accessing the udev library failed, please verify the device is attached or specify the tty device on the command line to override auto detection \r\n");
+			//handleException();
 		}
 
 		// obtain a list of all tty devices
@@ -583,7 +586,7 @@ namespace ENERGY_PROBE_DRIVER {
 			device_found = true;
 			strncpy(comport, udev_device_get_devnode(dev), buffersize);
 			comport[buffersize - 1] = 0; // strncpy does not guarantee a null-terminated string
-			logg.logMessage("Device detected on %s", comport);
+			printf("Device detected on %s \r\n", comport);
 			udev_device_unref(parent);
 			break;
 		}
@@ -593,7 +596,7 @@ namespace ENERGY_PROBE_DRIVER {
 		udev_unref(udev);
 
 		if (device_found == false) {
-			logg.logError("Device could not be found, please verify the device is attached or specify the tty device on the command line to override auto detection");
+			printf("Device could not be found, please verify the device is attached or specify the tty device on the command line to override auto detection \r\n");
 			handleException();
 		}
 	}
@@ -604,14 +607,14 @@ namespace ENERGY_PROBE_DRIVER {
 	{
 		(void)comport;
 		(void)buffersize;
-		//    logg.logError("Please specify the tty device with -d. E.g. -d /dev/ttyACM0.");
+		printf("Please specify the tty device with -d. E.g. -d /dev/ttyACM0. \r\n");
 		//    handleException();
 	}
 
 #elif defined(DARWIN)
 
 	inline void EnergyProbe::autoDetectDevice_OS(char* comport, int buffersize) {
-		logg.logError("On OSX, please specify the tty device with -d. E.g. -d /dev/cu.usbmodem411");
+		printf("On OSX, please specify the tty device with -d. E.g. -d /dev/cu.usbmodem411 \r\n");
 		handleException();
 	}
 
@@ -634,4 +637,4 @@ namespace ENERGY_PROBE_DRIVER {
 		return comport;
 	}
 
-}
+	}

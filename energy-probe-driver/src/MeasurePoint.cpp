@@ -1,10 +1,17 @@
 #include "MeasurePoint.h"
 
-ENERGY_PROBE_DRIVER::MeasurePoint::MeasurePoint(char* buffer)
-{
-}
+#include <iostream>
 
-float ENERGY_PROBE_DRIVER::MeasurePoint::getVoltage()
+namespace ENERGY_PROBE_DRIVER
 {
-	return Voltage;
+
+	MeasurePoint::MeasurePoint(int buffer)
+	{
+		std::cout << "Chars: " << buffer << std::endl;
+	}
+
+	float MeasurePoint::getVoltage()
+	{
+		return Voltage;
+	}
 }
