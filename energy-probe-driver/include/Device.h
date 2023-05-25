@@ -48,7 +48,7 @@ namespace ENERGY_PROBE_DRIVER {
 	public:
 		// Constructed with an output path, which must stay allocated by the caller
 		// for the life of this object ..
-		Device(const char* output_path, FILE* binfile, Fifo* fifo);
+		Device(Fifo* fifo);
 		virtual ~Device();
 
 		virtual void prepareChannels() = 0;
@@ -71,8 +71,6 @@ namespace ENERGY_PROBE_DRIVER {
 		DriverSessionManager* gSessionData;
 
 	private:
-		const char* mOutputPath;
-		FILE* const mBinfile;
 		Fifo* const mFifo;
 		char* mBuffer;
 

@@ -25,11 +25,9 @@
 
 
 namespace ENERGY_PROBE_DRIVER {
-	Device::Device(const char* outputPath, FILE* binfile, Fifo* fifo)
-		: mOutputPath(outputPath),
-		mBinfile(binfile),
-		mFifo(fifo),
-		gSessionData(DriverSessionManager::getSessionManager())
+	Device::Device(Fifo* fifo)
+		: mFifo(fifo),
+	gSessionData(DriverSessionManager::getSessionManager())
 	{
 		if (fifo != NULL) {
 			mBuffer = fifo->start();
@@ -42,60 +40,61 @@ namespace ENERGY_PROBE_DRIVER {
 
 	char* Device::getXML(int* const length) const
 	{
-		const int BUF_SIZE = 1 << 14;
-		char* const xml = (char*)malloc(BUF_SIZE);
-		int pos = 0;
+		//const int BUF_SIZE = 1 << 14;
+		//char* const xml = (char*)malloc(BUF_SIZE);
+		//int pos = 0;
 
-		pos += snprintf(&xml[pos], BUF_SIZE - pos, "<?xml version=\"1.0\" encoding='UTF-8'?>\n");
-		pos += snprintf(&xml[pos], BUF_SIZE - pos, "<captured version=\"%d\">\n", CAIMAN_VERSION);
-		pos += snprintf(&xml[pos], BUF_SIZE - pos, "  <target name=\"%s\" sample_rate=\"%d\" sources=\"%d\" size=\"%d\"/>\n", mVendor, mSampleRate, mNumFields,
-			mDatasize);
-		pos += snprintf(&xml[pos], BUF_SIZE - pos, "  <counters>\n");
-		for (int i = 0; i < MAX_COUNTERS; i++) {
-			if (gSessionData->getEnableStateForCounter(i)) {
-				pos += snprintf(&xml[pos], BUF_SIZE - pos, "    <counter source=\"%d\" channel=\"%d\" type=\"%s\" resistance=\"%d\"/>\n",
-					gSessionData->getCounterSourceWithIndex(i), gSessionData->getCounterChannelWithIndex(i), field_title_names[gSessionData->getCounterFieldWithIndex(i)],
-					gSessionData->getShuntResistorWithIndex(gSessionData->getCounterChannelWithIndex(i)));
-			}
-		}
-		pos += snprintf(&xml[pos], BUF_SIZE - pos, "  </counters>\n");
-		pos += snprintf(&xml[pos], BUF_SIZE - pos, "</captured>\n");
-		xml[pos] = '\0';
+		//pos += snprintf(&xml[pos], BUF_SIZE - pos, "<?xml version=\"1.0\" encoding='UTF-8'?>\n");
+		//pos += snprintf(&xml[pos], BUF_SIZE - pos, "<captured version=\"%d\">\n", CAIMAN_VERSION);
+		//pos += snprintf(&xml[pos], BUF_SIZE - pos, "  <target name=\"%s\" sample_rate=\"%d\" sources=\"%d\" size=\"%d\"/>\n", mVendor, mSampleRate, mNumFields,
+		//	mDatasize);
+		//pos += snprintf(&xml[pos], BUF_SIZE - pos, "  <counters>\n");
+		//for (int i = 0; i < MAX_COUNTERS; i++) {
+		//	if (gSessionData->getEnableStateForCounter(i)) {
+		//		pos += snprintf(&xml[pos], BUF_SIZE - pos, "    <counter source=\"%d\" channel=\"%d\" type=\"%s\" resistance=\"%d\"/>\n",
+		//			gSessionData->getCounterSourceWithIndex(i), gSessionData->getCounterChannelWithIndex(i), field_title_names[gSessionData->getCounterFieldWithIndex(i)],
+		//			gSessionData->getShuntResistorWithIndex(gSessionData->getCounterChannelWithIndex(i)));
+		//	}
+		//}
+		//pos += snprintf(&xml[pos], BUF_SIZE - pos, "  </counters>\n");
+		//pos += snprintf(&xml[pos], BUF_SIZE - pos, "</captured>\n");
+		//xml[pos] = '\0';
 
-		*length = pos;
-		return xml;
+		//*length = pos;
+		//return xml;
+		return "";
 	}
 
 	void Device::writeXML() const
 	{
-		FILE* xmlout;
-		char filename[CAIMAN_PATH_MAX + 1];
+		//FILE* xmlout;
+		//char filename[CAIMAN_PATH_MAX + 1];
 
-		snprintf(filename, CAIMAN_PATH_MAX, "%scaptured.xml", mOutputPath);
-		if ((xmlout = fopen(filename, "wt")) == NULL) {
-			//logg.logError("Unable to create %s", filename);
-			//handleException();
-		}
+		//snprintf(filename, CAIMAN_PATH_MAX, "%scaptured.xml", mOutputPath);
+		//if ((xmlout = fopen(filename, "wt")) == NULL) {
+		//	//logg.logError("Unable to create %s", filename);
+		//	//handleException();
+		//}
 
-		int length;
-		char* xml = getXML(&length);
-		fputs(xml, xmlout);
-		free(xml);
-		fclose(xmlout);
+		//int length;
+		//char* xml = getXML(&length);
+		//fputs(xml, xmlout);
+		//free(xml);
+		//fclose(xmlout);
 	}
 
 	void Device::writeData(void* buf, size_t size)
 	{
-		if (mBinfile != NULL) {
-			if (fwrite(buf, 1, size, mBinfile) != size) {
-				//logg.logError("Error writing .apc energy data");
-				//handleException();
-			}
-		}
-		else {
+		//if (mBinfile != NULL) {
+		//	if (fwrite(buf, 1, size, mBinfile) != size) {
+		//		//logg.logError("Error writing .apc energy data");
+		//		//handleException();
+		//	}
+		//}
+		//else {
 			std::memcpy(mBuffer, buf, size);
 			mBuffer = mFifo->write(size);
-		}
+		//}
 	}
 
 }

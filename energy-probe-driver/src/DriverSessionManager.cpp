@@ -40,43 +40,12 @@ namespace ENERGY_PROBE_DRIVER {
 		mMaxEnabledChannel = -1;
 
 		//TODO Needs to be fittet
-		FILE* binfile = NULL;
-		char* outputPath = (char*)malloc(CAIMAN_PATH_MAX + 1);
-		char* binaryPath = (char*)malloc(CAIMAN_PATH_MAX + 1);
-		strncpy(outputPath, "./test", CAIMAN_PATH_MAX);
-		Fifo* fifo = NULL;
-		static sem_t senderSem, senderThreadStarted;
 
-		outputPath[CAIMAN_PATH_MAX - 1] = 0; // strncpy does not guarantee a null-terminated string
+		static sem_t senderSem;
+		Fifo* fifo = new Fifo(1 << 15, 1 << 20, &senderSem);
+		
 
-	// Ensure the path ends with a path separator
-		int n = strlen(outputPath);
-		if (outputPath[n - 1] != '/' && outputPath[n - 1] != '\\') {
-			strncat(outputPath, "/", CAIMAN_PATH_MAX - n - 1);
-		}
-
-		// Set up warnings file
-		snprintf(binaryPath, CAIMAN_PATH_MAX, "%swarnings.xml", outputPath);
-		unlink(binaryPath);
-
-		// Create a string representing the path to the binary output file and open it
-		snprintf(binaryPath, CAIMAN_PATH_MAX, "%s0000000000", outputPath);
-		if ((binfile = fopen(binaryPath, "wb")) == 0) {
-			printf("Unable to open output file: %s0000000000\nPlease check write permissions on this file. \r\n", outputPath);
-		}
-		else {
-			if (sem_init(&senderSem, 0, 0) || sem_init(&senderThreadStarted, 0, 0)) {
-				printf("sem_init() failed");
-			}
-			fifo = new Fifo(1 << 15, 1 << 20, &senderSem);
-			//THREAD_CREATE(senderThreadID, senderThread);
-			//if (!senderThreadID) {
-			//	logg.logError("Failed to create sender thread");
-			//	handleException();
-			//}
-		}
-		fifo = new Fifo(1 << 15, 1 << 20, &senderSem);
-		EnergyProbeObject = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(outputPath, binfile, fifo);
+		EnergyProbeObject = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo);
 	}
 
 	DriverSessionManager* DriverSessionManager::getSessionManager()

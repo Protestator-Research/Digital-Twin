@@ -81,8 +81,8 @@ using namespace std;
 
 // Public interface implementation
 namespace ENERGY_PROBE_DRIVER {
-	EnergyProbe::EnergyProbe(const char* outputPath, FILE* binfile, Fifo* fifo)
-		: Device(outputPath, binfile, fifo)
+	EnergyProbe::EnergyProbe(Fifo* fifo)
+		: Device(fifo)
 	{
 		mIsRunning = false;
 	}

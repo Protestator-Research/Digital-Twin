@@ -22,7 +22,7 @@ namespace ENERGY_PROBE_DRIVER {
 	class EnergyProbe : public Device
 	{
 	public:
-		EnergyProbe(const char* outputPath, FILE* binfile, Fifo* fifo);
+		EnergyProbe(Fifo* fifo);
 		virtual ~EnergyProbe();
 
 		virtual void prepareChannels();
