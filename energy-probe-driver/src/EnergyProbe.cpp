@@ -29,6 +29,8 @@ using namespace std;
 #include <fcntl.h>
 #include <libudev.h>
 #include <semaphore.h>
+#include <cstring>
+
 #endif
 
  //#include "Dll.h"
@@ -54,8 +56,9 @@ using namespace std;
 // This is a compatibility version between caiman and the Arm Energy Probe
 #define ENERGY_PROBE_VERSION 20110803
 
+#ifdef WIN32 //only Possible in Win32
 #define DYNAMIC_LINK_UDEV 1
-
+#endif
 // Main.cpp defines Quit. It's ugly, but it's true
 //extern volatile bool gQuit;
 
@@ -107,20 +110,20 @@ namespace ENERGY_PROBE_DRIVER {
 		snprintf(command, sizeof(command) - 1, "stty -F %s raw -echo", mComport);
 		if (system(command) != 0) {
 			printf("Unable to set %s to raw mode, please verify the device exists \r\n", mComport);
-			//        handleException();
+			return;
 		}
 #endif
 
 		if (mComport == NULL || *mComport == 0) {
 			printf("Unable to detect the energy probe. Verify that it is attached to the computer and properly enumerated with the OS. If it is enumerated, you can override auto-detection by specifying the 'Device' in the options dialog. \r\n");
-			//        handleException();
+			return;
 		}
 
 		// Make connection to the energy metering device
 		mStream = OPEN_DEVICE(mComport);
 		if (mStream == INVALID_HANDLE_VALUE) {
 			printf("Unable to open the energy probe at %s - consider overriding auto-detection by specifying the 'Device' in the options dialog. \r\n", mComport);
-			//        handleException();
+			return;
 		}
 
 		// Sync and reset the interface, then read data until the magic sequence is found
@@ -391,6 +394,7 @@ namespace ENERGY_PROBE_DRIVER {
 		if (gSessionData->getMaxEnabledChannels() >= MAX_EPROBE_CHANNELS) {
 			printf("Incorrect configuration: channel %d is configured, but Arm Energy Probe supports ch0-ch%d. v\r\n", gSessionData->getMaxEnabledChannels(), MAX_EPROBE_CHANNELS-1);
 			//        handleException();
+            return;
 		}
 
 		mNumFields = 0;
@@ -555,7 +559,7 @@ namespace ENERGY_PROBE_DRIVER {
 		udev = udev_new();
 		if (!udev) {
 			printf("Accessing the udev library failed, please verify the device is attached or specify the tty device on the command line to override auto detection \r\n");
-			//handleException();
+			return;
 		}
 
 		// obtain a list of all tty devices
@@ -596,7 +600,7 @@ namespace ENERGY_PROBE_DRIVER {
 
 		if (device_found == false) {
 			printf("Device could not be found, please verify the device is attached or specify the tty device on the command line to override auto detection \r\n");
-			handleException();
+			return;
 		}
 	}
 

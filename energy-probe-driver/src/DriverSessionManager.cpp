@@ -46,6 +46,7 @@ namespace ENERGY_PROBE_DRIVER {
 		
 
 		EnergyProbeObject = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo, this);
+        EnergyProbeObject->init("/dev/ttyACM0");
 	}
 
 	DriverSessionManager* DriverSessionManager::getSessionManager()

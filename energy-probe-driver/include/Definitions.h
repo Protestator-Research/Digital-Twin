@@ -28,7 +28,10 @@
 #include <limits.h>
 #define PATH_SEPARATOR '/'
 #define CAIMAN_PATH_MAX PATH_MAX
+#define SUPPORT_UDEV
 #endif
+
+
 
 // Fields
 static const char * const field_title_names[] = { "", "Power", "Voltage", "", "Current" };

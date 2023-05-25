@@ -2,7 +2,8 @@
 
 #include "digitwester_global.h"
 #include <memory>
-#include <include/DriverSessionManager.h>
+#include <DriverSessionManager.h>
+//#include <include/DriverSessionManager.h>
 
 namespace REALTWESTER {
     class RealTwester {
