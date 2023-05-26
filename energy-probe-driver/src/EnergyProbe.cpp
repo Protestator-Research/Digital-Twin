@@ -316,7 +316,7 @@ namespace ENERGY_PROBE_DRIVER {
 			}
 			else {
 				printf("Expected an ack from device but received %02x \r\n", ack);
-				//            handleException();
+                return;
 			}
 		}
 	}

@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <vector>
+#include <thread>
 
 #include "Definitions.h"
 #include "energy_probe_driver_global.h"
@@ -50,10 +51,21 @@ namespace ENERGY_PROBE_DRIVER {
 		void registerObserver(std::shared_ptr<DataPointObserver>);
 		void informObserver(std::shared_ptr<MeasurePoint> measurement);
 
+
+        void startGatheringData();
+        void stopGatheringData();
+
+        void enableChannel(size_t index);
+
+        void detectAndCreateEnergyProbe();
+
+        void compileData();
     private:
 		static DriverSessionManager* PointerToItself;
 		DriverSessionManager();
         void detectAllProbes();
+
+        void getDataThreadMethod();
 			   
 		// Counters
 		// one of power, voltage, or current
@@ -75,11 +87,14 @@ namespace ENERGY_PROBE_DRIVER {
 		// shunt resistor
 		int mResistors[MAX_CHANNELS];
 
-		int mMaxEnabledChannel;
 
+        int mMaxEnabledChannel = -1;
 
 		std::vector<std::shared_ptr<DataPointObserver>> Observers;
 		std::unique_ptr<EnergyProbe> EnergyProbeObject;
+
+        std::unique_ptr<std::thread> GetDataThread;
+        bool ThreadHasToRun = false;
     };
 }
 

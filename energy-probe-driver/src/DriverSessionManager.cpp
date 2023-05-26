@@ -36,17 +36,6 @@ namespace ENERGY_PROBE_DRIVER {
 			mChannelEnabled[i] = false;
 			mResistors[i] = 0;
 		}
-
-		mMaxEnabledChannel = -1;
-
-		//TODO Needs to be fittet
-		static sem_t senderSem;
-        sem_init(&senderSem, 0, 0);
-        Fifo* fifo = new Fifo(1 << 15, 1 << 20, &senderSem);
-		
-
-		EnergyProbeObject = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo, this);
-        EnergyProbeObject->init("/dev/ttyACM0");
 	}
 
 	DriverSessionManager* DriverSessionManager::getSessionManager()
@@ -92,7 +81,12 @@ namespace ENERGY_PROBE_DRIVER {
 
 	int DriverSessionManager::getMaxEnabledChannels()
 	{
-		return mMaxEnabledChannel;
+        int returnValue = 0;
+		for(size_t i = 0; i<MAX_CHANNELS;i++){
+            if(mChannelEnabled[i])
+                returnValue++;
+        }
+        return returnValue;
 	}
 
 	void DriverSessionManager::toggleEnableStateForCounter(int index)
@@ -115,4 +109,91 @@ namespace ENERGY_PROBE_DRIVER {
 		for (auto observer : Observers)
 			observer->setNewMeasurePoint(measurement);
 	}
+
+    void DriverSessionManager::startGatheringData() {
+        EnergyProbeObject->start();
+        ThreadHasToRun = true;
+        GetDataThread = std::make_unique<std::thread>(std::bind(&DriverSessionManager::getDataThreadMethod,this));
+    }
+
+    void DriverSessionManager::getDataThreadMethod() {
+        while(ThreadHasToRun){
+            EnergyProbeObject->processBuffer();
+        }
+    }
+
+    void DriverSessionManager::stopGatheringData() {
+        ThreadHasToRun = false;
+        EnergyProbeObject->stop();
+        GetDataThread->join();
+        GetDataThread.reset();
+    }
+
+    void DriverSessionManager::enableChannel(size_t index) {
+        mChannelEnabled[index] = true;
+    }
+
+    void DriverSessionManager::detectAndCreateEnergyProbe() {
+        //TODO Needs to be fittet
+        static sem_t senderSem;
+        sem_init(&senderSem, 0, 0);
+        Fifo* fifo = new Fifo(1 << 15, 1 << 20, &senderSem);
+
+        EnergyProbeObject = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo, this);
+        EnergyProbeObject->prepareChannels();
+        EnergyProbeObject->init("/dev/ttyACM0");
+    }
+
+    void DriverSessionManager::compileData() {
+        static bool compiled = false;
+
+        if (compiled) {
+            return;
+        }
+
+        int channelsConfigured = 0;
+        for (int channel = 0; channel < MAX_CHANNELS; ++channel) {
+            // Is a resistor value given for each enabled channel?
+            if (mResistors[channel] <= 0) {
+                continue;
+            }
+
+            mChannelEnabled[channel] = true;
+
+            for (int field = 0; field < 3; ++field) {
+                static const int field_num[] = { POWER, CURRENT, VOLTAGE };
+                static const int field_source[] = { 0, 2, 1 };
+
+                const int index = 3 * channelsConfigured + field;
+                mCounterChannel[index] = channel;
+                mCounterField[index] = field_num[field];
+//                mCounterDaqCh[index][0] = '\0';
+                mCounterEnabled[index] = true;
+
+                // Determine sources
+                // Source always in the following order, as per energy meter device:
+                // ch0 pwr, ch0 volt, ch0 curr, ch1 pwr, ch1 volt, ch1 curr, ch2 pwr, etc.
+                mCounterSource[index] = 3 * channelsConfigured + field_source[field];
+                if (mCounterField[index] == POWER || mCounterField[index] == CURRENT) {
+                    mSourceScaleFactor[mCounterSource[index]] = 100 / (float) mResistors[channel];
+                }
+                else {
+                    mSourceScaleFactor[mCounterSource[index]] = 1;
+                }
+            }
+
+            ++channelsConfigured;
+
+            if (channel > mMaxEnabledChannel) {
+                mMaxEnabledChannel = channel;
+            }
+        }
+
+        if (mMaxEnabledChannel < 0) {
+            printf("No channels enabled, please ensure resistance values are set \r\n");
+            return;
+        }
+
+        compiled = true;
+    }
 }
