@@ -249,28 +249,29 @@ namespace ENERGY_PROBE_DRIVER {
 					}
 				}
 
-				gSessionData->informObserver(std::make_shared<MeasurePoint>(value));
 
-				data1 = value & 0xFF;
-				data2 = (value >> 8) & 0xFF;
-				data3 = (value >> 16) & 0xFF;
-				data4 = (value >> 24) & 0xFF;
+                data1 = value & 0xFF;
+                data2 = (value >> 8) & 0xFF;
+                data3 = (value >> 16) & 0xFF;
+                data4 = (value >> 24) & 0xFF;
 
-				// output data
-				outBuffer[outLength++] = data1;
-				outBuffer[outLength++] = data2;
-				outBuffer[outLength++] = data3;
-				outBuffer[outLength++] = data4;
-				// save data
-				last_value[mNumFields - remaining][0] = data1;
-				last_value[mNumFields - remaining][1] = data2;
-				last_value[mNumFields - remaining][2] = data3;
-				last_value[mNumFields - remaining][3] = data4;
-				// update remaining data fields
-				remaining--;
+                // output data
+                outBuffer[outLength++] = data1;
+                outBuffer[outLength++] = data2;
+                outBuffer[outLength++] = data3;
+                outBuffer[outLength++] = data4;
+                // save data
+                last_value[mNumFields - remaining][0] = data1;
+                last_value[mNumFields - remaining][1] = data2;
+                last_value[mNumFields - remaining][2] = data3;
+                last_value[mNumFields - remaining][3] = data4;
+                // update remaining data fields
+                remaining--;
 
-				// write data
-				if (outLength >= sizeof(outBuffer)) {
+                gSessionData->informObserver(std::make_shared<MeasurePoint>(data2));
+
+                // write data
+                if (outLength >= sizeof(outBuffer)) {
 					writeData(outBuffer, outLength);
 					outLength = 0;
 				}

@@ -7,7 +7,7 @@ namespace ENERGY_PROBE_DRIVER
 
 	MeasurePoint::MeasurePoint(int buffer)
 	{
-		std::cout << "Chars: " << buffer << std::endl;
+        Voltage = (float)buffer;
 	}
 
 	float MeasurePoint::getVoltage()
