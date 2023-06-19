@@ -21,12 +21,12 @@ add_executable(digitwester
         src/Data/DataPoint.h
         src/Data/IDataBase.h)
 
-# if(energyprobedriver)
+if(energyprobedriver)
 target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json energyprobedriver::energyprobedriver Threads::Threads)
-# else (energyprobedriver)
-#     message("Using in Development Mode, since no EnergyProbeDriver via conan is installed")
-#     target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json Threads::Threads EnergyProbeDriver)
-# endif (energyprobedriver)
+else (energyprobedriver)
+    message("Using in Development Mode, since no EnergyProbeDriver via conan is installed")
+    target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json Threads::Threads EnergyProbeDriver)
+endif (energyprobedriver)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION "."
         RUNTIME DESTINATION bin

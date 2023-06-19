@@ -1,5 +1,6 @@
 package com.github.tukcps.sysmd.parser
 
+import Parser.Scanner
 import com.github.tukcps.jaadd.*
 import com.github.tukcps.sysmd.ast.*
 import com.github.tukcps.sysmd.ast.functions.AstHasA
@@ -10,8 +11,8 @@ import com.github.tukcps.sysmd.entities.implementation.AnnotationImplementation
 import com.github.tukcps.sysmd.entities.implementation.FeatureImplementation
 import com.github.tukcps.sysmd.entities.implementation.MultiplicityImplementation
 import com.github.tukcps.sysmd.exceptions.*
-import com.github.tukcps.sysmd.parser.Scanner.Definitions.Token
-import com.github.tukcps.sysmd.parser.Scanner.Definitions.Token.Kind.*
+import Parser.Scanner.Definitions.Token
+import Parser.Scanner.Definitions.Token.Kind.*
 import com.github.tukcps.sysmd.quantities.Quantity
 import com.github.tukcps.sysmd.services.AgilaSession
 import com.github.tukcps.sysmd.services.report
