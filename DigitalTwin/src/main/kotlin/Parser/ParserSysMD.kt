@@ -1,10 +1,5 @@
-package com.github.tukcps.sysmd.parser
+package Parser
 
-import DigitalTwinSession
-import Parser.*
-import Parser.Identification
-import Parser.QualifiedName
-import Parser.Scanner
 import com.github.tukcps.sysmd.entities.*
 import com.github.tukcps.jaadd.*
 import com.github.tukcps.sysmd.ast.*
@@ -15,18 +10,18 @@ import com.github.tukcps.sysmd.entities.implementation.AnnotationImplementation
 import com.github.tukcps.sysmd.entities.implementation.FeatureImplementation
 import com.github.tukcps.sysmd.entities.implementation.MultiplicityImplementation
 import com.github.tukcps.sysmd.exceptions.*
-import Parser.Scanner.Definitions.Token
-import Parser.Scanner.Definitions.Token.Kind.*
-import Parser.SimpleName
 import com.github.tukcps.sysmd.quantities.Quantity
 import com.github.tukcps.sysmd.services.reportInfo
 import com.github.tukcps.sysmd.services.resolveName
-import com.github.tukcps.jaadd.functions.unaryMinus
 import com.github.tukcps.jaadd.values.IntegerRange
 import com.github.tukcps.jaadd.values.XBool
 import com.github.tukcps.sysmd.ast.AstLeaf
+import com.github.tukcps.sysmd.parser.*
+import com.github.tukcps.sysmd.parser.SysMdSemantics
 import com.github.tukcps.sysmd.quantities.Unit
 import com.github.tukcps.sysmd.quantities.VectorQuantity
+import com.github.tukcps.sysmd.services.AgilaSession
+import com.github.tukcps.sysmd.services.report
 
 
 /**
@@ -39,13 +34,13 @@ import com.github.tukcps.sysmd.quantities.VectorQuantity
  * @block: optional lambda that will be executed in scope of the parser production rules, for debugging & testing.
  */
 open class ParserSysMD(
-    val model: DigitalTwinSession,                            // model in which the results will be returned.
-    val textualRepresentation: TextualRepresentation,   // the textual representation in which parsing is done
+    override val model: AgilaSession,                            // model in which the results will be returned.
+    override val textualRepresentation: TextualRepresentation,   // the textual representation in which parsing is done
     input: String? = null                               // input as a String of scanner; if not given, the body of textual representation
-) : Scanner(input?:textualRepresentation.body) {
+) : com.github.tukcps.sysmd.parser.ParserSysMD(model=model,textualRepresentation=textualRepresentation,input=input) {
 
     // A class that implements the Semantic Actions on the Agila model.
-    var semantics = SysMdSemantics(model, null, "Global", textualRepresentation)
+    override var semantics = SysMdSemantics(model, null, "Global", textualRepresentation)
 
     // The line in which a triple started with a subject; used for error reporting.
     private var subjectLine: Int = 0
@@ -72,17 +67,17 @@ open class ParserSysMD(
      * Implementation of the production rule:
      *    SysMD :- (Triple ".")* EOF
      */
-    fun parseSysMD() {
-        while (token.kind != EOF) {
+    override fun parseSysMD() {
+        while (token.kind != Definitions.Token.Kind.EOF) {
             try {
                 parseTriple()
-                consume(DOT, EOF) // Triple without DOT and only EOF shall deprecate.
+                consume(Definitions.Token.Kind.DOT, Definitions.Token.Kind.EOF) // Triple without DOT and only EOF shall deprecate.
             } catch (exception: Exception) {
                 if (model.settings.catchExceptions) handleError(exception)
                 else throw exception
             }
         }
-        consume(EOF)
+        consume(Definitions.Token.Kind.EOF)
     }
 
     /**
@@ -99,20 +94,20 @@ open class ParserSysMD(
      *
      * For implementation, we consider the special relations IS_A, HAS_A, IMPORTS, DEFINES separately.
      */
-    fun parseTriple() {
+    override fun parseTriple() {
         val subject: Identification
 
-        if (tokenIs(EOF))  return
+        if (tokenIs(Definitions.Token.Kind.EOF))  return
 
         parseIdentification().also { subject = it; subjectLine = consumedToken.lineNo }
 
         when(consumeToken()) {
-            IS_A     -> parseClass(subject, "")
-            HAS_A    -> parseFeatureList(subject)
-            USES     -> parseQualifiedNameList().also { semantics.uses(subject.toName(), it) }
-            IMPORTS  -> parseQualifiedNameList().also { semantics.imports(subject.toName(), it) }
-            DEFINES  -> parseDefinitionList(subject.toName())
-            NAME_LIT -> {
+            Definitions.Token.Kind.IS_A -> parseClass(subject, "")
+            Definitions.Token.Kind.HAS_A -> parseFeatureList(subject)
+            Definitions.Token.Kind.USES -> parseQualifiedNameList().also { semantics.uses(subject.toName(), it) }
+            Definitions.Token.Kind.IMPORTS -> parseQualifiedNameList().also { semantics.imports(subject.toName(), it) }
+            Definitions.Token.Kind.DEFINES -> parseDefinitionList(subject.toName())
+            Definitions.Token.Kind.NAME_LIT -> {
                 val relationship: QualifiedName = consumedToken.string
                 parseQualifiedNameList()    .also {
                     semantics.hasRelationshipFeature(semantics.namespacePrefix?:"Global", null, listOf(subject.toName()), relationship, it)
@@ -134,9 +129,9 @@ open class ParserSysMD(
      * @return Pair of two pairs of name and multiplicity each.
      */
     private fun parseRelationshipDefinition(subject: Identification, owner: QualifiedName)   {
-        consume(RELATIONSHIP, CONNECTOR)
+        consume(Definitions.Token.Kind.RELATIONSHIP, Definitions.Token.Kind.CONNECTOR)
 
-        val superclass = if (token.kind == NAME_LIT) parseQualifiedName() else null
+        val superclass = if (token.kind == Definitions.Token.Kind.NAME_LIT) parseQualifiedName() else null
         var sources: Feature? = null    // We model the sources as an optional Typed Feature with multiplicity.
         var sourcesType: Identity<Type>? = null
         var sourcesMultiplicity: IntegerRange? = null
@@ -144,14 +139,14 @@ open class ParserSysMD(
         var targetsType: Identity<Type>? = null
         var targetsMultiplicity: IntegerRange? = null
 
-        if (consumeIfTokenIs(FROM)) {
+        if (consumeIfTokenIs(Definitions.Token.Kind.FROM)) {
             parseMultiplicity().also{ sourcesMultiplicity = it }
             parseQualifiedName().also {
                 sources = FeatureImplementation(name = "from")
                 sourcesType = Identity(str = it)
             }
         }
-        if (consumeIfTokenIs(TO)) {
+        if (consumeIfTokenIs(Definitions.Token.Kind.TO)) {
             parseMultiplicity().also { targetsMultiplicity = it }
             parseQualifiedName().also {
                 targets = FeatureImplementation(name = "to")
@@ -169,8 +164,8 @@ open class ParserSysMD(
     private fun parseQualifiedNameList(): MutableList<QualifiedName> {
         val result = mutableListOf<QualifiedName>()
         parseQualifiedName().also { result.add(it) }
-        while (token.kind == COMMA) {
-            consume(COMMA)
+        while (token.kind == Definitions.Token.Kind.COMMA) {
+            consume(Definitions.Token.Kind.COMMA)
             parseQualifiedName().also { result.add(it) }
         }
         return result
@@ -184,8 +179,8 @@ open class ParserSysMD(
         val subject: Identification
 
         parseIdentification().also { subject = it }
-        consume(IS_A, NAME_LIT, COMMA)
-        if (consumedToken.kind == IS_A) {
+        consume(Definitions.Token.Kind.IS_A, Definitions.Token.Kind.NAME_LIT, Definitions.Token.Kind.COMMA)
+        if (consumedToken.kind == Definitions.Token.Kind.IS_A) {
             parseClass(subject, owner)
         } else {
             model.report(semantics.namespace, "Error or deprecated syntax: Replace 'source RELATION target' with 'owner hasA Relation name: source REL target'")
@@ -202,13 +197,13 @@ open class ParserSysMD(
      */
     private fun parseClass(subject: Identification, owner: QualifiedName) {
         when (token.kind) {
-            NAME_LIT ->     parseQualifiedName().also   { semantics.isAClass(subject, it, owner)}
+            Definitions.Token.Kind.NAME_LIT ->     parseQualifiedName().also   { semantics.isAClass(subject, it, owner)}
             // Deprecated:
-            PACKAGE ->      consumeToken().also {
+            Definitions.Token.Kind.PACKAGE ->      consumeToken().also {
                 model.report(semantics.namespace, "Deprecated syntax: Replace 'name isA Package' with 'owner hasA Package name'")
                 semantics.hasAPackage(owner, subject)
             }
-            RELATIONSHIP, CONNECTOR -> parseRelationshipDefinition(subject, owner)
+            Definitions.Token.Kind.RELATIONSHIP, Definitions.Token.Kind.CONNECTOR -> parseRelationshipDefinition(subject, owner)
             else -> throw SyntaxError(parser = this, "In class definition: after 'isA', a name, or 'Relationship', 'Connector' is expected.")
         }
     }
@@ -218,8 +213,8 @@ open class ParserSysMD(
      */
     private fun parseDefinitionList(subject: QualifiedName) {
         parseDefinition(subject)
-        while (token.kind == SEMICOLON) {
-            consume(SEMICOLON)
+        while (token.kind == Definitions.Token.Kind.SEMICOLON) {
+            consume(Definitions.Token.Kind.SEMICOLON)
             parseDefinition(subject)
         }
     }
@@ -230,24 +225,24 @@ open class ParserSysMD(
      *   '<' NAME '>' NAME | NAME '<' NAME '>'
      * This gives SysMD the ability to identify an element either via a unique ID or a path specification.
      */
-    fun parseIdentification(): Identification {
+    override fun parseIdentification(): Identification {
         var shortName: String? = null
         var name: String? = null
         when(token.kind) {
-            LT -> {
+            Definitions.Token.Kind.LT -> {
                 nextToken()
                 parseSimpleName().also { shortName = it }
-                consume(GT)
-                if (token.kind == NAME_LIT) {
+                consume(Definitions.Token.Kind.GT)
+                if (token.kind == Definitions.Token.Kind.NAME_LIT) {
                     parseQualifiedName().also { name = it }
                 }
             }
-            NAME_LIT -> {
+            Definitions.Token.Kind.NAME_LIT -> {
                 parseQualifiedName().also { name = it }
-                if (token.kind == LT) {
+                if (token.kind == Definitions.Token.Kind.LT) {
                     nextToken()
                     parseSimpleName().also { shortName = it }
-                    consume(GT)
+                    consume(Definitions.Token.Kind.GT)
                 }
             }
             else -> throw SyntaxError(this, "Expected identification or qualified name, but read: $token")
@@ -260,10 +255,10 @@ open class ParserSysMD(
      * A list of Objects, separated by comma and finished by a dot.
      *   ObjectList :- Object ("," Object)*
      */
-    fun parseFeatureList(subject: Identification) {
+    override fun parseFeatureList(subject: Identification) {
         parseFeature(subject)
-        while (token.kind == COMMA || token.kind == SEMICOLON) {
-            consume(COMMA, SEMICOLON)
+        while (token.kind == Definitions.Token.Kind.COMMA || token.kind == Definitions.Token.Kind.SEMICOLON) {
+            consume(Definitions.Token.Kind.COMMA, Definitions.Token.Kind.SEMICOLON)
             parseFeature(subject)
         }
     }
@@ -274,7 +269,7 @@ open class ParserSysMD(
      * SimpleName :- NAME
      **/
     private fun parseSimpleName(): SimpleName {
-        if (token.kind != NAME_LIT)
+        if (token.kind != Definitions.Token.Kind.NAME_LIT)
             throw SyntaxError(this, "Expected name, but read ${toString()}")
         val name = token.string
         nextToken()
@@ -287,14 +282,14 @@ open class ParserSysMD(
      * QualifiedName :- "NAME("::"NAME)*
      */
     private fun parseQualifiedName(): String {
-        if (token.kind != NAME_LIT)
+        if (token.kind != Definitions.Token.Kind.NAME_LIT)
             throw SyntaxError(this, "Expected name, but read ${toString()}")
         var path = token.string
         nextToken()
 
-        while (token.kind == DPDP) {
+        while (token.kind == Definitions.Token.Kind.DPDP) {
             nextToken()
-            if (token.kind != NAME_LIT)
+            if (token.kind != Definitions.Token.Kind.NAME_LIT)
                 throw SyntaxError(this, "Expected name, but read ${toString()}$")
             path += "::" + token.string
             nextToken()
@@ -309,9 +304,9 @@ open class ParserSysMD(
      */
     private fun parseMultiplicity(): IntegerRange {
         var multiplicity = IntegerRange(1, 1)
-        if(consumeIfTokenIs(LCBRACE)) {
+        if(consumeIfTokenIs(Definitions.Token.Kind.LCBRACE)) {
             parseIntegerRange().also { multiplicity = it }
-            consume(RCBRACE)
+            consume(Definitions.Token.Kind.RCBRACE)
         }
         return multiplicity
     }
@@ -327,27 +322,27 @@ open class ParserSysMD(
      */
     private fun parseFeature(subject: Identification) {
         when (token.kind) {
-            PACKAGE -> {
+            Definitions.Token.Kind.PACKAGE -> {
                 nextToken()
                 val name = parseIdentification()
                 semantics.hasAPackage(subject.toName(), name)
             }
-            RELATIONSHIP, CONNECTOR -> {
+            Definitions.Token.Kind.RELATIONSHIP, Definitions.Token.Kind.CONNECTOR -> {
                 nextToken()
                 val name = parseIdentification()
                 parseRelationshipFeature(subject.toName(), name)
             }
-            FEATURE -> {
+            Definitions.Token.Kind.FEATURE -> {
                 nextToken()
                 val name = parseIdentification()
                 parseComponentFeature(subject.toName(), name)
             }
-            VALUE -> {
+            Definitions.Token.Kind.VALUE -> {
                 nextToken()
                 val name = parseIdentification()
                 parseValueFeature(subject.toName(), name)
             }
-            NAME_LIT -> {
+            Definitions.Token.Kind.NAME_LIT -> {
                 parseQualifiedName().also {
                     when (it) {
                         "Value", "Quantity", "Requirement", "Performance" -> {
@@ -361,7 +356,7 @@ open class ParserSysMD(
                         }
 
                         "Relation", "Connector", "Link" -> {
-                            val name = if (token.kind == NAME_LIT) parseIdentification() else null
+                            val name = if (token.kind == Definitions.Token.Kind.NAME_LIT) parseIdentification() else null
                             parseRelationshipFeature(subject.toName(), name)
                         }
 
@@ -384,15 +379,15 @@ open class ParserSysMD(
         val type: QualifiedName
         var direction = Feature.FeatureDirectionKind.IN
 
-        consume(DP)
+        consume(Definitions.Token.Kind.DP)
 
         // Optional multiplicity; default is 1.
         // parseMultiplicity().also { multiplicity = it }
 
-        consumeIfTokenIs(ALL, ONE).also {
+        consumeIfTokenIs(Definitions.Token.Kind.ALL, Definitions.Token.Kind.ONE).also {
             when (consumedToken.kind) {
-                ALL -> direction = Feature.FeatureDirectionKind.OUT
-                ONE -> direction = Feature.FeatureDirectionKind.IN
+                Definitions.Token.Kind.ALL -> direction = Feature.FeatureDirectionKind.OUT
+                Definitions.Token.Kind.ONE -> direction = Feature.FeatureDirectionKind.IN
                 else -> {} // keep default.
             }
         }
@@ -404,12 +399,12 @@ open class ParserSysMD(
 
         parseConstraint().also { feature.valueSpecs = it }
 
-        if (consumeIfTokenIs(LCBRACE)) {
+        if (consumeIfTokenIs(Definitions.Token.Kind.LCBRACE)) {
             parseUnit().also { feature.unitSpec(it) }
-            consume(RCBRACE)
+            consume(Definitions.Token.Kind.RCBRACE)
         }
 
-        if (tokenIs(EQ)) {
+        if (tokenIs(Definitions.Token.Kind.EQ)) {
             val iBeforeExpression = position
             nextToken()
             parseExpression().also {
@@ -430,11 +425,11 @@ open class ParserSysMD(
         val type: QualifiedName
         var instances: List<QualifiedName> = emptyList()
 
-        consume(DP)
+        consume(Definitions.Token.Kind.DP)
         parseMultiplicity().also { multiplicity = MultiplicityImplementation(valueSpec = it) }
         parseQualifiedName().also { type = it }
 
-        if (consumeIfTokenIs(EQ)) {
+        if (consumeIfTokenIs(Definitions.Token.Kind.EQ)) {
             instances = parseQualifiedNameList()
         }
         semantics.hasComponentFeature(subject, name, multiplicity, type, instances)
@@ -450,18 +445,18 @@ open class ParserSysMD(
         val relationship: QualifiedName
         val target: List<QualifiedName>
 
-        if (tokenIs(EQ)) {
-            consume(EQ)
+        if (tokenIs(Definitions.Token.Kind.EQ)) {
+            consume(Definitions.Token.Kind.EQ)
             parseQualifiedNameList().also { source = it }
             parseQualifiedName().also { relationship = it }
             parseQualifiedNameList().also { target = it }
-        } else if (tokenIs(DP)) {
-            consume(DP)
+        } else if (tokenIs(Definitions.Token.Kind.DP)) {
+            consume(Definitions.Token.Kind.DP)
             parseQualifiedName().also { relationship = it }
-            consumeIfTokenIs(EQ)    // just optional.
-            consume(FROM)
+            consumeIfTokenIs(Definitions.Token.Kind.EQ)    // just optional.
+            consume(Definitions.Token.Kind.FROM)
             parseQualifiedNameList().also { source = it }
-            consume(TO)
+            consume(Definitions.Token.Kind.TO)
             parseQualifiedNameList().also { target = it }
         } else throw SyntaxError(this, "In Relationship: expected 'from' or name.")
         semantics.hasRelationshipFeature(subject, name, source, relationship, target)
@@ -473,7 +468,7 @@ open class ParserSysMD(
     private fun parseIntegerRange(): IntegerRange {
         val result = IntegerRange(IntegerRange.Integers)
         parseConstInt().also { result.min = it; result.max = it }
-        if (consumeIfTokenIs(DOTDOT)) {
+        if (consumeIfTokenIs(Definitions.Token.Kind.DOTDOT)) {
             parseConstInt().also { result.max = it }
         }
         if (result.min > result.max)
@@ -486,19 +481,19 @@ open class ParserSysMD(
      **/
     private fun parseValueRange(): Quantity {
         var result: Quantity
-        if (tokenIs(INTEGER_LIT)) {
+        if (tokenIs(Definitions.Token.Kind.INTEGER_LIT)) {
             parseConstInt().also { result = Quantity(model.builder.rangeIDD(it, it)) }
-        } else if (tokenIs(FLOAT_LIT)) {
+        } else if (tokenIs(Definitions.Token.Kind.FLOAT_LIT)) {
             parseConstReal().also { result = Quantity(model.builder.range(it, it),"?") }
         } else
             throw SyntaxError(this, "expect value-range of form number .. number")
 
-        if (!tokenIs(DOTDOT)) {
+        if (!tokenIs(Definitions.Token.Kind.DOTDOT)) {
             return result
         }
         else { // ".." ValueLiteral
-            consume(DOTDOT)
-            if (tokenIs(INTEGER_LIT)) {
+            consume(Definitions.Token.Kind.DOTDOT)
+            if (tokenIs(Definitions.Token.Kind.INTEGER_LIT)) {
                 parseConstInt().also {
                     result = when (result.value) {
                         is AADD -> Quantity(model.builder.range(result.aadd().getRange().min, it.toDouble()),"?")
@@ -506,7 +501,7 @@ open class ParserSysMD(
                         else -> throw SyntaxError(this, "expect range of form [number .. number]")
                     }
                 }
-            } else if (tokenIs(FLOAT_LIT)) {
+            } else if (tokenIs(Definitions.Token.Kind.FLOAT_LIT)) {
                 parseConstReal().also {
                     result = when (result.value) {
                         is AADD -> Quantity(model.builder.range(result.aadd().getRange().min, it),"?")
@@ -522,28 +517,28 @@ open class ParserSysMD(
     /** RealSubtype :- ["(" Number [.. ConstValue] | true | false ")"] */
     private fun parseConstraint(): MutableList<Any?> {
         val constraints = mutableListOf<Any?>()
-        if (consumeIfTokenIs(LBRACE)) {
+        if (consumeIfTokenIs(Definitions.Token.Kind.LBRACE)) {
             when {
-                tokenIs(MINUS, TIMES, INTEGER_LIT, FLOAT_LIT) -> {
-                    while(!tokenIs(RBRACE)) { //Multiple constraints for vector
+                tokenIs(Definitions.Token.Kind.MINUS, Definitions.Token.Kind.TIMES, Definitions.Token.Kind.INTEGER_LIT, Definitions.Token.Kind.FLOAT_LIT) -> {
+                    while(!tokenIs(Definitions.Token.Kind.RBRACE)) { //Multiple constraints for vector
                         val min = parseNumber()
-                        val max = optionalWhen(DOTDOT, default = min) {
-                            consume(DOTDOT)
+                        val max = optionalWhen(Definitions.Token.Kind.DOTDOT, default = min) {
+                            consume(Definitions.Token.Kind.DOTDOT)
                             parseNumber()
                         }
                         constraints.add("$min .. $max")
-                        consumeIfTokenIs(COMMA)
+                        consumeIfTokenIs(Definitions.Token.Kind.COMMA)
                     }
-                    consumeIfTokenIs(RBRACE)
+                    consumeIfTokenIs(Definitions.Token.Kind.RBRACE)
                 }
-                tokenIs(TRUE, FALSE) -> {
-                    while(!tokenIs(RBRACE)){
-                        if(consumeIfTokenIs(TRUE))
+                tokenIs(Definitions.Token.Kind.TRUE, Definitions.Token.Kind.FALSE) -> {
+                    while(!tokenIs(Definitions.Token.Kind.RBRACE)){
+                        if(consumeIfTokenIs(Definitions.Token.Kind.TRUE))
                             constraints.add(XBool.True)
-                        else if(consumeIfTokenIs(FALSE))
+                        else if(consumeIfTokenIs(Definitions.Token.Kind.FALSE))
                             constraints.add(XBool.False)
                     }
-                    consumeIfTokenIs(RBRACE)
+                    consumeIfTokenIs(Definitions.Token.Kind.RBRACE)
                 }
                 else ->
                     throw SyntaxError(this, "When parsing constraint: expect number range, true, or false, but read $token")
@@ -559,7 +554,7 @@ open class ParserSysMD(
      * Expression :- Comparison
      * @return an AstNode with the abstract syntax tree
      */
-    fun parseExpression(): AstNode {
+    override fun parseExpression(): AstNode {
         return parseComparison()
     }
 
@@ -567,18 +562,22 @@ open class ParserSysMD(
      * conditionalExpression :- IF expression ? expression ELSE expression
      */
     private fun parseConditionalExpression(): AstNode {
-        consume(IF)
+        consume(Definitions.Token.Kind.IF)
         val ifExpr: AstNode; val thenExpr: AstNode
 
-        if (token.kind==LBRACE) {
-            consume(LBRACE)
+        if (token.kind==Definitions.Token.Kind.LBRACE) {
+            consume(Definitions.Token.Kind.LBRACE)
             model.reportInfo(semantics.namespace, "Deprecated: if (condition) expr else expr; use: if condition? expr else expr")
         }
         parseExpression().also { ifExpr = it }
-        consume(QUESTION, RBRACE)
+        consume(Definitions.Token.Kind.QUESTION, Definitions.Token.Kind.RBRACE)
         parseExpression().also { thenExpr = it }
-        consume(ELSE)
-        parseExpression().also { return semantics.ifElseExpression(ifExpr, thenExpr, it) }
+        consume(Definitions.Token.Kind.ELSE)
+        parseExpression().also { return semantics.ifElseExpression(
+            condExpr = ifExpr,
+            thenExpr = thenExpr,
+            elseExpr = it
+        ) }
     }
 
     /**
@@ -588,7 +587,12 @@ open class ParserSysMD(
      */
     private fun parseComparison(): AstNode {
         var result = parseSum()
-        if (consumeIfTokenIs(GT, LT, EQ, GE, LE, EE)) {
+        if (consumeIfTokenIs(Definitions.Token.Kind.GT,
+                Definitions.Token.Kind.LT,
+                Definitions.Token.Kind.EQ,
+                Definitions.Token.Kind.GE,
+                Definitions.Token.Kind.LE,
+                Definitions.Token.Kind.EE)) {
             val op = consumedToken.kind
             val t2 = parseSum()
             result = AstBinOp(result, op, t2)
@@ -599,7 +603,7 @@ open class ParserSysMD(
     /** Sum :- Product ( ("+"|"-"|"|") Product )*     */
     private fun parseSum(): AstNode {
         var s1 = parseProduct()
-        while (consumeIfTokenIs(PLUS, MINUS, OR)) {
+        while (consumeIfTokenIs(Definitions.Token.Kind.PLUS, Definitions.Token.Kind.MINUS, Definitions.Token.Kind.OR)) {
             val op = consumedToken.kind
             val s2 = parseProduct()
             s1 = AstBinOp(s1, op, s2)
@@ -610,7 +614,7 @@ open class ParserSysMD(
     /** Product :- Value ( ("*"|"/"|"&") Value )*     */
     private fun parseProduct(): AstNode {
         var f1 = parseExponent()
-        while (consumeIfTokenIs(TIMES, DIV, AND, CROSS, DOTProduct)) {
+        while (consumeIfTokenIs(Definitions.Token.Kind.TIMES, Definitions.Token.Kind.DIV, Definitions.Token.Kind.AND, Definitions.Token.Kind.CROSS, Definitions.Token.Kind.DOTProduct)) {
             val op = consumedToken.kind
             val f2 = parseExponent()
             f1 = AstBinOp(f1, op, f2)
@@ -623,7 +627,7 @@ open class ParserSysMD(
      */
     private fun parseExponent(): AstNode {
         var f1 = parseUnaryOperatorExpression()
-        while (consumeIfTokenIs(EXP)) {
+        while (consumeIfTokenIs(Definitions.Token.Kind.EXP)) {
             val op = consumedToken.kind
             val f2 = parseUnaryOperatorExpression()
             f1 = AstBinOp(f1, op, f2)
@@ -635,11 +639,11 @@ open class ParserSysMD(
      * UnaryOperatorExpression :- ["+" | "-" | "not"] ExponentExpression
      */
     private fun parseUnaryOperatorExpression(): AstNode {
-        return if (consumeIfTokenIs(PLUS, MINUS, NOT)) {
+        return if (consumeIfTokenIs(Definitions.Token.Kind.PLUS, Definitions.Token.Kind.MINUS, Definitions.Token.Kind.NOT)) {
             when (consumedToken.kind) {
-                PLUS -> parseValue()
-                MINUS -> AstUnaryOp(MINUS, parseValue())
-                NOT -> AstNot(model, arrayListOf(parseValue()))
+                Definitions.Token.Kind.PLUS -> parseValue()
+                Definitions.Token.Kind.MINUS -> AstUnaryOp(Definitions.Token.Kind.MINUS, parseValue())
+                Definitions.Token.Kind.NOT -> AstNot(model, arrayListOf(parseValue()))
                 else -> throw SyntaxError(this, "Error in unary expression")
             }
         } else
@@ -651,16 +655,16 @@ open class ParserSysMD(
      *             |  // nothing.
      */
     private fun parseParameter(): ArrayList<AstNode>? =
-        optionalWhen(LBRACE, null) {
+        optionalWhen(Definitions.Token.Kind.LBRACE, null) {
             nextToken()
             val parameters = ArrayList<AstNode>()
-            while (token.kind != RBRACE) {
+            while (token.kind != Definitions.Token.Kind.RBRACE) {
                 parameters.add(parseExpression())
-                while (consumeIfTokenIs(COMMA)) {
+                while (consumeIfTokenIs(Definitions.Token.Kind.COMMA)) {
                     parameters.add(parseExpression())
                 }
             }
-            consume(RBRACE)
+            consume(Definitions.Token.Kind.RBRACE)
             parameters
         }
 
@@ -669,30 +673,30 @@ open class ParserSysMD(
      *  Unit :-> "%" // Per cent as a unit
      *          | ["1"] (NAME_LIT ["^" INTEGER_LIT])* ["/" (NAME_LIT [^INTEGER_LIT] )+]
      **/
-    fun parseUnit(): String {
+    override fun parseUnit(): String {
         var result = ""
 
-        if (token.kind == PERCENT) {
+        if (token.kind == Definitions.Token.Kind.PERCENT) {
             nextToken(); return "%"
         }
 
         // optional "1" , TODO: should be checked ...
-        optionalConsume(INTEGER_LIT) { result += consumedToken.number.toInt().toString() + " " }
+        optionalConsume(Definitions.Token.Kind.INTEGER_LIT) { result += consumedToken.number.toInt().toString() + " " }
 
-        while (token.kind == NAME_LIT || token.kind == EURO) {
+        while (token.kind == Definitions.Token.Kind.NAME_LIT || token.kind == Definitions.Token.Kind.EURO) {
             nextToken().also { result += consumedToken.toString() }
-            optionalConsume(EXP) {
-                consume(INTEGER_LIT).also { result += "^${consumedToken.number.toInt()}" }
+            optionalConsume(Definitions.Token.Kind.EXP) {
+                consume(Definitions.Token.Kind.INTEGER_LIT).also { result += "^${consumedToken.number.toInt()}" }
             }
             result += " "
         }
 
-        optionalConsume(DIV) {
+        optionalConsume(Definitions.Token.Kind.DIV) {
             result += "$consumedToken "
-            while (token.kind == NAME_LIT) {
+            while (token.kind == Definitions.Token.Kind.NAME_LIT) {
                 nextToken().also { result += consumedToken.toString() }
-                optionalConsume(EXP) {
-                    consume(INTEGER_LIT).also { result += "^${consumedToken.number.toInt()}" }
+                optionalConsume(Definitions.Token.Kind.EXP) {
+                    consume(Definitions.Token.Kind.INTEGER_LIT).also { result += "^${consumedToken.number.toInt()}" }
                 }
                 result += " "
             }
@@ -709,17 +713,17 @@ open class ParserSysMD(
      */
     private fun parseValue(): AstNode {
         var astNode: AstNode            // Value or expression
-        val neg = consumeIfTokenIs(MINUS) // Sign of negative value.
+        val neg = consumeIfTokenIs(Definitions.Token.Kind.MINUS) // Sign of negative value.
         when (token.kind) {
-            LCBRACE -> {                // Range of kind [number, number] unit
-                consume(LCBRACE)
+            Definitions.Token.Kind.LCBRACE -> {                // Range of kind [number, number] unit
+                consume(Definitions.Token.Kind.LCBRACE)
                 val quantity: Quantity
                 var unit = ""
                 parseValueRange().also { quantity = it }
-                consume(RCBRACE)
-                if (consumeIfTokenIs(LCBRACE)) {
+                consume(Definitions.Token.Kind.RCBRACE)
+                if (consumeIfTokenIs(Definitions.Token.Kind.LCBRACE)) {
                     parseUnit().also { unit = it }
-                    consume(RCBRACE)
+                    consume(Definitions.Token.Kind.RCBRACE)
                 }
                 astNode = when(quantity.value){
                     is AADD ->  AstLeaf(model, Quantity(quantity.value as AADD, unit))
@@ -730,64 +734,64 @@ open class ParserSysMD(
                 }
             }
 
-            FLOAT_LIT -> {              // Floating point literal of kind number unit
+            Definitions.Token.Kind.FLOAT_LIT -> {              // Floating point literal of kind number unit
                 val min = token.number
                 var unit = ""
-                consume(FLOAT_LIT)
+                consume(Definitions.Token.Kind.FLOAT_LIT)
                 // optional: Extension to range by
-                val max = if (tokenIs(DOTDOT)) {
-                    consume(DOTDOT)
-                    consume(FLOAT_LIT)
+                val max = if (tokenIs(Definitions.Token.Kind.DOTDOT)) {
+                    consume(Definitions.Token.Kind.DOTDOT)
+                    consume(Definitions.Token.Kind.FLOAT_LIT)
                     consumedToken.number
                 } else min
 
-                if (tokenIs(LCBRACE, NAME_LIT, PERCENT)) {
-                    if (tokenIs(LCBRACE)) {
-                        consume(LCBRACE)
+                if (tokenIs(Definitions.Token.Kind.LCBRACE, Definitions.Token.Kind.NAME_LIT, Definitions.Token.Kind.PERCENT)) {
+                    if (tokenIs(Definitions.Token.Kind.LCBRACE)) {
+                        consume(Definitions.Token.Kind.LCBRACE)
                         parseUnit().also { unit = it }
-                        consume(RCBRACE)
+                        consume(Definitions.Token.Kind.RCBRACE)
                     } else {
                         unit = token.string
-                        consume(NAME_LIT)
+                        consume(Definitions.Token.Kind.NAME_LIT)
                     }
                 }
                 astNode = AstLeaf(model, Quantity(model.builder.range(min, max), unit))
             }
 
-            INTEGER_LIT -> {            // Integer literal
+            Definitions.Token.Kind.INTEGER_LIT -> {            // Integer literal
                 val min = token.number.toLong()
-                consume(INTEGER_LIT)
+                consume(Definitions.Token.Kind.INTEGER_LIT)
                 // optional: Extension to range by
-                val max = if (tokenIs(DOTDOT)) {
-                    consume(DOTDOT)
-                    consume(INTEGER_LIT)
+                val max = if (tokenIs(Definitions.Token.Kind.DOTDOT)) {
+                    consume(Definitions.Token.Kind.DOTDOT)
+                    consume(Definitions.Token.Kind.INTEGER_LIT)
                     consumedToken.number.toLong()
                 } else min
                 astNode = AstLeaf(model, Quantity(model.builder.rangeIDD(min, max)))
             }
 
-            STRING_LIT -> {            // A string literal
+            Definitions.Token.Kind.STRING_LIT -> {            // A string literal
                 astNode = AstLeaf(model, Quantity(StrDD.Leaf(model.builder, token.string)))
                 nextToken()
             }
 
-            TRUE -> {               // True literal
+            Definitions.Token.Kind.TRUE -> {               // True literal
                 astNode = AstLeaf(model, Quantity(model.builder.True))
                 nextToken()
             }
 
-            FALSE -> {              // False literal
+            Definitions.Token.Kind.FALSE -> {              // False literal
                 astNode = AstLeaf(model, Quantity(model.builder.False))
                 nextToken()
             }
-            LBRACE -> {             // ( Expr )
+            Definitions.Token.Kind.LBRACE -> {             // ( Expr )
                 nextToken()
                 var expression = parseExpression()
                 try { //test if expression can be used as a Vector
                     val values = mutableListOf<DD>()
                     expression.evalUp()
                     values.add(expression.dd.clone())
-                    while (consumeIfTokenIs(COMMA)) {  // Iterate through all vector elements
+                    while (consumeIfTokenIs(Definitions.Token.Kind.COMMA)) {  // Iterate through all vector elements
                         expression = parseExpression()
                         if(expression is AstLeaf || expression is AstUnaryOp) {
                             expression.evalUp()
@@ -795,41 +799,43 @@ open class ParserSysMD(
                         }else
                             throw SemanticError("Vectors with expression, which are no values, is not allowed")
                     }
-                    consume(RBRACE)
+                    consume(Definitions.Token.Kind.RBRACE)
                     var unit = ""
-                    if (tokenIs(LCBRACE, NAME_LIT, PERCENT)) {
-                        if (tokenIs(LCBRACE)) {
-                            consume(LCBRACE)
+                    if (tokenIs(Definitions.Token.Kind.LCBRACE, Definitions.Token.Kind.NAME_LIT,
+                            Definitions.Token.Kind.PERCENT
+                        )) {
+                        if (tokenIs(Definitions.Token.Kind.LCBRACE)) {
+                            consume(Definitions.Token.Kind.LCBRACE)
                             parseUnit().also { unit = it }
-                            consume(RCBRACE)
+                            consume(Definitions.Token.Kind.RCBRACE)
                         } else {
                             unit = token.string
-                            consume(NAME_LIT)
+                            consume(Definitions.Token.Kind.NAME_LIT)
                         }
                     }
                     astNode = AstLeaf(model, VectorQuantity(values, Unit(unit)))
                 } catch (e:Exception) { // is a simple expression, no vector
                     astNode = expression
-                    consume(RBRACE)
+                    consume(Definitions.Token.Kind.RBRACE)
                 }
             }
-            HAS_A -> {              // hasA(partName)
+            Definitions.Token.Kind.HAS_A -> {              // hasA(partName)
                 nextToken()
-                consume(LBRACE)
+                consume(Definitions.Token.Kind.LBRACE)
                 val ownerName = parseQualifiedName()
-                consume(COMMA)
+                consume(Definitions.Token.Kind.COMMA)
                 val ownedName = parseQualifiedName()
-                consume(RBRACE).also { astNode = AstHasA(model, semantics.namespace, ownerName, ownedName) }
+                consume(Definitions.Token.Kind.RBRACE).also { astNode = AstHasA(model, semantics.namespace, ownerName, ownedName) }
             }
-            IS_A -> {               // isA(typeName)
+            Definitions.Token.Kind.IS_A -> {               // isA(typeName)
                 nextToken()
-                consume(LBRACE)
+                consume(Definitions.Token.Kind.LBRACE)
                 val subclassName = parseQualifiedName()
-                consume(COMMA)
+                consume(Definitions.Token.Kind.COMMA)
                 val superclassName = parseQualifiedName()
-                consume(RBRACE).also { astNode = AstIsA(model, semantics.namespace, subclassName, superclassName) }
+                consume(Definitions.Token.Kind.RBRACE).also { astNode = AstIsA(model, semantics.namespace, subclassName, superclassName) }
             }
-            NAME_LIT -> {           // qualifiedName [( parameters )]
+            Definitions.Token.Kind.NAME_LIT -> {           // qualifiedName [( parameters )]
                 val name = parseQualifiedName()
                 val params = parseParameter()
                 astNode = if (params == null)
@@ -837,7 +843,7 @@ open class ParserSysMD(
                     else
                         semantics.mkFuncCall(name, params)     // a function call
             }
-            IF -> { astNode = parseConditionalExpression() }
+            Definitions.Token.Kind.IF -> { astNode = parseConditionalExpression() }
             else ->
                 throw SyntaxError(this, "expected value, but read: $token")
         }
@@ -851,7 +857,8 @@ open class ParserSysMD(
                 astNode.upQuantity = VectorQuantity(astNode.downQuantity.negate().values, astNode.upQuantity.unit, astNode.upQuantity.unitSpec)
                 astNode.downQuantity = VectorQuantity(remember, astNode.downQuantity.unit, astNode.downQuantity.unitSpec)
                 astNode
-            } else AstBinOp(AstLeaf(model, Quantity(model.builder.scalar(0.0),"?")), MINUS, astNode)
+            } else AstBinOp(AstLeaf(model, Quantity(model.builder.scalar(0.0),"?")),
+                Definitions.Token.Kind.MINUS, astNode)
         }
         else astNode
     }
@@ -859,20 +866,20 @@ open class ParserSysMD(
 
     /** A number literal (Int or Float) or a property with known value */
     private fun parseConstReal(): Double {
-        val neg = consumeIfTokenIs(MINUS) // Sign of negative value.
+        val neg = consumeIfTokenIs(Definitions.Token.Kind.MINUS) // Sign of negative value.
         return when (token.kind) {
-            INTEGER_LIT,
-            FLOAT_LIT -> {           // Number literal
+            Definitions.Token.Kind.INTEGER_LIT,
+            Definitions.Token.Kind.FLOAT_LIT -> {           // Number literal
                 val value = token.number
                 nextToken()
                 if (neg) -value else value
             }
-            NAME_LIT -> {
+            Definitions.Token.Kind.NAME_LIT -> {
                 val name = parseQualifiedName()
                 val p = semantics.namespace.resolveName<ValueFeature>(name) ?: throw ElementNotFoundException(this, name)
                 if (neg) -p.rangeSpecs[0].min else p.rangeSpecs[0].min //ConstReal is never a vector
             }
-            TIMES ->  {
+            Definitions.Token.Kind.TIMES ->  {
                 nextToken()
                 return if(neg) model.settings.minReal else model.settings.maxReal
             }
@@ -882,9 +889,9 @@ open class ParserSysMD(
 
     /** A number literal (Int or Float) or a property with known value */
     private fun parseNumber(): String {
-        val neg = consumeIfTokenIs(MINUS) // Sign of negative value.
+        val neg = consumeIfTokenIs(Definitions.Token.Kind.MINUS) // Sign of negative value.
         return when (token.kind) {
-            INTEGER_LIT, FLOAT_LIT -> {           // Number literal
+            Definitions.Token.Kind.INTEGER_LIT, Definitions.Token.Kind.FLOAT_LIT -> {           // Number literal
                 val value = if (token.number.rem(1).equals(0.0))
                         token.number.toLong().toString()  // No ".0" as in Double.toString ...
                     else
@@ -892,7 +899,7 @@ open class ParserSysMD(
                 nextToken()
                 if (neg) "-$value" else value
             }
-            TIMES ->  {
+            Definitions.Token.Kind.TIMES ->  {
                 nextToken()
                 "*"
             }
@@ -902,20 +909,20 @@ open class ParserSysMD(
 
     /** A number literal (Int) or a property with known value */
     private fun parseConstInt(): Long {
-        val neg = consumeIfTokenIs(MINUS) // Sign of negative value.
+        val neg = consumeIfTokenIs(Definitions.Token.Kind.MINUS) // Sign of negative value.
         when (token.kind) {
-            INTEGER_LIT -> {           // Number literal
+            Definitions.Token.Kind.INTEGER_LIT -> {           // Number literal
                 val value = token.number
                 nextToken()
                 return if (neg) -value.toLong() else value.toLong()
             }
-            NAME_LIT -> {
+            Definitions.Token.Kind.NAME_LIT -> {
                 val name = parseQualifiedName()
                 val p = semantics.namespace.resolveName<ValueFeature>(name)
                     ?: throw ElementNotFoundException(this.textualRepresentation, element=null, name=name, token=consumedToken)
                 return if (neg) -p.intSpecs[0].min else p.intSpecs[0].min // ConstInt is never a vector
             }
-            TIMES -> {
+            Definitions.Token.Kind.TIMES -> {
                 nextToken()
                 return if(neg) model.settings.minInt else model.settings.maxInt
             }
@@ -927,7 +934,7 @@ open class ParserSysMD(
      * Helper function that checks if the token is start, and if so executes production rule,
      * otherwise it returns default
      */
-    private fun <T> optionalWhen(start: Token.Kind, default: T, rule: ParserSysMD.() -> T): T =
+    private fun <T> optionalWhen(start: Definitions.Token.Kind, default: T, rule: ParserSysMD.() -> T): T =
         if (token.kind == start) rule() else default
 
 
@@ -936,7 +943,7 @@ open class ParserSysMD(
      * consume it and apply the following production rule. The rule produces a result of type T.
      * The default result is given as parameter of the same type.
      */
-    private fun <T> optionalConsume(start: Token.Kind, default: T? = null, rule: ParserSysMD.() -> T? = { null }): T? =
+    private fun <T> optionalConsume(start: Definitions.Token.Kind, default: T? = null, rule: ParserSysMD.() -> T? = { null }): T? =
         if (this.token.kind == start) {
             consume(start)
             rule()
@@ -946,7 +953,7 @@ open class ParserSysMD(
     /**
      * Consumes a token and returns its kind.
      */
-    private fun consumeToken(): Token.Kind {
+    private fun consumeToken(): Definitions.Token.Kind {
         nextToken()
         return consumedToken.kind
     }
@@ -964,7 +971,7 @@ open class ParserSysMD(
         } else
             model.report(SysMDError("Exception: ${exception.message}"))
         // Skip input until we get next DOT (=end of statement) or EOF.
-        while (token.kind != DOT && token.kind != EOF)
+        while (token.kind != Definitions.Token.Kind.DOT && token.kind != Definitions.Token.Kind.EOF)
             consumeToken()
         consumeToken()
     }
