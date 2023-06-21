@@ -1,4 +1,4 @@
-package com.github.tukcps.sysmd.parser
+package Parser
 
 import com.github.tukcps.sysmd.entities.Element
 

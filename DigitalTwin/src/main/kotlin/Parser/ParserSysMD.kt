@@ -1,21 +1,24 @@
 package com.github.tukcps.sysmd.parser
 
+import DigitalTwinSession
+import Parser.*
+import Parser.Identification
+import Parser.QualifiedName
 import Parser.Scanner
+import com.github.tukcps.sysmd.entities.*
 import com.github.tukcps.jaadd.*
 import com.github.tukcps.sysmd.ast.*
 import com.github.tukcps.sysmd.ast.functions.AstHasA
 import com.github.tukcps.sysmd.ast.functions.AstIsA
 import com.github.tukcps.sysmd.ast.functions.AstNot
-import com.github.tukcps.sysmd.entities.*
 import com.github.tukcps.sysmd.entities.implementation.AnnotationImplementation
 import com.github.tukcps.sysmd.entities.implementation.FeatureImplementation
 import com.github.tukcps.sysmd.entities.implementation.MultiplicityImplementation
 import com.github.tukcps.sysmd.exceptions.*
 import Parser.Scanner.Definitions.Token
 import Parser.Scanner.Definitions.Token.Kind.*
+import Parser.SimpleName
 import com.github.tukcps.sysmd.quantities.Quantity
-import com.github.tukcps.sysmd.services.AgilaSession
-import com.github.tukcps.sysmd.services.report
 import com.github.tukcps.sysmd.services.reportInfo
 import com.github.tukcps.sysmd.services.resolveName
 import com.github.tukcps.jaadd.functions.unaryMinus
@@ -36,7 +39,7 @@ import com.github.tukcps.sysmd.quantities.VectorQuantity
  * @block: optional lambda that will be executed in scope of the parser production rules, for debugging & testing.
  */
 open class ParserSysMD(
-    val model: AgilaSession,                            // model in which the results will be returned.
+    val model: DigitalTwinSession,                            // model in which the results will be returned.
     val textualRepresentation: TextualRepresentation,   // the textual representation in which parsing is done
     input: String? = null                               // input as a String of scanner; if not given, the body of textual representation
 ) : Scanner(input?:textualRepresentation.body) {

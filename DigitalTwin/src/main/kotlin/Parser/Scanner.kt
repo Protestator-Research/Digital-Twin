@@ -1,6 +1,6 @@
 package Parser
 
-import Exceptions.LexicalError
+import com.github.tukcps.sysmd.exceptions.LexicalError
 import Parser.Scanner.Definitions.Token.Kind.*
 import kotlin.math.pow
 

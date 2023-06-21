@@ -1,6 +1,6 @@
-package com.github.tukcps.sysmd.parser
+package Parser
 
-import Parser.Scanner
+import com.github.tukcps.sysmd.entities.*
 import com.github.tukcps.jaadd.StrDD
 import com.github.tukcps.jaadd.functions.unaryMinus
 import com.github.tukcps.jaadd.values.IntegerRange
@@ -10,15 +10,12 @@ import com.github.tukcps.sysmd.ast.AstBinOp
 import com.github.tukcps.sysmd.ast.AstLeaf
 import com.github.tukcps.sysmd.ast.AstNode
 import com.github.tukcps.sysmd.ast.AstRoot
-import com.github.tukcps.sysmd.entities.*
-import com.github.tukcps.sysmd.entities.implementation.AnnotationImplementation
-import com.github.tukcps.sysmd.entities.implementation.SpecializationImplementation
-import com.github.tukcps.sysmd.entities.implementation.ValueFeatureImplementation
 import com.github.tukcps.sysmd.exceptions.ElementNotFoundException
 import com.github.tukcps.sysmd.exceptions.SemanticError
 import com.github.tukcps.sysmd.exceptions.SyntaxError
 import Parser.Scanner.Definitions.Token
 import Parser.Scanner.Definitions.Token.Kind.*
+import com.github.tukcps.sysmd.parser.Semantics
 import com.github.tukcps.sysmd.quantities.Quantity
 import com.github.tukcps.sysmd.quantities.VectorQuantity
 import com.github.tukcps.sysmd.services.AgilaSession

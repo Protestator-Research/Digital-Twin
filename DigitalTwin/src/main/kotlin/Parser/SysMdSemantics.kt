@@ -1,12 +1,15 @@
-package com.github.tukcps.sysmd.parser
+package Parser
 
+import com.github.tukcps.sysmd.entities.*
+import com.github.tukcps.sysmd.entities.implementation.*
+import Parser.*
 import com.github.tukcps.jaadd.values.IntegerRange
 import com.github.tukcps.sysmd.ast.AstNode
 import com.github.tukcps.sysmd.ast.functions.*
 import com.github.tukcps.sysmd.entities.*
-import com.github.tukcps.sysmd.entities.Annotation
 import com.github.tukcps.sysmd.entities.implementation.*
 import com.github.tukcps.sysmd.exceptions.SemanticError
+import com.github.tukcps.sysmd.parser.loadProjectFromRepository
 import com.github.tukcps.sysmd.services.AgilaSession
 import com.github.tukcps.sysmd.services.report
 import com.github.tukcps.sysmd.services.resolveName
@@ -222,7 +225,8 @@ class SysMdSemantics(
                 model.addUnownedElement(
                     NamespaceImportImplementation(
                         owner = Identity(subject),
-                        importedNamespace = Identity(obj)),
+                        importedNamespace = Identity(obj)
+                    ),
                     subject)
         }
     }

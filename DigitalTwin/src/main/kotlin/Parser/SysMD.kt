@@ -1,4 +1,4 @@
-package com.github.tukcps.sysmd.parser
+package Parser
 
 import com.github.tukcps.jaadd.AADD
 import com.github.tukcps.jaadd.BDD
@@ -12,6 +12,8 @@ import com.github.tukcps.sysmd.entities.implementation.AnnotatingElementImplemen
 import com.github.tukcps.sysmd.entities.implementation.TextualRepresentationImplementation
 import com.github.tukcps.sysmd.exceptions.SemanticError
 import com.github.tukcps.sysmd.exceptions.SysMDError
+import com.github.tukcps.sysmd.parser.ParserSysMD
+import com.github.tukcps.sysmd.parser.importMD
 import com.github.tukcps.sysmd.rest.ElementDAO
 import com.github.tukcps.sysmd.services.*
 import com.github.tukcps.sysmd.services.AgilaSessionMgr.runInSession

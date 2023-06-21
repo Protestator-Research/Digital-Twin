@@ -1,4 +1,4 @@
-package com.github.tukcps.sysmd.parser
+package Parser
 
 typealias SimpleName = String
 typealias QualifiedName=String

@@ -1,10 +1,12 @@
 package com.github.tukcps.sysmd.parser
 
+import com.github.tukcps.sysmd.entities.*
+import com.github.tukcps.sysmd.entities.implementation.*
+import Parser.Identification
+import Parser.QualifiedName
+import Parser.loadProjectFromRepository
 import com.github.tukcps.sysmd.ast.AstNode
 import com.github.tukcps.sysmd.ast.functions.*
-import com.github.tukcps.sysmd.entities.*
-import com.github.tukcps.sysmd.entities.Annotation
-import com.github.tukcps.sysmd.entities.implementation.*
 import com.github.tukcps.sysmd.exceptions.SemanticError
 import com.github.tukcps.sysmd.services.AgilaSession
 import com.github.tukcps.sysmd.services.reportInfo
@@ -15,8 +17,8 @@ import com.github.tukcps.sysmd.services.resolveName
  * implement the actions required by a production rule of the SysMD2 language.
  */
 class Semantics(
-    val model: AgilaSession,
-    var generatedElementsAnnotation: Annotation? = null,
+        val model: AgilaSession,
+        var generatedElementsAnnotation: Annotation? = null,
 ) : AgilaSession by model {
     /**
      * A stack in which we save the context in which the parser is currently working.
@@ -75,8 +77,9 @@ class Semantics(
             val element = ClassImplementation(name = part.name, shortName = part.shortName)
             val created = create(element, namespace)
             val foundClass = if (clazz != null ) namespace.resolveName<Type>(clazz) else any
-            val specialization = SpecializationImplementation(subclass = Identity(ref=element), superclass=Identity(
-                str =clazz?:"Any", ref = foundClass, id=foundClass?.elementId))
+            val specialization = SpecializationImplementation(subclass = Identity(ref=element), superclass= Identity(
+                str =clazz?:"Any", ref = foundClass, id=foundClass?.elementId)
+            )
             create(specialization, created)
             return created
         } else {        // Instantiation in part or design
@@ -144,7 +147,7 @@ class Semantics(
             else
                 model.addUnownedElement(
                     NamespaceImportImplementation(
-                        owner=Identity(subject),
+                        owner= Identity(subject),
                         importedNamespace = Identity(objList.first())
                     )
                 )
