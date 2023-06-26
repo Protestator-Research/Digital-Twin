@@ -5,7 +5,6 @@ Document uses ScalarValues, SI, ISO26262.
 Within this Project the Digital Twin Models are defined.
 
 [toc]
-
 # Definition of the Base Components
 ```SysMD::Global
 SystemV:Voltage [V].
@@ -18,7 +17,7 @@ Condensator imports SI.
 Condensator hasA
     capacity: Capacity(10^(-12)..10000) [F]
     inputVoltage: Voltage() [V] measurable
-    charge: Capacity*Volage [C] measureable
+    charge: Capacity*Volage [C] measurable
     outputVoltage : inputVoltage at t_0 + 1/C * \int^{t_0}_{t} I(a) da [v] mesurable
     outputCurrent : C * (V(t) * d/dt) [i]
    
@@ -29,7 +28,7 @@ Condensator imports SI.
 Condensator hasA
     capacity: Capacity(10^(-12)..10000) [F]
     inputVoltage: Voltage() [V] measurable
-    charge: Capacity*Volage [C] measureable
+    charge: Capacity*Volage [C] measurable
     outputVoltage : inputVoltage at t_0 + 1/C * \int^{t_0}_{t} I(a) da [v] mesurable
     outputCurrent : C * (V(t) * d/dt) [i]
 ```
@@ -38,7 +37,7 @@ Resistor isA Component
 Resistor imports SI.
 Resistor hasA
     inputVoltage: Voltage() [V] measurable
-    inputCurrent: Current() [I] measuralbe
+    inputCurrent: Current() [I] measurable
     resistance:Resistace() [Omega]
     outputVoltage:Voltage() [V] measurable
 ```
@@ -77,8 +76,8 @@ COMP hasA
 // VoltageDivider imports SI.
 // VoltageDivider hasA
 //    highInputVoltage:Voltage [V] measurable
-//    lowInputVoltage:Voltage [V] mesurable
-//    outputVoltage:Voltage [V] mesurable
+//    lowInputVoltage:Voltage [V] measurable
+//    outputVoltage:Voltage [V] measurable
 //    UpperResistor:Resistor(inputVoltage = highInputVoltage,outputVoltage = outputVoltage)
 //    LowerResistor:Resistor(inputVoltage = lowInputVoltage,outputVoltage = outputVoltage)
 ```
@@ -99,7 +98,7 @@ DFlipFlop isA Component.
 DFlipFlop imports SI.
 DFlipFlop hasA
     Clock : Voltage [V] measurable
-    inputD : Voltage [V] measuralbe
+    inputD : Voltage [V] measurable
     NotS : Voltage [V] = NAND(inputVoltageA = inputD, inputVoltageB = Clock)
     NotR : Voltage [V] = NAND(inputVoltageA = Clock, inputVoltageB = NotS)
     inputQ_t0 : Voltage [V] measurable
@@ -112,7 +111,7 @@ VoltageDevider isA Component.
 VoltageDevider imports SI.
 VoltageDevider hasA
     HighInputVoltage:Voltage [V] measurable
-    LowInputVoltage:Voltage [V] measutable
+    LowInputVoltage:Voltage [V] measurable
     resistance1:Resistace() [Omega]
     resistance2:Resistace() [Omega]
     OutputVoltage:Voltage [V] measurable = (HighInputVoltage-LowInputVoltage)/(resistance1+resistance2)*resistance2
