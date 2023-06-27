@@ -1,0 +1,145 @@
+{
+  "description": "fontWeight: value in range(1,1000)---400 is Normal 700 is Bold fontFamily: choose between Monospace, Cursive, SansSerif, Serif and Default currentOs: for Win 11 you have to manually set this property!!lineHeightMultiplier: depends on your screen resolution and maybe on OS -- 1.5f works for me on 1920x1080 and 3.0f on 2736x1824",
+  "startDirectory": "C:\\Users\\herzog/SysMD",
+  "imagesToCache": 10,
+  "defaultHighlightStyle": {
+    "colorRGBA": "0.0;0.0;1.0;1.0",
+    "fontWeight": 400,
+    "fontFamily": "Undefined"
+  },
+  "useDefaultHighlight": false,
+  "keywordHighlighing": {
+    "Connector": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "dot": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "Feature": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "defines": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "not": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "isA": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "and": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "else": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "hasA": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "from": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "has": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "if": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "measurable": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "all": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "or": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "imports": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "in": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "one": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "false": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "cross": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "Relationship": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "true": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "Value": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "uses": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "to": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "Package": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    }
+  },
+  "heightWhenCollapsed": 100,
+  "tabSize": 4
+}

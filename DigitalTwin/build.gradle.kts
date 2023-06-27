@@ -1,7 +1,9 @@
 plugins {
     kotlin("jvm") version "1.8.20"
     application
+    id("org.javamodularity.moduleplugin") version "1.8.12"
     id("org.openjfx.javafxplugin") version "0.0.13"
+    id("org.beryx.jlink") version "2.25.0"
 }
 
 group   = "com.github.tukcps"
@@ -46,11 +48,6 @@ repositories {
 }
 
 dependencies {
-//    val standalone: Boolean = if (org.gradle.internal.os.OperatingSystem.current().isWindows)
-//        !File("${System.getProperty("user.home")}\\agila.hierarchical.build").exists()
-//    else
-//        !File("/tmp/agila.hierarchical.build").exists()
-
     if(file("../jaadd").exists()) {
         println("  *** using jaadd from local clone in ./jaadd           ***")
         implementation(project(":jaadd"))
@@ -67,8 +64,8 @@ dependencies {
         implementation("com.github.tukcps:sysmd:$sysmdVersion")
     }
 
-    testImplementation(kotlin("test"))
 
+    testImplementation(kotlin("test"))
 }
 
 tasks.test {
@@ -86,5 +83,5 @@ application {
 
 javafx {
     version = "20"
-    modules = mutableListOf( "javafx.controls" )
+    modules = mutableListOf( "javafx.controls", "javafx.fxml" )
 }
