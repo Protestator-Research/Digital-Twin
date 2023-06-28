@@ -1,0 +1,5 @@
+package Functionality
+
+fun integrate(){
+
+}
