@@ -1,19 +1,13 @@
 package ui
 
 import javafx.application.Application
-import javafx.application.Platform
-import javafx.event.ActionEvent
-import javafx.event.EventHandler
+import javafx.beans.value.ChangeListener
+import javafx.beans.value.ObservableValue
 import javafx.fxml.FXMLLoader
-import javafx.geometry.Insets
-import javafx.scene.Node
 import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.control.*
-import javafx.scene.control.ButtonBar.ButtonData
-import javafx.scene.layout.GridPane
 import javafx.stage.Stage
-import javafx.util.Callback
 
 
 lateinit var SessionController:MainWindowController
@@ -54,6 +48,7 @@ class MainWindow: Application() {
     fun redecorateTreeView(){
         val projectTree = scene!!.lookup("#ProjectTreeView") as TreeView<String>
         projectTree.root = TreeItem<String>("Projects")
+        projectTree.root.isExpanded=true
         projectTree.isShowRoot = true
 
         for(project in SessionController.projects)
@@ -64,12 +59,18 @@ class MainWindow: Application() {
             {
                 for(dt in projectDTs)
                 {
-                    projectChild.children.add(TreeItem(dt.name))
+                    val dtItem = TreeItem(dt.name)
+                    projectChild.children.add(dtItem)
                 }
             }else
                 projectChild.children.add(TreeItem("No Digital Twins available"))
             projectTree.root.children.add(projectChild)
         }
+
+        projectTree.selectionModel.selectedItemProperty()
+            .addListener { observable, oldValue, newValue ->
+                SessionController.onDigitalTwinSelected(newValue.value)
+            }
     }
     private var scene:Scene?=null
 }

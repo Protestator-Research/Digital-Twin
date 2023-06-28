@@ -1,6 +1,7 @@
 package ui
 
 import com.github.tukcps.sysmd.rest.AgilaRepository
+import com.github.tukcps.sysmd.rest.ElementDAO
 import com.github.tukcps.sysmd.rest.Rest
 import com.github.tukcps.sysmd.rest.entities.DigitalTwin
 import com.github.tukcps.sysmd.rest.entities.Project
@@ -21,6 +22,9 @@ class MainWindowController
     var projects:MutableList<Project>
     var digitalTwins:HashMap<UUID,MutableList<DigitalTwin>> = hashMapOf()
     var applicationState:MainWindowStates
+    var elements:MutableList<ElementDAO> = mutableListOf()
+
+    private lateinit var fxController: FXController
 
     init {
         projects = AgilaRepository.getProjects()
@@ -41,5 +45,49 @@ class MainWindowController
         getDigitalTwinsOfProjects()
         applicationState = if(projects.isNotEmpty()) MainWindowStates.ONLINE_STATE else MainWindowStates.OFFLINE_STATE
         Platform.runLater({onUpdateState(applicationState)})
+    }
+
+    fun onDigitalTwinSelected(name:String){
+        var usedDT:DigitalTwin?=null
+        if(isDigitalTwinSelected(name))
+        {
+            for(key in digitalTwins.keys){
+                if(digitalTwins[key]?.isNotEmpty() == true){
+                    for(digitalTwin in digitalTwins[key]!!){
+                        if(digitalTwin.name==name){
+                            fxController.setNameOfDigitalTwin(name)
+                            usedDT = digitalTwin
+                        }
+                    }
+                }
+            }
+        }
+        if(usedDT!=null){
+            for(project in projects){
+                if(usedDT.parentProject==project.id){
+                    var branch = project.defaultBranch?.let { AgilaRepository.getBranchById(project.id, it.id) }
+                    branch?.head?.id?.let { downloadAllProjectData(project.id, it) }
+                }
+            }
+        }
+    }
+
+    fun isDigitalTwinSelected(name:String):Boolean {
+        if((name=="")||(name=="Projects"))
+            return false
+
+        for(project in projects)
+            if(name == project.name)
+                return false
+
+        return true
+    }
+
+    fun downloadAllProjectData(projectId:UUID,commitId:UUID) {
+        elements = AgilaRepository.getAllElements(projectId,commitId)
+    }
+
+    fun setFxSessionController(controller:FXController){
+        fxController = controller
     }
 }

@@ -1,5 +1,6 @@
 package ui
 
+import com.github.tukcps.sysmd.rest.entities.DigitalTwin
 import javafx.application.Platform
 import javafx.fxml.FXML
 import javafx.geometry.Insets
@@ -11,6 +12,7 @@ import javafx.util.Callback
 class FXController {
 
     init {
+        SessionController.setFxSessionController(this)
     }
 
     @FXML
@@ -62,4 +64,20 @@ class FXController {
 
 //                logger.info("OnAction {}", event)
     }
+
+    @FXML
+    fun onPlayButtonClicked(){
+
+    }
+
+    @FXML
+    fun onDownloadButtonClicked() {
+
+    }
+
+    fun setNameOfDigitalTwin(name:String) {
+        Platform.runLater({DigitalTwinLabel.text=name})
+    }
+
+    lateinit var DigitalTwinLabel:Label
 }
