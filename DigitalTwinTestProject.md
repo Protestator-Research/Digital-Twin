@@ -17,19 +17,8 @@ Condensator imports SI.
 Condensator hasA
     capacity: Capacity(10^(-12)..10000) [F]
     inputVoltage: Voltage() [V] measurable
-    charge: Capacity*Volage [C] measurable
-    outputVoltage : inputVoltage at t_0 + 1/C * \int^{t_0}_{t} I(a) da [v] mesurable
-    outputCurrent : C * (V(t) * d/dt) [i]
-   
-```
-```SysMD::Global
-Condensator isA Component
-Condensator imports SI.
-Condensator hasA
-    capacity: Capacity(10^(-12)..10000) [F]
-    inputVoltage: Voltage() [V] measurable
-    charge: Capacity*Volage [C] measurable
-    outputVoltage : inputVoltage at t_0 + 1/C * \int^{t_0}_{t} I(a) da [v] mesurable
+    charge: capacity*inputVoltage [C] measurable
+    outputVoltage : inputVoltage at t_0 + 1/C * \int^{t_0}_{t} I(a) da [v] measurable
     outputCurrent : C * (V(t) * d/dt) [i]
 ```
 ```SysMD::Global
@@ -57,10 +46,10 @@ Paralell hasA
 NAND isA Component.
 NAND imports SI.
 NAND hasA
-    inputVoltageA:Voltage() [V] measurable
-    inputVoltageB:Voltage() [V] measurable        
-    threshholdVoltage:Voltage() [V]
-    outputVoltage:Voltage() [V] measurable = (!(inputVoltageA>=threshholdVoltage)&&(inputVoltageB>=threshholdVoltage))*SystemV
+    inputVA : Voltage() [V] measurable
+    inputVB : Voltage() [V] measurable        
+    threshholdV : Voltage() [V]
+    outputV : Voltage() [V] measurable = ((inputVA<=threshholdV)||(inputVB<=threshholdV))*SystemV
 ```
 ```SysMD::Global
 COMP isA Component.

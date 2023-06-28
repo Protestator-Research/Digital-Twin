@@ -1,5 +1,7 @@
 package ui
 
+import DigitalTwinSession
+import Parser.DigitalTwinParser
 import com.github.tukcps.sysmd.rest.AgilaRepository
 import com.github.tukcps.sysmd.rest.ElementDAO
 import com.github.tukcps.sysmd.rest.Rest
@@ -16,6 +18,8 @@ enum class MainWindowStates {
     DIGITAL_TWIN_SELECTED
 }
 
+val dtSession = DigitalTwinSession()
+
 class MainWindowController
     (var onUpdateState:(MainWindowStates)->Unit) {
 
@@ -23,6 +27,7 @@ class MainWindowController
     var digitalTwins:HashMap<UUID,MutableList<DigitalTwin>> = hashMapOf()
     var applicationState:MainWindowStates
     var elements:MutableList<ElementDAO> = mutableListOf()
+    private var selectedDT:DigitalTwin?=null
 
     private lateinit var fxController: FXController
 
@@ -34,6 +39,7 @@ class MainWindowController
     fun getDigitalTwinsOfProjects(){
         for (project in projects)
         {
+            dtSession.loadedProjects.add(project.id)
             digitalTwins[project.id]=AgilaRepository.getDigitalTwinsFromProject(project.id)
         }
     }
@@ -48,7 +54,6 @@ class MainWindowController
     }
 
     fun onDigitalTwinSelected(name:String){
-        var usedDT:DigitalTwin?=null
         if(isDigitalTwinSelected(name))
         {
             for(key in digitalTwins.keys){
@@ -56,16 +61,16 @@ class MainWindowController
                     for(digitalTwin in digitalTwins[key]!!){
                         if(digitalTwin.name==name){
                             fxController.setNameOfDigitalTwin(name)
-                            usedDT = digitalTwin
+                            selectedDT = digitalTwin
                         }
                     }
                 }
             }
         }
-        if(usedDT!=null){
+        if(selectedDT!=null){
             for(project in projects){
-                if(usedDT.parentProject==project.id){
-                    var branch = project.defaultBranch?.let { AgilaRepository.getBranchById(project.id, it.id) }
+                if(selectedDT!!.parentProject==project.id){
+                    val branch = project.defaultBranch?.let { AgilaRepository.getBranchById(project.id, it.id) }
                     branch?.head?.id?.let { downloadAllProjectData(project.id, it) }
                 }
             }
@@ -90,4 +95,16 @@ class MainWindowController
     fun setFxSessionController(controller:FXController){
         fxController = controller
     }
+
+    fun startSimulation(){
+        if(selectedDT==null)
+            return
+        val parser = selectedDT?.connectedModels?.let { DigitalTwinParser(elements, it) }
+        if (parser != null) {
+            parser.filterToSelectedElements()
+            parser.parseElements()
+            parser.reloadDocumentsIfNeccesary()
+        }
+    }
+
 }

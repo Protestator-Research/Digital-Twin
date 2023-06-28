@@ -36,7 +36,7 @@ open class ParserSysMD(
     override val model: AgilaSession,                            // model in which the results will be returned.
     override val textualRepresentation: TextualRepresentation,   // the textual representation in which parsing is done
     input: String? = null                               // input as a String of scanner; if not given, the body of textual representation
-) : com.github.tukcps.sysmd.parser.ParserSysMD(model,textualRepresentation,input) {
+) : com.github.tukcps.sysmd.parser.ParserSysMD(model = model, textualRepresentation = textualRepresentation, input = input) {
 
     // A class that implements the Semantic Actions on the Agila model.
     override var semantics = SysMdSemantics(model, null, "Global", textualRepresentation)

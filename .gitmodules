@@ -1,6 +1,3 @@
-[submodule "caiman"]
-	path = caiman
-	url = https://github.com/ARM-software/caiman.git
 [submodule "sysmd"]
 	path = sysmd
 	url = https://cpsgit.informatik.uni-kl.de/open/sysmd.git

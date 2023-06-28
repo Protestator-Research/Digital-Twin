@@ -1,6 +1,5 @@
 package ui
 
-import com.github.tukcps.sysmd.rest.entities.DigitalTwin
 import javafx.application.Platform
 import javafx.fxml.FXML
 import javafx.geometry.Insets
@@ -61,13 +60,15 @@ class FXController {
         val result = dialog.showAndWait()
 
         SessionController.updateFromServer(result.get().first,result.get().second.toInt())
-
-//                logger.info("OnAction {}", event)
     }
 
     @FXML
     fun onPlayButtonClicked(){
-
+        try {
+            SessionController.startSimulation()
+        }catch (ex:Exception){
+            ex.printStackTrace()
+        }
     }
 
     @FXML
