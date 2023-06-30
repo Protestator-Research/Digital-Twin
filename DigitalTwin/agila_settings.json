@@ -1,6 +1,6 @@
 {
   "description": "fontWeight: value in range(1,1000)---400 is Normal 700 is Bold fontFamily: choose between Monospace, Cursive, SansSerif, Serif and Default currentOs: for Win 11 you have to manually set this property!!lineHeightMultiplier: depends on your screen resolution and maybe on OS -- 1.5f works for me on 1920x1080 and 3.0f on 2736x1824",
-  "startDirectory": "C:\\Users\\Moritz Herzog/SysMD",
+  "startDirectory": "C:\\Users\\herzog/SysMD",
   "imagesToCache": 10,
   "defaultHighlightStyle": {
     "colorRGBA": "0.0;0.0;1.0;1.0",

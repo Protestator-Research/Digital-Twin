@@ -33,13 +33,13 @@ import com.github.tukcps.sysmd.services.resolveName
  * @block: optional lambda that will be executed in scope of the parser production rules, for debugging & testing.
  */
 open class ParserSysMD(
-    override val model: AgilaSession,                            // model in which the results will be returned.
-    override val textualRepresentation: TextualRepresentation,   // the textual representation in which parsing is done
+    val model: AgilaSession,                            // model in which the results will be returned.
+    val textualRepresentation: TextualRepresentation,   // the textual representation in which parsing is done
     input: String? = null                               // input as a String of scanner; if not given, the body of textual representation
-) : com.github.tukcps.sysmd.parser.ParserSysMD(model = model, textualRepresentation = textualRepresentation, input = input) {
+) : Scanner(input?:textualRepresentation.body)  {
 
     // A class that implements the Semantic Actions on the Agila model.
-    override var semantics = SysMdSemantics(model, null, "Global", textualRepresentation)
+    var semantics = SysMdSemantics(model, null, "Global", textualRepresentation)
 
     // The line in which a triple started with a subject; used for error reporting.
     private var subjectLine: Int = 0
@@ -66,7 +66,7 @@ open class ParserSysMD(
      * Implementation of the production rule:
      *    SysMD :- (Triple ".")* EOF
      */
-    override fun parseSysMD() {
+    fun parseSysMD() {
         while (token.kind != EOF) {
             try {
                 parseTriple()
@@ -93,7 +93,7 @@ open class ParserSysMD(
      *
      * For implementation, we consider the special relations IS_A, HAS_A, IMPORTS, DEFINES separately.
      */
-    override fun parseTriple() {
+    fun parseTriple() {
         val subject: Identification
 
         if (tokenIs(EOF))  return
@@ -113,7 +113,8 @@ open class ParserSysMD(
                 }
             }
             else ->
-                throw SyntaxError(this, "Expecting relation but read $consumedToken")
+                throw Exception("Sytax Error: Expecting relation but read $consumedToken")
+//                throw SyntaxError(this, "Expecting relation but read $consumedToken")
         }
     }
 
@@ -195,7 +196,9 @@ open class ParserSysMD(
                 semantics.hasAPackage(owner, subject)
             }
             RELATIONSHIP, CONNECTOR -> parseRelationshipDefinition(subject, owner)
-            else -> throw SyntaxError(parser = this, "In class definition: after 'isA', a name, or 'Relationship', 'Connector' is expected.")
+            else ->
+                throw Exception("Sytax Error: In class definition: after 'isA', a name, or 'Relationship', 'Connector' is expected.")
+//                throw SyntaxError(parser = this, "In class definition: after 'isA', a name, or 'Relationship', 'Connector' is expected.")
         }
     }
 
@@ -216,7 +219,7 @@ open class ParserSysMD(
      *   '<' NAME '>' NAME | NAME '<' NAME '>'
      * This gives SysMD the ability to identify an element either via a unique ID or a path specification.
      */
-    override fun parseIdentification(): Identification {
+    fun parseIdentification(): Identification {
         var shortName: String? = null
         var name: String? = null
         when(token.kind) {
@@ -236,7 +239,9 @@ open class ParserSysMD(
                     consume(GT)
                 }
             }
-            else -> throw SyntaxError(this, "Expected identification or qualified name, but read: $token")
+            else ->
+                throw Exception("Sytax Error: Expected identification or qualified name, but read: $token")
+//                throw SyntaxError(this, "Expected identification or qualified name, but read: $token")
         }
         return Identification(shortName, name)
     }
@@ -246,7 +251,7 @@ open class ParserSysMD(
      * A list of Objects, separated by comma and finished by a dot.
      *   ObjectList :- Object ("," Object)*
      */
-    override fun parseFeatureList(subject: Identification) {
+    fun parseFeatureList(subject: Identification) {
         parseFeature(subject)
         while (token.kind == COMMA || token.kind == SEMICOLON) {
             consume(COMMA, SEMICOLON)
@@ -261,7 +266,8 @@ open class ParserSysMD(
      **/
     private fun parseSimpleName(): SimpleName {
         if (token.kind != NAME_LIT)
-            throw SyntaxError(this, "Expected name, but read ${toString()}")
+            throw Exception("Sytax Error: Expected name, but read ${toString()}")
+//            throw SyntaxError(this, "Expected name, but read ${toString()}")
         val name = token.string
         nextToken()
         return name
@@ -274,14 +280,16 @@ open class ParserSysMD(
      */
     private fun parseQualifiedName(): String {
         if (token.kind != NAME_LIT)
-            throw SyntaxError(this, "Expected name, but read ${toString()}")
+            throw Exception("Sytax Error: Expected name, but read ${toString()}")
+//            throw SyntaxError(this, "Expected name, but read ${toString()}")
         var path = token.string
         nextToken()
 
         while (token.kind == DPDP) {
             nextToken()
             if (token.kind != NAME_LIT)
-                throw SyntaxError(this, "Expected name, but read ${toString()}$")
+                throw Exception("Sytax Error: Expected name, but read ${toString()}")
+//                throw SyntaxError(this, "Expected name, but read ${toString()}$")
             path += "::" + token.string
             nextToken()
         }
@@ -357,7 +365,9 @@ open class ParserSysMD(
                     }
                 }
             }
-            else -> throw SyntaxError(this, "Expecting Feature, Value, Relationship, or NAME, but read $token")
+            else ->
+                throw Exception("Sytax Error: Expecting Feature, Value, Relationship, or NAME, but read $token")
+//                throw SyntaxError(this, "Expecting Feature, Value, Relationship, or NAME, but read $token")
         }
     }
 
@@ -449,7 +459,9 @@ open class ParserSysMD(
             parseQualifiedNameList().also { source = it }
             consume(TO)
             parseQualifiedNameList().also { target = it }
-        } else throw SyntaxError(this, "In Relationship: expected 'from' or name.")
+        } else
+            throw Exception("Sytax Error: max of range must be larger or equal min")
+//            throw SyntaxError(this, "In Relationship: expected 'from' or name.")
         semantics.hasRelationshipFeature(subject, name, source, relationship, target)
     }
 
@@ -463,7 +475,8 @@ open class ParserSysMD(
             parseConstInt().also { result.max = it }
         }
         if (result.min > result.max)
-            throw SyntaxError(this, message = "max of range must be larger or equal min")
+            throw Exception("Sytax Error: Inmax of range must be larger or equal min")
+//            throw SyntaxError(this, message = "max of range must be larger or equal min")
         return result
     }
 
@@ -477,7 +490,8 @@ open class ParserSysMD(
         } else if (tokenIs(FLOAT_LIT)) {
             parseConstReal().also { result = Quantity(model.builder.range(it, it),"?") }
         } else
-            throw SyntaxError(this, "expect value-range of form number .. number")
+            throw Exception("Sytax Error: expect value-range of form number .. number")
+//            throw SyntaxError(this, "expect value-range of form number .. number")
 
         if (!tokenIs(DOTDOT)) {
             return result
@@ -489,7 +503,9 @@ open class ParserSysMD(
                     result = when (result.value) {
                         is AADD -> Quantity(model.builder.range(result.aadd().getRange().min, it.toDouble()),"?")
                         is IDD -> Quantity(model.builder.rangeIDD(result.idd().getRange().min, it))
-                        else -> throw SyntaxError(this, "expect range of form [number .. number]")
+                        else ->
+                            throw Exception("Sytax Error: expect range of form [number .. number]")
+//                            throw SyntaxError(this, "expect range of form [number .. number]")
                     }
                 }
             } else if (tokenIs(FLOAT_LIT)) {
@@ -497,7 +513,9 @@ open class ParserSysMD(
                     result = when (result.value) {
                         is AADD -> Quantity(model.builder.range(result.aadd().getRange().min, it),"?")
                         is IDD -> Quantity(model.builder.range(result.idd().getRange().min.toDouble(), it),"?")
-                        else -> throw SyntaxError(this, "expect range of form [number .. number]")
+                        else ->
+                            throw Exception("Sytax Error: expect range of form [number .. number]")
+//                            throw SyntaxError(this, "expect range of form [number .. number]")
                     }
                 }
             }
@@ -532,7 +550,8 @@ open class ParserSysMD(
                     consumeIfTokenIs(RBRACE)
                 }
                 else ->
-                    throw SyntaxError(this, "When parsing constraint: expect number range, true, or false, but read $token")
+                    throw Exception("Sytax Error: When parsing constraint: expect number range, true, or false, but read $token")
+//                    throw SyntaxError(this, "When parsing constraint: expect number range, true, or false, but read $token")
             }
             return constraints
         } else
@@ -545,7 +564,7 @@ open class ParserSysMD(
      * Expression :- Comparison
      * @return an AstNode with the abstract syntax tree
      */
-    override fun parseExpression(): AstNode {
+    fun parseExpression(): AstNode {
         return parseComparison()
     }
 
@@ -630,7 +649,9 @@ open class ParserSysMD(
                 PLUS -> parseValue()
                 MINUS -> AstUnaryOp(MINUS, parseValue())
                 NOT -> AstNot(model, arrayListOf(parseValue()))
-                else -> throw SyntaxError(this, "Error in unary expression")
+                else ->
+                    throw Exception("Sytax Error: Error in unary expression")
+//                    throw SyntaxError(this, "Error in unary expression")
             }
         } else
             parseValue()
@@ -659,7 +680,7 @@ open class ParserSysMD(
      *  Unit :-> "%" // Per cent as a unit
      *          | ["1"] (NAME_LIT ["^" INTEGER_LIT])* ["/" (NAME_LIT [^INTEGER_LIT] )+]
      **/
-    override fun parseUnit(): String {
+    fun parseUnit(): String {
         var result = ""
 
         if (token.kind == PERCENT) {
@@ -716,7 +737,9 @@ open class ParserSysMD(
                     is IDD ->  AstLeaf(model, Quantity(quantity.value as IDD))
                     is StrDD ->  AstLeaf(model, Quantity(quantity.value as StrDD))
                     is BDD ->  AstLeaf(model, Quantity(quantity.value as BDD))
-                    else -> throw SemanticError("Unsupported type for $quantity.")
+                    else ->
+                        throw Exception("Sytax Error: Unsupported type for $quantity.")
+//                        throw SemanticError("Unsupported type for $quantity.")
                 }
             }
 
@@ -830,7 +853,8 @@ open class ParserSysMD(
             }
             IF -> { astNode = parseConditionalExpression() }
             else ->
-                throw SyntaxError(this, "expected value, but read: $token")
+                throw Exception("Sytax Error: expected value, but read: $token")
+//                throw SyntaxError(this, "expected value, but read: $token")
         }
         return if (neg) {
             if ((astNode is AstLeaf) && (astNode as AstLeaf).property == null) {
@@ -860,14 +884,18 @@ open class ParserSysMD(
             }
             NAME_LIT -> {
                 val name = parseQualifiedName()
-                val p = semantics.namespace.resolveName<ValueFeature>(name) ?: throw ElementNotFoundException(this, name)
+                val p = semantics.namespace.resolveName<ValueFeature>(name) ?:
+                throw Exception("Element with $name not found")
+//                throw ElementNotFoundException(this, name)
                 if (neg) -p.rangeSpecs[0].min else p.rangeSpecs[0].min //ConstReal is never a vector
             }
             TIMES ->  {
                 nextToken()
                 return if(neg) model.settings.minReal else model.settings.maxReal
             }
-            else -> throw SemanticError("Expected real constant (number literal, defined name, or '*'.")
+            else ->
+                throw Exception("Sytax Error: Expected real constant (number literal, defined name, or '*'.")
+//                throw SemanticError("Expected real constant (number literal, defined name, or '*'.")
         }
     }
 
@@ -887,7 +915,9 @@ open class ParserSysMD(
                 nextToken()
                 "*"
             }
-            else -> throw SemanticError("Expected number literal or '*'.")
+            else ->
+                throw Exception("Sytax Error: Expected number literal or '*'.")
+//                throw SemanticError("Expected number literal or '*'.")
         }
     }
 
@@ -910,7 +940,10 @@ open class ParserSysMD(
                 nextToken()
                 return if(neg) model.settings.minInt else model.settings.maxInt
             }
-            else -> throw SyntaxError(this,"Expected integer constant (number literal, defined name, or '*'.")        }
+            else ->
+                throw Exception("Sytax Error: Expected integer constant (number literal, defined name, or '*'.\"")
+//                throw SyntaxError(this,"Expected integer constant (number literal, defined name, or '*'.")
+        }
     }
 
 

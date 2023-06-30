@@ -22,12 +22,14 @@ class DigitalTwinParser(
 
     fun parseElements(){
         var index = 0
+        dtSession.import(elementsToParse)
+//        var parser = com.github.tukcps.sysmd.parser.ParserSysMD(model = dtSession, textualRepresentation = textualRepresentation)
         for(element in elementsToParse)
         {
             println("index: " + index)
             var textualRepresentation = element.toElement() as TextualRepresentation
-            dtSession[textualRepresentation.elementId] = textualRepresentation
-            var parser = com.github.tukcps.sysmd.parser.ParserSysMD(model = dtSession, textualRepresentation = textualRepresentation)
+//            dtSession[textualRepresentation.elementId] = textualRepresentation
+            var parser = ParserSysMD(model = dtSession, textualRepresentation = textualRepresentation)
             parser.parseSysMD()
             index++
         }
