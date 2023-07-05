@@ -1,6 +1,7 @@
 package Parser
 
 import com.github.tukcps.sysmd.entities.TextualRepresentation
+import com.github.tukcps.sysmd.parser.ParserSysMD
 import com.github.tukcps.sysmd.rest.ElementDAO
 import com.github.tukcps.sysmd.rest.toElement
 import ui.dtSession

@@ -29,12 +29,12 @@ class DigitalTwinSession(
                     componentsMap[(element.second as Specialization).source[0].toString()] = SysMDComponent()
                 }
             }
-//            if(element.second is ValueFeature) {
-//                println((element.second as ValueFeature).qualifiedName)
-//                val qualifiedName = (element.second as ValueFeature).qualifiedName
-//                val completeName = element.first.toString().removeSuffix("?") + "::" + qualifiedName
-//                componentsMap[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName, getTypeOfElement(completeName))
-//            }
+            if(element.second is ValueFeature) {
+                println((element.second as ValueFeature).qualifiedName)
+                val qualifiedName = (element.second as ValueFeature).qualifiedName
+                val completeName = element.first.toString().removeSuffix("?") + "::" + qualifiedName
+                componentsMap[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName, getTypeOfElement(completeName))
+            }
             println(element.toString())
         }
         println("Remodel")
