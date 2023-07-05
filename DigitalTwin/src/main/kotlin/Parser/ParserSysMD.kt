@@ -6,12 +6,14 @@ import com.github.tukcps.jaadd.values.XBool
 import com.github.tukcps.sysmd.ast.*
 import com.github.tukcps.sysmd.ast.functions.AstHasA
 import com.github.tukcps.sysmd.ast.functions.AstIsA
+import com.github.tukcps.sysmd.ast.functions.AstIte
 import com.github.tukcps.sysmd.ast.functions.AstNot
 import com.github.tukcps.sysmd.entities.*
 import com.github.tukcps.sysmd.entities.implementation.AnnotationImplementation
 import com.github.tukcps.sysmd.entities.implementation.MultiplicityImplementation
 import com.github.tukcps.sysmd.exceptions.*
 import com.github.tukcps.sysmd.parser.*
+import com.github.tukcps.sysmd.parser.Scanner
 import com.github.tukcps.sysmd.parser.Scanner.Definitions.Token
 import com.github.tukcps.sysmd.parser.Scanner.Definitions.Token.Kind.*
 import com.github.tukcps.sysmd.quantities.Quantity
@@ -21,6 +23,7 @@ import com.github.tukcps.sysmd.services.AgilaSession
 import com.github.tukcps.sysmd.services.report
 import com.github.tukcps.sysmd.services.reportInfo
 import com.github.tukcps.sysmd.services.resolveName
+import java.util.*
 
 
 /**
@@ -33,13 +36,13 @@ import com.github.tukcps.sysmd.services.resolveName
  * @block: optional lambda that will be executed in scope of the parser production rules, for debugging & testing.
  */
 open class ParserSysMD(
-    val model: AgilaSession,                            // model in which the results will be returned.
-    val textualRepresentation: TextualRepresentation,   // the textual representation in which parsing is done
+    open val model: AgilaSession,                            // model in which the results will be returned.
+    open val textualRepresentation: TextualRepresentation,   // the textual representation in which parsing is done
     input: String? = null                               // input as a String of scanner; if not given, the body of textual representation
-) : Scanner(input?:textualRepresentation.body)  {
+) : Scanner(input?:textualRepresentation.body) {
 
     // A class that implements the Semantic Actions on the Agila model.
-    var semantics = SysMdSemantics(model, null, "Global", textualRepresentation)
+    var semantics = SysMdSemantics(model, null, textualRepresentation)
 
     // The line in which a triple started with a subject; used for error reporting.
     private var subjectLine: Int = 0
@@ -52,7 +55,6 @@ open class ParserSysMD(
                     sources = mutableListOf(Identity(ref = textualRepresentation)),
                     targets = mutableListOf()
                 )
-                semantics.namespacePrefix = textualRepresentation.getNamespacePrefix()
                 require(model[textualRepresentation.elementId] != null)
                 semantics.generatedElementsAnnotation = model.create(generatedElementsAnnotation, textualRepresentation)
             }
@@ -66,18 +68,52 @@ open class ParserSysMD(
      * Implementation of the production rule:
      *    SysMD :- (Triple ".")* EOF
      */
-    fun parseSysMD() {
+    open fun parseSysMD() {
         while (token.kind != EOF) {
             try {
-                parseTriple()
-                consume(DOT, EOF) // Triple without DOT and only EOF shall deprecate.
+                if (token.toKind() in setOf(PACKAGE, PART, ATTRIBUTE, DEF, ASSOC)) {
+                    parseElement()
+                    consume(DOT, EOF, SEMICOLON)
+                } else {
+                    parseTriple()
+                    consume(DOT, EOF)
+                }
             } catch (exception: Exception) {
-                if (model.settings.catchExceptions) handleError(exception)
+                if (model.settings.catchExceptions) {
+                    handleError(exception)
+                    semantics.initOwners()
+                }
                 else throw exception
             }
         }
         consume(EOF)
     }
+
+
+    /**
+     * Element  :-
+     *                "Def"         Definition
+     *              | "Part"        Identification ":" QualifiedName = Expression
+     *              | "Attribute"   Identification ":" QualifiedName ... = Expression
+     *              | "Association" Identification ":" QualifiedName from ... to
+     *              | "Package"     Identification
+     *
+     * NOTE: We allow alternative 'kind names' for the leading keywords
+     */
+    fun parseElement() {
+        nextToken()
+        when(consumedToken.toKind()) {
+            DEF        -> { parseDefinition() }
+            PART       -> { parseComponentFeature() }
+            ATTRIBUTE  -> { parseValueFeature() }
+            ASSOC      -> { parseAssociation() }
+            PACKAGE    -> { parseIdentification().also { semantics.addPackage(identification = it) } }
+            else ->
+                throw Exception("Syntax Error: Expected def, part, attribute, assoc, package or equivalent class name, but read '${consumedToken.string}' and ${token.string}")
+//                throw SyntaxError(this, "Expected def, part, attribute, assoc, package or equivalent class name, but read '${consumedToken.string}' and ${token.string}")}
+        }
+    }
+
 
     /**
      * A semantic triple, or a description:
@@ -93,29 +129,35 @@ open class ParserSysMD(
      *
      * For implementation, we consider the special relations IS_A, HAS_A, IMPORTS, DEFINES separately.
      */
-    fun parseTriple() {
-        val subject: Identification
+    open fun parseTriple() {
 
         if (tokenIs(EOF))  return
 
-        parseIdentification().also { subject = it; subjectLine = consumedToken.lineNo }
+        parseIdentification().also { subjectLine = consumedToken.lineNo; semantics.pushOwner(it.name?:it.shortName!!) }
 
         when(consumeToken()) {
-            IS_A     -> parseClass(subject, "")
-            HAS_A    -> parseFeatureList(subject)
-            USES     -> parseQualifiedNameList().also { semantics.uses(subject.toName(), it) }
-            IMPORTS  -> parseQualifiedNameList().also { semantics.imports(subject.toName(), it) }
-            DEFINES  -> parseDefinitionList(subject.toName())
+            IS_A     -> parseQualifiedName().also       {
+                val subject = semantics.owners.pop()
+                semantics.addClass(identification = Identification(name=subject), superclass = it)
+                semantics.owners.push(subject)
+            }
+            HAS_A    -> parseElementList()
+            USES     -> parseQualifiedNameList().also { semantics.loadProject(it) }
+            IMPORTS  -> parseQualifiedNameList().also { semantics.addImport(semantics.ownerName(), it) }
+            DEFINES  -> parseDefinitionList()
             NAME_LIT -> {
                 val relationship: QualifiedName = consumedToken.string
                 parseQualifiedNameList()    .also {
-                    semantics.hasRelationshipFeature(semantics.namespacePrefix?:"Global", null, listOf(subject.toName()), relationship, it)
+                    semantics.addLink(semantics.textualRepresentation.getOwnerPrefix(), null, listOf(semantics.ownerName()), relationship, it)
                 }
             }
-            else ->
-                throw Exception("Sytax Error: Expecting relation but read $consumedToken")
-//                throw SyntaxError(this, "Expecting relation but read $consumedToken")
+            else -> {
+                semantics.initOwners()
+                throw Exception("Expecting valid triple (isA, hasA, uses, imports, defines, user-defined, but read $consumedToken")
+//                throw SyntaxError(this, "Expecting valid triple (isA, hasA, uses, imports, defines, user-defined, but read $consumedToken")
+            }
         }
+        semantics.popOwner()
     }
 
 
@@ -124,28 +166,33 @@ open class ParserSysMD(
      * The From and to parts are each optional; the default multiplicity is 1 .. 1.
      * Production rule:
      *
-     *  sourceTargetWithMultiplicity :- [FROM NAME<Type> Multiplicity] [TO NAME<Type> Multiplicity]
+     *  RelationShipDefinition :- Kind [QualifiedName<Type>]
+     *                              [FROM QualifiedName<Type> Multiplicity]
+     *                              [TO QualifiedName<Type> Multiplicity]
      *
      * @return Pair of two pairs of name and multiplicity each.
      */
-    private fun parseRelationshipDefinition(subject: Identification, owner: QualifiedName)   {
-        val relationshipKind = consume(RELATIONSHIP, CONNECTOR)
+    private fun parseRelationshipDefinition(identification: Identification) {
+        val relationshipKind = token.string
+        var valueRel = false
+        consume(ASSOC, NAME_LIT)
 
-        val superclass = if (token.kind == NAME_LIT) parseQualifiedName() else null
+        val superclass = if (token.kind == NAME_LIT) parseQualifiedName() else "Any" // Link!
         var sourcesType: Identity<Feature>? = null
         var sourcesMultiplicity: IntegerRange? = null
         var targetsType: Identity<Feature>? = null
         var targetsMultiplicity: IntegerRange? = null
 
         if (consumeIfTokenIs(FROM)) {
-            parseMultiplicity().also{ sourcesMultiplicity = it }
+            parseMultiplicity().also  { sourcesMultiplicity = it }
+            if (token.toKind() == ATTRIBUTE) consumeToken().also { valueRel = true }
             parseQualifiedName().also { sourcesType = Identity(str = it) }
         }
         if (consumeIfTokenIs(TO)) {
             parseMultiplicity().also { targetsMultiplicity = it }
             parseQualifiedName().also { targetsType = Identity(str = it) }
         }
-        semantics.isARelationship(relationshipKind, subject, superclass, sourcesType, sourcesMultiplicity, targetsType, targetsMultiplicity, owner)
+        semantics.defAssoc(relationshipKind, identification, superclass, sourcesType, sourcesMultiplicity, targetsType, targetsMultiplicity, valueRel)
     }
 
 
@@ -167,49 +214,26 @@ open class ParserSysMD(
     /**
      * Definition :- Identification "isA" QualifiedName ["from" QualifiedNameList "to" QualifiedNameList]
      */
-    private fun parseDefinition(owner: QualifiedName) {
-        val subject: Identification
+    private fun parseDefinition() {
+        val identification: Identification
 
-        parseIdentification().also { subject = it }
-        consume(IS_A, NAME_LIT, COMMA)
-        if (consumedToken.kind == IS_A) {
-            parseClass(subject, owner)
-        } else {
-            model.report(semantics.namespace, "Error or deprecated syntax: Replace 'source RELATION target' with 'owner hasA Relation name: source REL target'")
+        parseIdentification().also { identification = it }
+        consume(IS_A)
+        when (token.toKind()) {
+            ASSOC    -> parseRelationshipDefinition (identification)
+            else     -> parseQualifiedName().also { semantics.addClass(identification = identification, superclass = it) }
         }
     }
 
-    /**
-     * Class definition
-     * QualifiedName
-     * | PACKAGE QualifiedName
-     * | RELATIONSHIP [QualifiedName] [FROM QualifiedNameList] [TO QualifiedNameList]
-     * | CONNECTOR [QualifiedName] [FROM QualifiedNameList] [TO QualifiedNameList]
-     * /// eventually: | QUANTITY Real = ConstantExpression.
-     */
-    private fun parseClass(subject: Identification, owner: QualifiedName) {
-        when (token.kind) {
-            NAME_LIT ->     parseQualifiedName().also   { semantics.isAClass(subject, it, owner)}
-            // Deprecated:
-            PACKAGE ->      consumeToken().also {
-                model.report(semantics.namespace, "Deprecated syntax: Replace 'name isA Package' with 'owner hasA Package name'")
-                semantics.hasAPackage(owner, subject)
-            }
-            RELATIONSHIP, CONNECTOR -> parseRelationshipDefinition(subject, owner)
-            else ->
-                throw Exception("Sytax Error: In class definition: after 'isA', a name, or 'Relationship', 'Connector' is expected.")
-//                throw SyntaxError(parser = this, "In class definition: after 'isA', a name, or 'Relationship', 'Connector' is expected.")
-        }
-    }
 
     /**
      * Definition (";" Definition)*
      */
-    private fun parseDefinitionList(subject: QualifiedName) {
-        parseDefinition(subject)
+    private fun parseDefinitionList() {
+        parseDefinition()
         while (token.kind == SEMICOLON) {
             consume(SEMICOLON)
-            parseDefinition(subject)
+            parseDefinition()
         }
     }
 
@@ -219,7 +243,7 @@ open class ParserSysMD(
      *   '<' NAME '>' NAME | NAME '<' NAME '>'
      * This gives SysMD the ability to identify an element either via a unique ID or a path specification.
      */
-    fun parseIdentification(): Identification {
+    open fun parseIdentification(): Identification {
         var shortName: String? = null
         var name: String? = null
         when(token.kind) {
@@ -240,7 +264,7 @@ open class ParserSysMD(
                 }
             }
             else ->
-                throw Exception("Sytax Error: Expected identification or qualified name, but read: $token")
+                throw Exception("Syntax Error: Expected identification or qualified name, but read: $token")
 //                throw SyntaxError(this, "Expected identification or qualified name, but read: $token")
         }
         return Identification(shortName, name)
@@ -249,13 +273,13 @@ open class ParserSysMD(
 
     /**
      * A list of Objects, separated by comma and finished by a dot.
-     *   ObjectList :- Object ("," Object)*
+     *   ObjectList :- Object (","|";" Object)*
      */
-    fun parseFeatureList(subject: Identification) {
-        parseFeature(subject)
+    fun parseElementList() {
+        parseElement()
         while (token.kind == COMMA || token.kind == SEMICOLON) {
             consume(COMMA, SEMICOLON)
-            parseFeature(subject)
+            parseElement()
         }
     }
 
@@ -266,7 +290,7 @@ open class ParserSysMD(
      **/
     private fun parseSimpleName(): SimpleName {
         if (token.kind != NAME_LIT)
-            throw Exception("Sytax Error: Expected name, but read ${toString()}")
+            throw Exception("Syntax Error: Expected name, but read ${toString()}")
 //            throw SyntaxError(this, "Expected name, but read ${toString()}")
         val name = token.string
         nextToken()
@@ -280,7 +304,7 @@ open class ParserSysMD(
      */
     private fun parseQualifiedName(): String {
         if (token.kind != NAME_LIT)
-            throw Exception("Sytax Error: Expected name, but read ${toString()}")
+            throw Exception("Syntax Error: Expected name, but read ${toString()}")
 //            throw SyntaxError(this, "Expected name, but read ${toString()}")
         var path = token.string
         nextToken()
@@ -288,7 +312,7 @@ open class ParserSysMD(
         while (token.kind == DPDP) {
             nextToken()
             if (token.kind != NAME_LIT)
-                throw Exception("Sytax Error: Expected name, but read ${toString()}")
+                throw Exception("Syntax Error: Expected name, but read ${toString()}")
 //                throw SyntaxError(this, "Expected name, but read ${toString()}$")
             path += "::" + token.string
             nextToken()
@@ -312,73 +336,14 @@ open class ParserSysMD(
 
 
     /**
-     * An object in a semantic triple that specifies a feature.
-     * It must be of the form:
-     * OwnedElement  :-
-     *            Valuekind     Identification ValueFeature
-     *          | ComponentKind Identification ComponentFeature
-     *          | RelationKind  Identification RelationshipFeature
-     */
-    private fun parseFeature(subject: Identification) {
-        when (token.kind) {
-            PACKAGE -> {
-                nextToken()
-                val name = parseIdentification()
-                semantics.hasAPackage(subject.toName(), name)
-            }
-            RELATIONSHIP, CONNECTOR -> {
-                nextToken()
-                val name = parseIdentification()
-                parseRelationshipFeature(subject.toName(), name)
-            }
-            FEATURE -> {
-                nextToken()
-                val name = parseIdentification()
-                parseComponentFeature(subject.toName(), name)
-            }
-            VALUE -> {
-                nextToken()
-                val name = parseIdentification()
-                parseValueFeature(subject.toName(), name)
-            }
-            NAME_LIT -> {
-                parseQualifiedName().also {
-                    when (it) {
-                        "Value", "Quantity", "Requirement", "Performance" -> {
-                            val name = parseIdentification()
-                            parseValueFeature(subject.toName(), name)
-                        }
-
-                        "Component", "Processor", "Software", "Part", "Function", "System" -> {
-                            val name = parseIdentification()
-                            parseComponentFeature(subject.toName(), name)
-                        }
-
-                        "Relation", "Connector", "Link" -> {
-                            val name = if (token.kind == NAME_LIT) parseIdentification() else null
-                            parseRelationshipFeature(subject.toName(), name)
-                        }
-
-                        else -> {
-                            parseValueFeature(subject.toName(), Identification(name=it))
-                        }
-                    }
-                }
-            }
-            else ->
-                throw Exception("Sytax Error: Expecting Feature, Value, Relationship, or NAME, but read $token")
-//                throw SyntaxError(this, "Expecting Feature, Value, Relationship, or NAME, but read $token")
-        }
-    }
-
-
-    /**
      * ValueFeature :- ':' [All|One] OfClass ["(" (Range Unit | true | false ")" ] [ '[' Unit ']' ] [ '=' Expression ]
      */
-    private fun parseValueFeature(subject: QualifiedName, identification: Identification) {
+    private fun parseValueFeature() {
         val multiplicity: Multiplicity = MultiplicityImplementation(valueSpec = IntegerRange(1,1))
         val type: QualifiedName
         var direction = Feature.FeatureDirectionKind.IN
+
+        val identification = parseIdentification()
 
         consume(DP)
 
@@ -396,7 +361,7 @@ open class ParserSysMD(
         // Type: The type of which the feature shall be a subclass of ...
         parseQualifiedName().also { type = it }
 
-        val feature = semantics.hasValueFeature(subject, identification, multiplicity, type, direction)
+        val feature = semantics.addExpression(identification = identification, multiplicity = multiplicity, className = type, direction = direction)
 
         parseConstraint().also { feature.valueSpecs = it }
 
@@ -408,7 +373,7 @@ open class ParserSysMD(
         if (tokenIs(EQ)) {
             val iBeforeExpression = position
             nextToken()
-            parseExpression().also {
+            parseExpression(type, feature.elementId).also {
                 feature.ast = AstRoot(model, feature, it)
                 val iAfterExpression = position - token.string.length
                 val exprString = input.subSequence(iBeforeExpression, iAfterExpression)
@@ -421,7 +386,8 @@ open class ParserSysMD(
     /**
      * ComponentFeature :- ':' [ Multiplicity ] QualifiedName<type>  ['=' InstanceList]
      */
-    private fun parseComponentFeature(subject: QualifiedName, name: Identification) {
+    private fun parseComponentFeature() {
+        val identification = parseIdentification()
         var multiplicity: Multiplicity
         val type: QualifiedName
         var instances: List<QualifiedName> = emptyList()
@@ -433,7 +399,7 @@ open class ParserSysMD(
         if (consumeIfTokenIs(EQ)) {
             instances = parseQualifiedNameList()
         }
-        semantics.hasComponentFeature(subject, name, multiplicity, type, instances)
+        semantics.hasComponentFeature(semantics.ownerName(), identification, multiplicity, type, instances)
     }
 
     /**
@@ -441,10 +407,13 @@ open class ParserSysMD(
      *          ':' QualifiedNameList<source> QualifiedName QualifiedNameList<target>
      *      |   '=' QualifiedName FROM QualifiedNameList<source> TO QualifiedNameList<target>
      */
-    private fun parseRelationshipFeature(subject: QualifiedName, name: Identification?) {
+    private fun parseAssociation() {
+        val identification: Identification
         val source: List<QualifiedName>
         val relationship: QualifiedName
         val target: List<QualifiedName>
+
+        parseIdentification().also { identification = it  }
 
         if (tokenIs(EQ)) {
             consume(EQ)
@@ -460,10 +429,12 @@ open class ParserSysMD(
             consume(TO)
             parseQualifiedNameList().also { target = it }
         } else
-            throw Exception("Sytax Error: max of range must be larger or equal min")
+            throw Exception("Syntax Error: In Relationship: expected 'from' or name.")
 //            throw SyntaxError(this, "In Relationship: expected 'from' or name.")
-        semantics.hasRelationshipFeature(subject, name, source, relationship, target)
+        semantics.addLink(identification=identification, sources = source, relationship = relationship, targets = target)
     }
+
+
 
     /**
      * IntegerRange :- ConstInt [".." ConstInt]
@@ -475,7 +446,7 @@ open class ParserSysMD(
             parseConstInt().also { result.max = it }
         }
         if (result.min > result.max)
-            throw Exception("Sytax Error: Inmax of range must be larger or equal min")
+            throw Exception("Syntax Error: max of range must be larger or equal min")
 //            throw SyntaxError(this, message = "max of range must be larger or equal min")
         return result
     }
@@ -490,7 +461,7 @@ open class ParserSysMD(
         } else if (tokenIs(FLOAT_LIT)) {
             parseConstReal().also { result = Quantity(model.builder.range(it, it),"?") }
         } else
-            throw Exception("Sytax Error: expect value-range of form number .. number")
+            throw Exception("Syntax Error: expect value-range of form number .. number")
 //            throw SyntaxError(this, "expect value-range of form number .. number")
 
         if (!tokenIs(DOTDOT)) {
@@ -504,7 +475,7 @@ open class ParserSysMD(
                         is AADD -> Quantity(model.builder.range(result.aadd().getRange().min, it.toDouble()),"?")
                         is IDD -> Quantity(model.builder.rangeIDD(result.idd().getRange().min, it))
                         else ->
-                            throw Exception("Sytax Error: expect range of form [number .. number]")
+                            throw Exception("Syntax Error: expect range of form [number .. number]")
 //                            throw SyntaxError(this, "expect range of form [number .. number]")
                     }
                 }
@@ -514,7 +485,7 @@ open class ParserSysMD(
                         is AADD -> Quantity(model.builder.range(result.aadd().getRange().min, it),"?")
                         is IDD -> Quantity(model.builder.range(result.idd().getRange().min.toDouble(), it),"?")
                         else ->
-                            throw Exception("Sytax Error: expect range of form [number .. number]")
+                            throw Exception("Syntax Error: expect range of form [number .. number]")
 //                            throw SyntaxError(this, "expect range of form [number .. number]")
                     }
                 }
@@ -550,7 +521,7 @@ open class ParserSysMD(
                     consumeIfTokenIs(RBRACE)
                 }
                 else ->
-                    throw Exception("Sytax Error: When parsing constraint: expect number range, true, or false, but read $token")
+                    throw Exception("Syntax Error: When parsing constraint: expect number range, true, or false, but read $token")
 //                    throw SyntaxError(this, "When parsing constraint: expect number range, true, or false, but read $token")
             }
             return constraints
@@ -564,8 +535,9 @@ open class ParserSysMD(
      * Expression :- Comparison
      * @return an AstNode with the abstract syntax tree
      */
-    fun parseExpression(): AstNode {
-        return parseComparison()
+    open fun parseExpression(type: QualifiedName? = null, elementID: UUID? = null): AstNode {
+        if (type != "Real" && type != "Integer") return parseComparison(null)
+        return parseComparison(type, elementID)
     }
 
     /**
@@ -583,11 +555,7 @@ open class ParserSysMD(
         consume(QUESTION, RBRACE)
         parseExpression().also { thenExpr = it }
         consume(ELSE)
-        parseExpression().also { return semantics.ifElseExpression(
-            condExpr = ifExpr,
-            thenExpr = thenExpr,
-            elseExpr = it
-        ) }
+        parseExpression().also { return semantics.ifElseExpression(ifExpr, thenExpr, it) }
     }
 
     /**
@@ -595,8 +563,8 @@ open class ParserSysMD(
      *
      * Expression :- Sum [ relOp Sum]
      */
-    private fun parseComparison(): AstNode {
-        var result = parseSum()
+    private fun parseComparison(type: QualifiedName? = null, elementID: UUID? = null): AstNode {
+        var result = parseSum(type, elementID)
         if (consumeIfTokenIs(GT, LT, EQ, GE, LE, EE)) {
             val op = consumedToken.kind
             val t2 = parseSum()
@@ -605,13 +573,30 @@ open class ParserSysMD(
         return result
     }
 
-    /** Sum :- Product ( ("+"|"-"|"|") Product )*     */
-    private fun parseSum(): AstNode {
+    /** Sum :- Product ( ("+"|"-"|"|") Product )*
+     * Will also process enumerations on reals and ints */
+    private fun parseSum(type: QualifiedName? = null, elementID: UUID? = null): AstNode {
+        //FIXME: Ignore douplicate values
+        var decVarCounter = 0
+
         var s1 = parseProduct()
         while (consumeIfTokenIs(PLUS, MINUS, OR)) {
             val op = consumedToken.kind
-            val s2 = parseProduct()
-            s1 = AstBinOp(s1, op, s2)
+            s1 = if (type != null) {
+                if ((type == "Real" || type == "Integer") && op == OR) {
+                    val s2 = parseProduct()
+                    if (s1 is AstIte && s1.getLeaves().filter { it.literalVal == (s2 as AstLeaf).literalVal }.isNotEmpty()) continue
+                    val cond = AstLeaf(model, Quantity(model.builder.variable("${elementID.toString()}::EnumDecision-$decVarCounter")))
+                    semantics.ifElseExpression(cond, s1, s2)
+                } else { //no real/int or no "or"
+                    val s2 = parseProduct()
+                    AstBinOp(s1, op, s2)
+                }
+            } else { //type == null
+                val s2 = parseProduct()
+                AstBinOp(s1, op, s2)
+            }
+            decVarCounter++
         }
         return s1
     }
@@ -650,7 +635,7 @@ open class ParserSysMD(
                 MINUS -> AstUnaryOp(MINUS, parseValue())
                 NOT -> AstNot(model, arrayListOf(parseValue()))
                 else ->
-                    throw Exception("Sytax Error: Error in unary expression")
+                    throw Exception("Syntax Error: Error in unary expression")
 //                    throw SyntaxError(this, "Error in unary expression")
             }
         } else
@@ -680,7 +665,7 @@ open class ParserSysMD(
      *  Unit :-> "%" // Per cent as a unit
      *          | ["1"] (NAME_LIT ["^" INTEGER_LIT])* ["/" (NAME_LIT [^INTEGER_LIT] )+]
      **/
-    fun parseUnit(): String {
+    open fun parseUnit(): String {
         var result = ""
 
         if (token.kind == PERCENT) {
@@ -737,9 +722,7 @@ open class ParserSysMD(
                     is IDD ->  AstLeaf(model, Quantity(quantity.value as IDD))
                     is StrDD ->  AstLeaf(model, Quantity(quantity.value as StrDD))
                     is BDD ->  AstLeaf(model, Quantity(quantity.value as BDD))
-                    else ->
-                        throw Exception("Sytax Error: Unsupported type for $quantity.")
-//                        throw SemanticError("Unsupported type for $quantity.")
+                    else -> throw SemanticError("Unsupported type for $quantity.")
                 }
             }
 
@@ -853,7 +836,7 @@ open class ParserSysMD(
             }
             IF -> { astNode = parseConditionalExpression() }
             else ->
-                throw Exception("Sytax Error: expected value, but read: $token")
+                throw Exception("Syntax Error: expected value, but read: $token")
 //                throw SyntaxError(this, "expected value, but read: $token")
         }
         return if (neg) {
@@ -884,8 +867,8 @@ open class ParserSysMD(
             }
             NAME_LIT -> {
                 val name = parseQualifiedName()
-                val p = semantics.namespace.resolveName<ValueFeature>(name) ?:
-                throw Exception("Element with $name not found")
+                val p = semantics.namespace.resolveName<Expression>(name) ?:
+                throw Exception("Element not found.")
 //                throw ElementNotFoundException(this, name)
                 if (neg) -p.rangeSpecs[0].min else p.rangeSpecs[0].min //ConstReal is never a vector
             }
@@ -894,7 +877,7 @@ open class ParserSysMD(
                 return if(neg) model.settings.minReal else model.settings.maxReal
             }
             else ->
-                throw Exception("Sytax Error: Expected real constant (number literal, defined name, or '*'.")
+                throw Exception("Semantic Error: Expected real constant (number literal, defined name, or '*'.")
 //                throw SemanticError("Expected real constant (number literal, defined name, or '*'.")
         }
     }
@@ -916,7 +899,7 @@ open class ParserSysMD(
                 "*"
             }
             else ->
-                throw Exception("Sytax Error: Expected number literal or '*'.")
+                throw Exception("Semantic Error: Expected integer constant (number literal, defined name, or '*'.")
 //                throw SemanticError("Expected number literal or '*'.")
         }
     }
@@ -932,7 +915,7 @@ open class ParserSysMD(
             }
             NAME_LIT -> {
                 val name = parseQualifiedName()
-                val p = semantics.namespace.resolveName<ValueFeature>(name)
+                val p = semantics.namespace.resolveName<Expression>(name)
                     ?: throw ElementNotFoundException(this.textualRepresentation, element=null, name=name, token=consumedToken)
                 return if (neg) -p.intSpecs[0].min else p.intSpecs[0].min // ConstInt is never a vector
             }
@@ -941,9 +924,31 @@ open class ParserSysMD(
                 return if(neg) model.settings.minInt else model.settings.maxInt
             }
             else ->
-                throw Exception("Sytax Error: Expected integer constant (number literal, defined name, or '*'.\"")
+                throw Exception("Syntax Error: Expected integer constant (number literal, defined name, or '*'.")
 //                throw SyntaxError(this,"Expected integer constant (number literal, defined name, or '*'.")
         }
+    }
+
+
+    /**
+     * We allow some flexibility in the preceding keywords of the Element productions;
+     * this turns the "keywords" in line with the ISO26262 vocabulary.
+     */
+    fun Token.toKind(): Token.Kind = when (this.kind) {
+        DEF       -> DEF
+        PART      -> PART
+        PACKAGE   -> PACKAGE
+        ATTRIBUTE -> ATTRIBUTE
+        ASSOC     -> ASSOC
+        NAME_LIT  -> when(string) {
+            in setOf("Def")  -> DEF
+            in setOf("Component", "Function", "Part", "System", "Software", "Processor", "Feature") -> PART
+            in setOf("Package") -> PACKAGE
+            in setOf("Value", "Quantity") -> ATTRIBUTE
+            in setOf("Relationship", "Relation", "Link") -> ASSOC
+            else -> ERROR
+        }
+        else     -> ERROR
     }
 
 

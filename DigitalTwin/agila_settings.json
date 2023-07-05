@@ -14,12 +14,12 @@
       "fontWeight": 400,
       "fontFamily": "Undefined"
     },
-    "dot": {
+    "part": {
       "colorRGBA": "0.0;0.0;1.0;1.0",
       "fontWeight": 400,
       "fontFamily": "Undefined"
     },
-    "Feature": {
+    "dot": {
       "colorRGBA": "0.0;0.0;1.0;1.0",
       "fontWeight": 400,
       "fontFamily": "Undefined"
@@ -50,6 +50,11 @@
       "fontFamily": "Undefined"
     },
     "hasA": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "assoc": {
       "colorRGBA": "0.0;0.0;1.0;1.0",
       "fontWeight": 400,
       "fontFamily": "Undefined"
@@ -119,11 +124,6 @@
       "fontWeight": 400,
       "fontFamily": "Undefined"
     },
-    "Value": {
-      "colorRGBA": "0.0;0.0;1.0;1.0",
-      "fontWeight": 400,
-      "fontFamily": "Undefined"
-    },
     "uses": {
       "colorRGBA": "0.0;0.0;1.0;1.0",
       "fontWeight": 400,
@@ -141,5 +141,11 @@
     }
   },
   "heightWhenCollapsed": 100,
-  "tabSize": 4
+  "tabSize": 4,
+  "name": "John",
+  "password": "john",
+  "url": "https://www.john.com",
+  "initializationNumber": 2,
+  "propagationNumber": 1,
+  "agendaExpertMode": false
 }
