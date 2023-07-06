@@ -25,16 +25,32 @@ class DigitalTwinSession(
         for (element in getUnownedElements())
         {
             if(element.second is Specialization) {
-                if((element.second as Specialization).target[0].toString() == "Component?") {
+                if ((element.second as Specialization).target[0].toString() == "Component?") {
                     componentsMap[(element.second as Specialization).source[0].toString()] = SysMDComponent()
+                } else {
+                    val qualifiedName = (element.second as Specialization).target[0].toString().removeSuffix("?")
+                    val completeName = element.first.toString().removeSuffix("?").split("::").first()
+                    val type = getTypeOfElement(qualifiedName)
+                    if (type == null)
+
+                        if (componentsMap[qualifiedName] != null) {
+                            componentsMap[completeName]?.consistsOfComponents?.set(
+                                qualifiedName,
+                                componentsMap[qualifiedName]
+                            )
+                        }
                 }
             }
             if(element.second is ValueFeature) {
                 println((element.second as ValueFeature).qualifiedName)
                 val qualifiedName = (element.second as ValueFeature).qualifiedName
                 val completeName = element.first.toString().removeSuffix("?") + "::" + qualifiedName
-                componentsMap[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName, getTypeOfElement(completeName))
+                val type = getTypeOfElement(completeName)
+                if(type!=null) {
+                    componentsMap[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName,type)
+                }
             }
+
             println(element.toString())
         }
         println("Remodel")

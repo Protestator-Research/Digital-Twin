@@ -29,6 +29,11 @@
       "fontWeight": 400,
       "fontFamily": "Undefined"
     },
+    "output": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
     "not": {
       "colorRGBA": "0.0;0.0;1.0;1.0",
       "fontWeight": 400,
@@ -105,6 +110,11 @@
       "fontFamily": "Undefined"
     },
     "cross": {
+      "colorRGBA": "0.0;0.0;1.0;1.0",
+      "fontWeight": 400,
+      "fontFamily": "Undefined"
+    },
+    "input": {
       "colorRGBA": "0.0;0.0;1.0;1.0",
       "fontWeight": 400,
       "fontFamily": "Undefined"
