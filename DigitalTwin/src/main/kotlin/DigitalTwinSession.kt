@@ -36,7 +36,7 @@ class DigitalTwinSession(
                         if (componentsMap[qualifiedName] != null) {
                             componentsMap[completeName]?.consistsOfComponents?.set(
                                 qualifiedName,
-                                componentsMap[qualifiedName]
+                                componentsMap[qualifiedName] !!
                             )
                         }
                 }
