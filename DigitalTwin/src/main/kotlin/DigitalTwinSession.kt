@@ -48,6 +48,12 @@ class DigitalTwinSession(
                 val type = getTypeOfElement(completeName)
                 if(type!=null) {
                     componentsMap[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName,type)
+                    if((element.second as ValueFeature).isMeasurable)
+                        componentsMap[element.first.toString().removeSuffix("?")]?.setMeasurable(qualifiedName)
+                    if((element.second as ValueFeature).isInput)
+                        componentsMap[element.first.toString().removeSuffix("?")]?.setInput(qualifiedName)
+                    if((element.second as ValueFeature).isOutput)
+                        componentsMap[element.first.toString().removeSuffix("?")]?.setOutput(qualifiedName)
                 }
             }
 
