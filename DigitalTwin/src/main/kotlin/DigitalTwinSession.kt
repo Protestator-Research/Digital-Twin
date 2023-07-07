@@ -1,6 +1,4 @@
-import Elements.SysMDComponent
-import Elements.SysMDElement
-import Elements.SysMDType
+import Elements.*
 import com.github.tukcps.jaadd.DDBuilder
 import com.github.tukcps.sysmd.cspsolver.DiscreteSolver
 import com.github.tukcps.sysmd.entities.*
@@ -42,7 +40,7 @@ class DigitalTwinSession(
                 }
             }
             if(element.second is ValueFeature) {
-                println((element.second as ValueFeature).qualifiedName)
+//                println((element.second as ValueFeature).qualifiedName)
                 val qualifiedName = (element.second as ValueFeature).qualifiedName
                 val completeName = element.first.toString().removeSuffix("?") + "::" + qualifiedName
                 val type = getTypeOfElement(completeName)
@@ -57,7 +55,50 @@ class DigitalTwinSession(
                 }
             }
 
-            println(element.toString())
+//            println(element.toString())
+        }
+        var i=0
+        while(i<getUnownedElements().size) {
+            var isAddionalSystemKnowledge = true;
+            val element = getUnownedElements().elementAt(i)
+            for(alreadyAnalyzed in componentsMap.keys) {
+                if (element.first.toString().contains(alreadyAnalyzed)) {
+                    isAddionalSystemKnowledge = false
+                    break
+                }
+                if(element.second is Class){
+                    if ((element.second as Class).name?.contains(alreadyAnalyzed) == true) {
+                        isAddionalSystemKnowledge = false
+                        break
+                    }
+                }
+            }
+            if(isAddionalSystemKnowledge) {
+                println(element.toString())
+                println("${element.first.toString()} will be analyzed")
+
+                if(element.second is Import) {
+                    SystemElements[element.first.toString().removeSuffix("?")] = SysMDTwin()
+                }
+
+                if(element.second is ValueFeature) {
+                    println((element.second as ValueFeature).qualifiedName)
+                    val qualifiedName = (element.second as ValueFeature).qualifiedName
+                    val completeName = element.first.toString().removeSuffix("?") + "::" + qualifiedName
+                    val type = getTypeOfElement(completeName)
+                    if(type!=null) {
+                        SystemElements[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName,type)
+                        if((element.second as ValueFeature).isMeasurable)
+                            SystemElements[element.first.toString().removeSuffix("?")]?.setMeasurable(qualifiedName)
+                        if((element.second as ValueFeature).isInput)
+                            SystemElements[element.first.toString().removeSuffix("?")]?.setInput(qualifiedName)
+                        if((element.second as ValueFeature).isOutput)
+                            SystemElements[element.first.toString().removeSuffix("?")]?.setOutput(qualifiedName)
+                    }
+                }
+
+            }
+            i++
         }
         println("Remodel")
     }
@@ -82,4 +123,6 @@ class DigitalTwinSession(
 
 
     val componentsMap = hashMapOf<String,SysMDElement>()
+    val globalProperties = hashMapOf<String, SysMDPropertie<*>>()
+    val SystemElements = hashMapOf<String, SysMDElement>()
 }
