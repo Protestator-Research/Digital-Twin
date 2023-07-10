@@ -97,6 +97,13 @@ class DigitalTwinSession(
                     }
                 }
 
+                if(element.second is Specialization) {
+                    println("element ${(element.second as Specialization).source.first()} is ${(element.second as Specialization).target.first().toString().removeSuffix("?")}")
+                    if((getTypeOfElement(element.first.toString().removeSuffix("?"))==null)&&(SystemElements[element.first.toString().split("::").first()]?.consistsOfComponents?.containsKey((element.second as Specialization).source.first().toString())==false)){
+                        SystemElements[element.first.toString().split("::").first()]?.consistsOfComponents?.set((element.second as Specialization).source.first().toString(),componentsMap[(element.second as Specialization).target.first().toString().removeSuffix("?")] !!)
+                    }
+                }
+
             }
             i++
         }
