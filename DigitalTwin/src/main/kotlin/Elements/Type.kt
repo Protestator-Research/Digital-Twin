@@ -44,6 +44,9 @@ enum class SysMDType {
     implmenents,
     implementedBy,
     executes,
-    executedby
+    executedby,
+
+
+    ERROR
 
 }

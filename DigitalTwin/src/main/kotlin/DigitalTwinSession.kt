@@ -1,13 +1,9 @@
 import Elements.*
 import com.github.tukcps.jaadd.DDBuilder
-import com.github.tukcps.sysmd.cspsolver.DiscreteSolver
+import com.github.tukcps.jaadd.values.IntegerRange
 import com.github.tukcps.sysmd.entities.*
-import com.github.tukcps.sysmd.entities.implementation.PackageImplementation
-import com.github.tukcps.sysmd.parser.QualifiedName
-import com.github.tukcps.sysmd.rest.ElementDAO
 import com.github.tukcps.sysmd.services.*
 import java.util.*
-import kotlin.collections.HashMap
 
 class DigitalTwinSession(
     id: UUID = UUID.randomUUID(),
@@ -20,46 +16,79 @@ class DigitalTwinSession(
     }
 
     fun remodelRepresentation(){
-//        for(element in )
-
         for (element in getUnownedElements())
         {
-            if(element.second is Specialization) {
+            if((element.first !is Association)&&(element.second is Specialization)) {
                 if ((element.second as Specialization).target[0].toString() == "Component?") {
                     componentsMap[(element.second as Specialization).source[0].toString()] = SysMDComponent()
                 } else {
                     val qualifiedName = (element.second as Specialization).target[0].toString().removeSuffix("?")
                     val completeName = element.first.toString().removeSuffix("?").split("::").first()
                     val partName = element.first.toString().removeSuffix("?").split("::").last()
-                    val type = getTypeOfElement(qualifiedName)
+                    val type = getTypeOfElement(element.first.toString().removeSuffix("?"))
+                    val number = getNumberOfElements(element.first.toString().removeSuffix("?"))
                     if (type == null)
-
-                        if (componentsMap[qualifiedName] != null) {
-                            componentsMap[completeName]?.consistsOfComponents?.set(
-                                partName,
-                                componentsMap[qualifiedName] !!
-                            )
+                        if(number>1) {
+                            for(i in 1..number){
+                                if (componentsMap[qualifiedName] != null) {
+                                    componentsMap[completeName]?.consistsOfComponents?.set(
+                                        "$partName$i",
+                                        componentsMap[qualifiedName]!!
+                                    )
+                                }
+                            }
+                        }
+                        else {
+                            if (componentsMap[qualifiedName] != null) {
+                                componentsMap[completeName]?.consistsOfComponents?.set(
+                                    partName,
+                                    componentsMap[qualifiedName]!!
+                                )
+                            }
                         }
                 }
             }
             if(element.second is ValueFeature) {
-//                println((element.second as ValueFeature).qualifiedName)
                 val qualifiedName = (element.second as ValueFeature).qualifiedName
                 val completeName = element.first.toString().removeSuffix("?") + "::" + qualifiedName
                 val type = getTypeOfElement(completeName)
+                val number = getNumberOfElements(completeName)
                 if(type!=null) {
-                    componentsMap[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName,type)
-                    if((element.second as ValueFeature).isMeasurable)
-                        componentsMap[element.first.toString().removeSuffix("?")]?.setMeasurable(qualifiedName)
-                    if((element.second as ValueFeature).isInput)
-                        componentsMap[element.first.toString().removeSuffix("?")]?.setInput(qualifiedName)
-                    if((element.second as ValueFeature).isOutput)
-                        componentsMap[element.first.toString().removeSuffix("?")]?.setOutput(qualifiedName)
+                    if (number > 1) {
+                        for(i in 1..number){
+                            componentsMap[element.first.toString().removeSuffix("?")]?.addProperty("$qualifiedName$i", type)
+                            componentsMap[element.first.toString().removeSuffix("?")]?.getProperty("$qualifiedName$i")?.id =
+                                element.second.elementId
+
+                            if ((element.second as ValueFeature).isMeasurable)
+                                componentsMap[element.first.toString().removeSuffix("?")]?.setMeasurable("$qualifiedName$i")
+                            if ((element.second as ValueFeature).isInput)
+                                componentsMap[element.first.toString().removeSuffix("?")]?.setInput("$qualifiedName$i")
+                            if ((element.second as ValueFeature).isOutput)
+                                componentsMap[element.first.toString().removeSuffix("?")]?.setOutput("$qualifiedName$i")
+                        }
+                    } else {
+                        componentsMap[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName, type)
+                        componentsMap[element.first.toString().removeSuffix("?")]?.getProperty(qualifiedName)?.id =
+                            element.second.elementId
+
+                        if ((element.second as ValueFeature).isMeasurable)
+                            componentsMap[element.first.toString().removeSuffix("?")]?.setMeasurable(qualifiedName)
+                        if ((element.second as ValueFeature).isInput)
+                            componentsMap[element.first.toString().removeSuffix("?")]?.setInput(qualifiedName)
+                        if ((element.second as ValueFeature).isOutput)
+                            componentsMap[element.first.toString().removeSuffix("?")]?.setOutput(qualifiedName)
+                    }
                 }
+            }
+
+            if(element.second is Multiplicity) {
+
             }
 
             println(element.toString())
         }
+
         var i=0
         while(i<getUnownedElements().size) {
             var isAddionalSystemKnowledge = true;
@@ -91,6 +120,7 @@ class DigitalTwinSession(
                     val type = getTypeOfElement(completeName)
                     if(type!=null) {
                         SystemElements[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName,type)
+                        SystemElements[element.first.toString().removeSuffix("?")]?.getProperty(qualifiedName)?.id=element.second.elementId
                         if((element.second as ValueFeature).isMeasurable)
                             SystemElements[element.first.toString().removeSuffix("?")]?.setMeasurable(qualifiedName)
                         if((element.second as ValueFeature).isInput)
@@ -100,13 +130,23 @@ class DigitalTwinSession(
                     }
                 }
 
-                if(element.second is Specialization) {
+                if((element.first !is Association)&&(element.second is Specialization)) {
                     println("element ${(element.second as Specialization).source.first()} is ${(element.second as Specialization).target.first().toString().removeSuffix("?")}")
-                    if((getTypeOfElement(element.first.toString().removeSuffix("?"))==null)&&(SystemElements[element.first.toString().split("::").first()]?.consistsOfComponents?.containsKey((element.second as Specialization).source.first().toString())==false)){
-                        SystemElements[element.first.toString().split("::").first()]?.consistsOfComponents?.set((element.second as Specialization).source.first().toString(),componentsMap[(element.second as Specialization).target.first().toString().removeSuffix("?")] !!)
+                    if((element.second as Specialization).target.first().toString().removeSuffix("?")=="connectTo") {
+                        println("${element.first.javaClass}")
+                        println("Connection Source ${(element.first.ref as Association).source}")
+                        println("Connection Target ${(element.first.ref as Association).target}")
+                    }else if((element.second as Specialization).target.first().toString().removeSuffix("?")=="hasValue"){
+                        println("Has Value Source ${(element.first.ref as Association).source}")
+                        println("Has Value Target ${(element.first.ref as Association).target}")
+                        val fullName = (element.first.ref as Association).source.toString().removeSuffix("?]").removePrefix("[")
+                        val property = getPropertyFromAddress(fullName)
+                        getConstantOfValue((element.first.ref as Association).target.toString(),property)
+                    }
+                    else if((getTypeOfElement(element.first.toString().removeSuffix("?"))==null)&&(SystemElements[element.first.toString().split("::").first()]?.consistsOfComponents?.containsKey((element.second as Specialization).source.first().toString())==false)){
+                        SystemElements[element.first.toString().split("::").first()]?.consistsOfComponents?.set((element.second as Specialization).source.first().toString(),componentsMap[(element.second as Specialization).target.first().toString().removeSuffix("?")]!!.copyOfElement(null) )
                     }
                 }
-
             }
             i++
         }
@@ -131,8 +171,47 @@ class DigitalTwinSession(
         return null
     }
 
+    private fun getNumberOfElements(name:String): Long {
+        for(element in getUnownedElements()){
+            if((element.first.toString()==(name+"?"))&&(element.second is Multiplicity))
+            {
+                return ((element.second as Multiplicity).valueSpecs.first() as IntegerRange).max
+            }
+        }
+        return 1
+    }
+
+
+    private fun getConstantOfValue(name:String,property:SysMDProperty<*>){
+        if (name.contains("Resistance22k"))
+            (property as SysMDProperty<Double>).currentValue=22000.0
+        else if(name.contains("Resistance4k7"))
+            (property as SysMDProperty<Double>).currentValue=4700.0
+        else if(name.contains("Resistance10k"))
+            (property as SysMDProperty<Double>).currentValue=4700.0
+        else if(name.contains("ZeroResistance"))
+            (property as SysMDProperty<Double>).currentValue=0.0000000000000000001
+        else if(name.contains("umFarat"))
+            (property as SysMDProperty<Double>).currentValue=0.00001
+    }
+
+    private fun getPropertyFromAddress(address:String):SysMDProperty<*> {
+        return getPropertyFromAddress(address.split("::"),0)
+    }
+
+    private fun getPropertyFromAddress(addressElements:List<String>,index:Int, elem:SysMDElement?=null) : SysMDProperty<*>{
+        if((elem == null)&&index>0)
+            throw Exception("Something Bad Happended")
+
+        when (addressElements.size-index) {
+            addressElements.size -> return getPropertyFromAddress(addressElements,index+1,SystemElements[addressElements[index]])
+            1 -> return elem?.getProperty(addressElements[index]) ?: SysMDProperty<Double>(currentValue = -123456789.123456789, type=SysMDType.ERROR)
+            else -> return getPropertyFromAddress(addressElements,index+1, elem?.consistsOfComponents!![addressElements[index]])
+        }
+    }
+
 
     val componentsMap = hashMapOf<String,SysMDElement>()
-    val globalProperties = hashMapOf<String, SysMDPropertie<*>>()
+    val globalProperties = hashMapOf<String, SysMDProperty<*>>()
     val SystemElements = hashMapOf<String, SysMDElement>()
 }

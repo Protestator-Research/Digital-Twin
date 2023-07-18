@@ -32,6 +32,8 @@ class MainWindowController
     private lateinit var fxController: FXController
 
     init {
+        Rest.baseURI= "cpsiot2.cs.uni-kl.de"
+        Rest.port = 8081
         projects = AgilaRepository.getProjects()
         getDigitalTwinsOfProjects()
         applicationState = if(projects.isNotEmpty()) MainWindowStates.ONLINE_STATE else MainWindowStates.OFFLINE_STATE
