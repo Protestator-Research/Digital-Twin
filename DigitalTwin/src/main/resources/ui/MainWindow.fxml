@@ -55,9 +55,9 @@
 <?import javafx.scene.paint.Color?>
 <?import javafx.scene.text.Font?>
 
-<VBox prefHeight="600.0" prefWidth="900.0" xmlns="http://javafx.com/javafx/20.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ui.FXController">
+<VBox prefHeight="600.0" prefWidth="1483.0" xmlns="http://javafx.com/javafx/20.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ui.FXController">
   <children>
-    <MenuBar VBox.vgrow="NEVER">
+    <MenuBar prefHeight="34.0" prefWidth="1232.0" VBox.vgrow="NEVER">
       <menus>
         <Menu mnemonicParsing="false" text="File">
           <items>
@@ -91,37 +91,41 @@
         </Menu>
       </menus>
     </MenuBar>
-    <SplitPane dividerPositions="0.2505567928730512" focusTraversable="true" prefHeight="-1.0" prefWidth="-1.0" VBox.vgrow="ALWAYS">
+    <SplitPane dividerPositions="0.17690749493585414, 0.7900067521944631" focusTraversable="true" prefHeight="-1.0" prefWidth="-1.0" VBox.vgrow="ALWAYS">
       <items>
         <AnchorPane>
                <children>
                   <TreeView fx:id="ProjectTreeView" layoutX="11.0" layoutY="14.0" prefHeight="551.0" prefWidth="222.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
                </children>
         </AnchorPane>
-        <ScrollPane prefHeight="-1.0" prefWidth="-1.0">
+        <ScrollPane prefHeight="537.0" prefWidth="972.0">
           <content>
-            <AnchorPane id="Content" minHeight="-1.0" minWidth="-1.0" prefHeight="551.0" prefWidth="665.0">
+            <AnchorPane id="Content" minHeight="-1.0" minWidth="-1.0" prefHeight="994.0" prefWidth="889.0" snapToPixel="false">
               <children>
-                <Label fx:id="DigitalTwinLabel" alignment="CENTER" layoutX="14.0" layoutY="14.0" style="&#10;" text="No Twin Selected" textAlignment="CENTER" wrapText="false">
+                <Label fx:id="DigitalTwinLabel" alignment="CENTER" layoutX="14.0" layoutY="14.0" style="&#10;" text="No Twin Selected" textAlignment="CENTER" wrapText="false" AnchorPane.leftAnchor="15.0">
                            <font>
                       <Font size="18.0" fx:id="x1" />
                            </font>
                            <textFill>
                       <Color red="0.624" green="0.624" blue="0.624" fx:id="x2" />
-                           </textFill></Label>
-                        <Button fx:id="PlayButton" layoutX="613.0" layoutY="15.0" mnemonicParsing="false" onAction="#onPlayButtonClicked" text="Play" />
-                        <DatePicker fx:id="FromDateSelect" layoutX="214.0" layoutY="15.0" prefHeight="25.0" prefWidth="143.0" />
-                        <Label layoutX="184.0" layoutY="19.0" text="From" />
-                        <Label layoutX="364.0" layoutY="19.0" text="To" />
-                        <DatePicker fx:id="ToDateSelect" layoutX="381.0" layoutY="15.0" prefHeight="25.0" prefWidth="136.0" />
-                        <Button fx:id="DownloadDataButton" layoutX="532.0" layoutY="15.0" mnemonicParsing="false" onAction="#onDownloadButtonClicked" prefHeight="25.0" prefWidth="68.0" text="Get Data" />
-                        <TableView fx:id="DTDataTable" layoutX="14.0" layoutY="54.0" prefHeight="471.0" prefWidth="638.0">
+                           </textFill>
+                        </Label>
+                        <Button fx:id="PlayButton" layoutX="613.0" layoutY="15.0" mnemonicParsing="false" onAction="#onPlayButtonClicked" text="Play" AnchorPane.rightAnchor="14.0" />
+                        <DatePicker fx:id="FromDateSelect" layoutX="214.0" layoutY="15.0" prefHeight="25.0" prefWidth="143.0" AnchorPane.rightAnchor="308.0" />
+                        <Label layoutX="184.0" layoutY="19.0" text="From" AnchorPane.rightAnchor="453.0" />
+                        <Label layoutX="364.0" layoutY="19.0" text="To" AnchorPane.rightAnchor="287.0" />
+                        <DatePicker fx:id="ToDateSelect" layoutX="381.0" layoutY="15.0" prefHeight="25.0" prefWidth="136.0" AnchorPane.rightAnchor="148.0" />
+                        <Button fx:id="DownloadDataButton" layoutX="533.0" layoutY="15.0" mnemonicParsing="false" onAction="#onDownloadButtonClicked" prefHeight="25.0" prefWidth="68.0" text="Get Data" AnchorPane.rightAnchor="64.0" />
+                        <TableView fx:id="DTDataTable" layoutX="15.0" layoutY="54.0" prefHeight="471.0" prefWidth="853.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="54.0">
                           <columns>
                             <TableColumn prefWidth="75.0" text="C1" />
                             <TableColumn prefWidth="75.0" text="C2" />
                           </columns>
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
                         </TableView>
-                        <LineChart fx:id="DTDataChart" layoutX="16.0" layoutY="563.0" prefHeight="431.0" prefWidth="633.0">
+                        <LineChart fx:id="DTDataChart" layoutX="16.0" layoutY="563.0" prefHeight="431.0" prefWidth="850.0" AnchorPane.leftAnchor="16.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="563.0">
                           <xAxis>
                             <CategoryAxis side="BOTTOM" />
                           </xAxis>
@@ -130,9 +134,17 @@
                           </yAxis>
                         </LineChart>
               </children>
+                     <opaqueInsets>
+                        <Insets />
+                     </opaqueInsets>
             </AnchorPane>
           </content>
         </ScrollPane>
+            <AnchorPane prefHeight="200.0" prefWidth="200.0">
+               <children>
+                  <TreeView fx:id="DigitalTwinStructure" prefHeight="547.0" prefWidth="308.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+               </children>
+            </AnchorPane>
 <!--        <AnchorPane>-->
 <!--          <children>-->
 <!--            <Label alignment="CENTER" font="$x1" layoutX="14.0" layoutY="14.0" style="&#10;" text="Details" textAlignment="CENTER" textFill="$x2" wrapText="false" />-->

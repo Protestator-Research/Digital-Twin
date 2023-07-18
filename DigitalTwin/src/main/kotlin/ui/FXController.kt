@@ -80,5 +80,53 @@ class FXController {
         Platform.runLater({DigitalTwinLabel.text=name})
     }
 
+    fun redecorateDigitalTwinStructure() {
+        if (SessionController.selectedDT != null) {
+
+            DigitalTwinStructure.root = TreeItem(SessionController.selectedDT!!.name)
+            var componentsItem :TreeItem<String> = TreeItem("Components")
+
+            for(key in dtSession.componentsMap.keys){
+                var componentItem = TreeItem(key)
+                var propertyItem= TreeItem("Properties")
+                for (pkey in dtSession.componentsMap[key]!!.properties){
+                    var prop = TreeItem(pkey.key + " : " + pkey.value.type)
+                    propertyItem.children.add(prop)
+                }
+                componentItem.children.add(propertyItem)
+                var components = TreeItem("Components")
+                for (ckey in dtSession.componentsMap[key]!!.consistsOfComponents) {
+                    var comp = TreeItem(ckey.key)
+                    components.children.add(comp)
+                }
+                componentItem.children.add(components)
+                componentsItem.children.add(componentItem)
+            }
+
+            var SystemsItem :TreeItem<String> = TreeItem("Systems")
+
+            for(key in dtSession.SystemElements.keys){
+                var componentItem = TreeItem(key)
+                var propertyItem= TreeItem("Properties")
+                for (pkey in dtSession.SystemElements[key]!!.properties){
+                    var prop = TreeItem(pkey.key + " : " + pkey.value.type)
+                    propertyItem.children.add(prop)
+                }
+                componentItem.children.add(propertyItem)
+                var components = TreeItem("Components")
+                for (ckey in dtSession.SystemElements[key]!!.consistsOfComponents) {
+                    var comp = TreeItem(ckey.key)
+                    components.children.add(comp)
+                }
+                componentItem.children.add(components)
+                SystemsItem.children.add(componentItem)
+            }
+
+            DigitalTwinStructure.root.children.add(componentsItem)
+            DigitalTwinStructure.root.children.add(SystemsItem)
+        }
+    }
+
     lateinit var DigitalTwinLabel:Label
+    lateinit var DigitalTwinStructure:TreeView<String>
 }

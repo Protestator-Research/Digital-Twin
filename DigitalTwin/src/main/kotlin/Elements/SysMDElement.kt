@@ -78,7 +78,7 @@ abstract class SysMDElement {
 
 
     val connectionType:ConnectionType = ConnectionType.UNDEFINED
-    protected var properties:HashMap<String,SysMDProperty<*>> = hashMapOf()
+    var properties:HashMap<String,SysMDProperty<*>> = hashMapOf()
     var inputs:HashMap<String,SysMDProperty<*>> = hashMapOf()
     var outputs:HashMap<String,SysMDProperty<*>> = hashMapOf()
     var consistsOfComponents:HashMap<String,SysMDElement> = hashMapOf()

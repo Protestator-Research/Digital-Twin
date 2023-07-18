@@ -114,37 +114,90 @@ class DigitalTwinSession(
                 }
 
                 if(element.second is ValueFeature) {
+
                     println((element.second as ValueFeature).qualifiedName)
+
                     val qualifiedName = (element.second as ValueFeature).qualifiedName
                     val completeName = element.first.toString().removeSuffix("?") + "::" + qualifiedName
                     val type = getTypeOfElement(completeName)
+                    val number = getNumberOfElements(completeName)
                     if(type!=null) {
-                        SystemElements[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName,type)
-                        SystemElements[element.first.toString().removeSuffix("?")]?.getProperty(qualifiedName)?.id=element.second.elementId
-                        if((element.second as ValueFeature).isMeasurable)
-                            SystemElements[element.first.toString().removeSuffix("?")]?.setMeasurable(qualifiedName)
-                        if((element.second as ValueFeature).isInput)
-                            SystemElements[element.first.toString().removeSuffix("?")]?.setInput(qualifiedName)
-                        if((element.second as ValueFeature).isOutput)
-                            SystemElements[element.first.toString().removeSuffix("?")]?.setOutput(qualifiedName)
+                        if (number > 1) {
+                            for (i in 1..number) {
+                                SystemElements[element.first.toString().removeSuffix("?")]?.addProperty("$qualifiedName$i", type)
+                                SystemElements[element.first.toString().removeSuffix("?")]?.getProperty("$qualifiedName$i")?.id = element.second.elementId
+                                if ((element.second as ValueFeature).isMeasurable)
+                                    SystemElements[element.first.toString().removeSuffix("?")]?.setMeasurable("$qualifiedName$i")
+                                if ((element.second as ValueFeature).isInput)
+                                    SystemElements[element.first.toString().removeSuffix("?")]?.setInput("$qualifiedName$i")
+                                if ((element.second as ValueFeature).isOutput)
+                                    SystemElements[element.first.toString().removeSuffix("?")]?.setOutput("$qualifiedName$i")
+                            }
+                        } else {
+                            SystemElements[element.first.toString().removeSuffix("?")]?.addProperty(qualifiedName, type)
+                            SystemElements[element.first.toString().removeSuffix("?")]?.getProperty(qualifiedName)?.id =
+                                element.second.elementId
+                            if ((element.second as ValueFeature).isMeasurable)
+                                SystemElements[element.first.toString().removeSuffix("?")]?.setMeasurable(qualifiedName)
+                            if ((element.second as ValueFeature).isInput)
+                                SystemElements[element.first.toString().removeSuffix("?")]?.setInput(qualifiedName)
+                            if ((element.second as ValueFeature).isOutput)
+                                SystemElements[element.first.toString().removeSuffix("?")]?.setOutput(qualifiedName)
+                        }
                     }
                 }
-
                 if((element.first !is Association)&&(element.second is Specialization)) {
-                    println("element ${(element.second as Specialization).source.first()} is ${(element.second as Specialization).target.first().toString().removeSuffix("?")}")
-                    if((element.second as Specialization).target.first().toString().removeSuffix("?")=="connectTo") {
-                        println("${element.first.javaClass}")
-                        println("Connection Source ${(element.first.ref as Association).source}")
-                        println("Connection Target ${(element.first.ref as Association).target}")
-                    }else if((element.second as Specialization).target.first().toString().removeSuffix("?")=="hasValue"){
-                        println("Has Value Source ${(element.first.ref as Association).source}")
-                        println("Has Value Target ${(element.first.ref as Association).target}")
-                        val fullName = (element.first.ref as Association).source.toString().removeSuffix("?]").removePrefix("[")
-                        val property = getPropertyFromAddress(fullName)
-                        getConstantOfValue((element.first.ref as Association).target.toString(),property)
-                    }
-                    else if((getTypeOfElement(element.first.toString().removeSuffix("?"))==null)&&(SystemElements[element.first.toString().split("::").first()]?.consistsOfComponents?.containsKey((element.second as Specialization).source.first().toString())==false)){
-                        SystemElements[element.first.toString().split("::").first()]?.consistsOfComponents?.set((element.second as Specialization).source.first().toString(),componentsMap[(element.second as Specialization).target.first().toString().removeSuffix("?")]!!.copyOfElement(null) )
+                    if ((element.second as Specialization).target[0].toString() == "System?") {
+                        SystemElements[element.first.toString().removeSuffix("?")] = SysMDTwin()
+                    } else {
+                        println(
+                            "element ${(element.second as Specialization).source.first()} is ${
+                                (element.second as Specialization).target.first().toString().removeSuffix("?")
+                            }"
+                        )
+                        if ((element.second as Specialization).target.first().toString()
+                                .removeSuffix("?") == "connectTo"
+                        ) {
+                            println("${element.first.javaClass}")
+                            println("Connection Source ${(element.first.ref as Association).source}")
+                            println("Connection Target ${(element.first.ref as Association).target}")
+                        } else if ((element.second as Specialization).target.first().toString()
+                                .removeSuffix("?") == "hasValue"
+                        ) {
+                            println("Has Value Source ${(element.first.ref as Association).source}")
+                            println("Has Value Target ${(element.first.ref as Association).target}")
+                            val fullName = (element.first.ref as Association).source.toString().removeSuffix("?]")
+                                .removePrefix("[")
+                            val property = getPropertyFromAddress(fullName)
+                            getConstantOfValue((element.first.ref as Association).target.toString(), property)
+                        } else if ((getTypeOfElement(
+                                element.first.toString().removeSuffix("?")
+                            ) == null) && (SystemElements[element.first.toString().split("::")
+                                .first()]?.consistsOfComponents?.containsKey(
+                                (element.second as Specialization).source.first().toString()
+                            ) == false)
+                        ) {
+                            val number = getNumberOfElements(element.first.toString().removeSuffix("?"))
+                            if (number > 1) {
+                                for (i in 1..number) {
+                                    SystemElements[element.first.toString().split("::")
+                                        .first()]?.consistsOfComponents?.set(
+                                        (element.second as Specialization).source.first().toString() + i,
+                                        componentsMap[(element.second as Specialization).target.first().toString()
+                                            .removeSuffix("?")]!!.copyOfElement(null)
+                                    )
+                                }
+                            }
+                            else
+                            {
+                                SystemElements[element.first.toString().split("::")
+                                    .first()]?.consistsOfComponents?.set(
+                                    (element.second as Specialization).source.first().toString(),
+                                    componentsMap[(element.second as Specialization).target.first().toString()
+                                        .removeSuffix("?")]!!.copyOfElement(null)
+                                )
+                            }
+                        }
                     }
                 }
             }

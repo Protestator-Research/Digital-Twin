@@ -27,7 +27,7 @@ class MainWindowController
     var digitalTwins:HashMap<UUID,MutableList<DigitalTwin>> = hashMapOf()
     var applicationState:MainWindowStates
     var elements:MutableList<ElementDAO> = mutableListOf()
-    private var selectedDT:DigitalTwin?=null
+    var selectedDT:DigitalTwin?=null
 
     private lateinit var fxController: FXController
 
@@ -76,6 +76,16 @@ class MainWindowController
                     branch?.head?.id?.let { downloadAllProjectData(project.id, it) }
                 }
             }
+            val parser = selectedDT?.connectedModels?.let { DigitalTwinParser(elements, it) }
+            if (parser != null) {
+                parser.filterToSelectedElements()
+                parser.parseElements()
+                parser.reloadDocumentsIfNeccesary()
+
+                Platform.runLater({
+                    fxController.redecorateDigitalTwinStructure()
+                })
+            }
         }
     }
 
@@ -101,12 +111,7 @@ class MainWindowController
     fun startSimulation(){
         if(selectedDT==null)
             return
-        val parser = selectedDT?.connectedModels?.let { DigitalTwinParser(elements, it) }
-        if (parser != null) {
-            parser.filterToSelectedElements()
-            parser.parseElements()
-            parser.reloadDocumentsIfNeccesary()
-        }
+
     }
 
 }
