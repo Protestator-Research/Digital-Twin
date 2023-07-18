@@ -20,6 +20,8 @@ class DigitalTwinSession(
     }
 
     fun remodelRepresentation(){
+//        for(element in )
+
         for (element in getUnownedElements())
         {
             if(element.second is Specialization) {
@@ -28,12 +30,13 @@ class DigitalTwinSession(
                 } else {
                     val qualifiedName = (element.second as Specialization).target[0].toString().removeSuffix("?")
                     val completeName = element.first.toString().removeSuffix("?").split("::").first()
+                    val partName = element.first.toString().removeSuffix("?").split("::").last()
                     val type = getTypeOfElement(qualifiedName)
                     if (type == null)
 
                         if (componentsMap[qualifiedName] != null) {
                             componentsMap[completeName]?.consistsOfComponents?.set(
-                                qualifiedName,
+                                partName,
                                 componentsMap[qualifiedName] !!
                             )
                         }
@@ -55,7 +58,7 @@ class DigitalTwinSession(
                 }
             }
 
-//            println(element.toString())
+            println(element.toString())
         }
         var i=0
         while(i<getUnownedElements().size) {
