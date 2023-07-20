@@ -25,6 +25,7 @@ class digitwesterRecipe(ConanFile):
         self.requires("libcurl/7.79.1")
         self.requires("nlohmann_json/3.11.2")
         self.requires("energyprobedriver/2305")
+        self.requires("paho-mqtt-c/1.3.12")
     
     def layout(self):
         cmake_layout(self)
