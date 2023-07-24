@@ -3,6 +3,8 @@ import com.github.tukcps.jaadd.DDBuilder
 import com.github.tukcps.jaadd.values.IntegerRange
 import com.github.tukcps.sysmd.entities.*
 import com.github.tukcps.sysmd.services.*
+import simulation.GraphManager
+import simulation.GraphNode
 import java.util.*
 
 class DigitalTwinSession(
@@ -161,6 +163,7 @@ class DigitalTwinSession(
                             println("${element.first.javaClass}")
                             println("Connection Source ${(element.first.ref as Association).source}")
                             println("Connection Target ${(element.first.ref as Association).target}")
+                            connections[(element.first.ref as Association).source.toString().removeSuffix("?]").removePrefix("[")] = (element.first.ref as Association).target.toString().removeSuffix("?]").removePrefix("[")
                         } else if ((element.second as Specialization).target.first().toString()
                                 .removeSuffix("?") == "hasValue"
                         ) {
@@ -203,6 +206,19 @@ class DigitalTwinSession(
             }
             i++
         }
+
+        for(sys in SystemElements){
+            val graph = GraphManager()
+            graphs[sys.key] = graph
+            graph.registerSystemNode(sys.value)
+            for(element in connections)
+            {
+                if(element.key.contains(sys.key)){
+                    graph.connectTwoNodes(element.key, element.value)
+                }
+            }
+        }
+
         println("Remodel")
     }
 
@@ -267,4 +283,6 @@ class DigitalTwinSession(
     val componentsMap = hashMapOf<String,SysMDElement>()
     val globalProperties = hashMapOf<String, SysMDProperty<*>>()
     val SystemElements = hashMapOf<String, SysMDElement>()
+    val graphs = hashMapOf<String, GraphManager>()
+    val connections = hashMapOf<String,String>()
 }

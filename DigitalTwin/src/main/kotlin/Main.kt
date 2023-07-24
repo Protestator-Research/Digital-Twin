@@ -1,11 +1,20 @@
+import MQTT.Broker
 import javafx.application.Application
-import javafx.scene.layout.Pane
-import javafx.stage.Stage
-import javafx.fxml.FXMLLoader
-import javafx.scene.Scene
 import ui.MainWindow
 
 
 fun main() {
+   // Start broker
+   // Start broker
+   Broker.startServer()
+
+// Bind a shutdown hook
+
+// Bind a shutdown hook
+   Runtime.getRuntime().addShutdownHook(Thread {
+      println("Stopping MQTT broker...")
+      Broker.stopServer()
+   })
+
    Application.launch(MainWindow::class.java)
 }

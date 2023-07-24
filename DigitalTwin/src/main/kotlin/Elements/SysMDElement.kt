@@ -1,5 +1,6 @@
 package Elements
 
+import MQTT.Broker
 import java.util.UUID
 
 abstract class SysMDElement {
@@ -75,6 +76,21 @@ abstract class SysMDElement {
     abstract fun copyOfElement(id:UUID?):SysMDElement
 
     abstract fun evaluateConnection()
+
+    fun addRecursiveComponentsToBroker(currentPath:String)
+    {
+        for(prop_keys in properties) {
+            if(prop_keys.value.measurable)
+                Broker.pushTopic("$currentPath/${prop_keys.key}")
+        }
+        for (component in consistsOfComponents) {
+            var newTopicName = "$currentPath/${component.key}"
+            Broker.pushTopic(newTopicName)
+            component.value.addRecursiveComponentsToBroker(newTopicName)
+        }
+
+//        Broker.pushTopic()
+    }
 
 
     val connectionType:ConnectionType = ConnectionType.UNDEFINED

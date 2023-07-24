@@ -64,6 +64,8 @@ dependencies {
         implementation("com.github.tukcps:sysmd:$sysmdVersion")
     }
 
+    implementation("io.moquette:moquette-broker:0.16")
+
 
     testImplementation(kotlin("test"))
 }

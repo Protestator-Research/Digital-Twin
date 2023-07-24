@@ -1,5 +1,6 @@
 package ui
 
+import MQTT.Broker
 import javafx.application.Platform
 import javafx.fxml.FXML
 import javafx.geometry.Insets
@@ -120,6 +121,12 @@ class FXController {
                 }
                 componentItem.children.add(components)
                 SystemsItem.children.add(componentItem)
+            }
+
+            for(value in dtSession.SystemElements) {
+                var topicName = "/${value.key}"
+                Broker.pushTopic(topicName)
+                value.value.addRecursiveComponentsToBroker(topicName)
             }
 
             DigitalTwinStructure.root.children.add(componentsItem)
