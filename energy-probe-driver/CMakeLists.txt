@@ -20,7 +20,7 @@ set(HEADER_FILES
         include/DriverSessionManager.h
         include/energy_probe_driver_global.h
         include/MeasurePoint.h
-        include/DataPointObserver.h)
+        include/DataPointObserver.h src/DirectConnectionManager.cpp include/DirectConnectionManager.h)
 
 add_library(EnergyProbeDriver 
         src/EnergyProbe.cpp
