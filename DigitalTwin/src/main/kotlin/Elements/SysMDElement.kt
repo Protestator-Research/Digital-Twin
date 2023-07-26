@@ -85,7 +85,7 @@ abstract class SysMDElement {
         }
         for (component in consistsOfComponents) {
             var newTopicName = "$currentPath/${component.key}"
-            Broker.pushTopic(newTopicName)
+//            Broker.pushTopic(newTopicName)
             component.value.addRecursiveComponentsToBroker(newTopicName)
         }
 
