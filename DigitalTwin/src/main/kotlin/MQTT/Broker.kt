@@ -1,5 +1,7 @@
 package MQTT
 
+import MQTT.entities.DigitalTwinLoadingRequest
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.moquette.broker.Server
 import io.moquette.broker.config.ClasspathResourceLoader
 import io.moquette.broker.config.IConfig
@@ -8,13 +10,18 @@ import io.moquette.broker.config.ResourceLoaderConfig
 import io.moquette.interception.InterceptHandler
 import io.netty.buffer.Unpooled
 import io.netty.handler.codec.mqtt.MqttMessageBuilders
+import io.netty.handler.codec.mqtt.MqttPublishMessage
 import io.netty.handler.codec.mqtt.MqttQoS
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
 
 
+
 object Broker {
+    private val objectMapper = ObjectMapper()
+    private var writer = objectMapper.writer().withDefaultPrettyPrinter()
+
     val mqttBroker: Server = Server()
     fun startServer() {
 
@@ -41,7 +48,10 @@ object Broker {
 
         // Publishing topics
         println("Pushing topics...")
-        pushTopic("/exit")
+
+        for (topic in GlobalTopics.values())
+            pushTopic(topic.callString)
+
         println("Topics pushed...")
     }
 
@@ -50,12 +60,26 @@ object Broker {
     }
 
     fun pushTopic(topic: String?) {
-        val message = MqttMessageBuilders.publish()
+        var message = MqttMessageBuilders.publish()
             .topicName(topic)
             .retained(true)
             .qos(MqttQoS.EXACTLY_ONCE)
             .payload(Unpooled.copiedBuffer("{}".encodeToByteArray()))
             .build()
+        when(topic){
+            GlobalTopics.CONNECT_TO_TWIN.callString -> {
+                message = MqttMessageBuilders.publish()
+                    .topicName(topic)
+                    .retained(true)
+                    .qos(MqttQoS.EXACTLY_ONCE)
+                    .payload(Unpooled.copiedBuffer(writer.writeValueAsString(DigitalTwinLoadingRequest()).toByteArray()))
+                    .build()
+            }
+            else -> {
+
+            }
+        }
+
         mqttBroker.internalPublish(message, "INTRLPUB")
     }
 }

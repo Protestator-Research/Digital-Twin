@@ -22,7 +22,7 @@ add_executable(digitwester
         src/Data/IDataBase.h)
 
 if(energyprobedriver)
-target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json energyprobedriver::energyprobedriver Threads::Threads)
+        target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json energyprobedriver::energyprobedriver Threads::Threads)
 else (energyprobedriver)
     message("Using in Development Mode, since no EnergyProbeDriver via conan is installed")
     target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json Threads::Threads EnergyProbeDriver)

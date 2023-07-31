@@ -1,6 +1,4 @@
 import MQTT.Broker
-import javafx.application.Application
-import ui.MainWindow
 
 
 fun main() {
@@ -16,5 +14,7 @@ fun main() {
       Broker.stopServer()
    })
 
-   Application.launch(MainWindow::class.java)
+
+
+//   Application.launch(MainWindow::class.java)
 }

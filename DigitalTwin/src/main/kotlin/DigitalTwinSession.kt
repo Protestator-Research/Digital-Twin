@@ -2,10 +2,18 @@ import Elements.*
 import com.github.tukcps.jaadd.DDBuilder
 import com.github.tukcps.jaadd.values.IntegerRange
 import com.github.tukcps.sysmd.entities.*
+import com.github.tukcps.sysmd.rest.AgilaRepository
+import com.github.tukcps.sysmd.rest.Rest
+import com.github.tukcps.sysmd.rest.entities.Project
 import com.github.tukcps.sysmd.services.*
 import simulation.GraphManager
 import simulation.GraphNode
 import java.util.*
+import kotlin.collections.ArrayList
+
+object DTSessionManager {
+    val dtSession = DigitalTwinSession()
+}
 
 class DigitalTwinSession(
     id: UUID = UUID.randomUUID(),
@@ -13,6 +21,14 @@ class DigitalTwinSession(
     settings: SessionSettings = SessionSettings(),
     builder: DDBuilder = DDBuilder()
 ) : AgilaSessionImpl(id, status, settings, builder) {
+
+    var currentProjects:ArrayList<Project>
+    init {
+        Rest.baseURI="cpsiot2.cs.uni-kl.de"
+        Rest.port = 8081
+        currentProjects = AgilaRepository.getProjects()
+    }
+
     operator fun set(elementId: UUID, value: Element) {
         repo.elements.set(elementId,value)
     }
@@ -279,6 +295,14 @@ class DigitalTwinSession(
         }
     }
 
+    fun connectToDigitalTwin(projectId:UUID, twinId:UUID) {
+        currentProjects = AgilaRepository.getProjects()
+        for(project in currentProjects){
+            if(project.id == projectId) {
+                val digitalTwins = AgilaRepository.getDigitalTwinsFromProject(projectId)
+            }
+        }
+    }
 
     val componentsMap = hashMapOf<String,SysMDElement>()
     val globalProperties = hashMapOf<String, SysMDProperty<*>>()

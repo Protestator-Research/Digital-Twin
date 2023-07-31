@@ -1,5 +1,6 @@
 package ui
 
+import DTSessionManager
 import DigitalTwinSession
 import Parser.DigitalTwinParser
 import com.github.tukcps.sysmd.rest.AgilaRepository
@@ -17,8 +18,6 @@ enum class MainWindowStates {
     ONLINE_STATE,
     DIGITAL_TWIN_SELECTED
 }
-
-val dtSession = DigitalTwinSession()
 
 class MainWindowController
     (var onUpdateState:(MainWindowStates)->Unit) {
@@ -41,7 +40,7 @@ class MainWindowController
     fun getDigitalTwinsOfProjects(){
         for (project in projects)
         {
-            dtSession.loadedProjects.add(project.id)
+            DTSessionManager.dtSession.loadedProjects.add(project.id)
             digitalTwins[project.id]=AgilaRepository.getDigitalTwinsFromProject(project.id)
         }
     }

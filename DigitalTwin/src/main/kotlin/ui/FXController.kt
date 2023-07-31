@@ -87,16 +87,16 @@ class FXController {
             DigitalTwinStructure.root = TreeItem(SessionController.selectedDT!!.name)
             var componentsItem :TreeItem<String> = TreeItem("Components")
 
-            for(key in dtSession.componentsMap.keys){
+            for(key in DTSessionManager.dtSession.componentsMap.keys){
                 var componentItem = TreeItem(key)
                 var propertyItem= TreeItem("Properties")
-                for (pkey in dtSession.componentsMap[key]!!.properties){
+                for (pkey in DTSessionManager.dtSession.componentsMap[key]!!.properties){
                     var prop = TreeItem(pkey.key + " : " + pkey.value.type)
                     propertyItem.children.add(prop)
                 }
                 componentItem.children.add(propertyItem)
                 var components = TreeItem("Components")
-                for (ckey in dtSession.componentsMap[key]!!.consistsOfComponents) {
+                for (ckey in DTSessionManager.dtSession.componentsMap[key]!!.consistsOfComponents) {
                     var comp = TreeItem(ckey.key)
                     components.children.add(comp)
                 }
@@ -106,27 +106,21 @@ class FXController {
 
             var SystemsItem :TreeItem<String> = TreeItem("Systems")
 
-            for(key in dtSession.SystemElements.keys){
+            for(key in DTSessionManager.dtSession.SystemElements.keys){
                 var componentItem = TreeItem(key)
                 var propertyItem= TreeItem("Properties")
-                for (pkey in dtSession.SystemElements[key]!!.properties){
+                for (pkey in DTSessionManager.dtSession.SystemElements[key]!!.properties){
                     var prop = TreeItem(pkey.key + " : " + pkey.value.type)
                     propertyItem.children.add(prop)
                 }
                 componentItem.children.add(propertyItem)
                 var components = TreeItem("Components")
-                for (ckey in dtSession.SystemElements[key]!!.consistsOfComponents) {
+                for (ckey in DTSessionManager.dtSession.SystemElements[key]!!.consistsOfComponents) {
                     var comp = TreeItem(ckey.key)
                     components.children.add(comp)
                 }
                 componentItem.children.add(components)
                 SystemsItem.children.add(componentItem)
-            }
-
-            for(value in dtSession.SystemElements) {
-                var topicName = "/${value.key}"
-                Broker.pushTopic(topicName)
-                value.value.addRecursiveComponentsToBroker(topicName)
             }
 
             DigitalTwinStructure.root.children.add(componentsItem)

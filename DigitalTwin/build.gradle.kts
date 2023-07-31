@@ -66,6 +66,12 @@ dependencies {
 
     implementation("io.moquette:moquette-broker:0.16")
 
+    // Needed for annotations for Spring Boot in package rest
+    implementation("org.json:json:20230227")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.14.0")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.+")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.+")
+
 
     testImplementation(kotlin("test"))
 }
