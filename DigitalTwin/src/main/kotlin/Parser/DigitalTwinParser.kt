@@ -1,10 +1,9 @@
 package Parser
 
+import BaseEntities.TextualRepresentation
 import DTSessionManager
-import com.github.tukcps.sysmd.entities.TextualRepresentation
-import com.github.tukcps.sysmd.parser.ParserSysMD
-import com.github.tukcps.sysmd.rest.ElementDAO
-import com.github.tukcps.sysmd.rest.toElement
+import SysMDRestImport.ElementDAO
+import SysMDRestImport.toElement
 import java.util.UUID
 
 class DigitalTwinParser(
@@ -26,9 +25,8 @@ class DigitalTwinParser(
         DTSessionManager.dtSession.import(elementsToParse)
         for(element in elementsToParse)
         {
-            println("index: " + index)
             var textualRepresentation = element.toElement() as TextualRepresentation
-            var parser = ParserSysMD(model = DTSessionManager.dtSession, textualRepresentation = textualRepresentation)
+            var parser = SysMDParser(model = DTSessionManager.dtSession, textualRepresentation = textualRepresentation)
             parser.parseSysMD()
             index++
         }

@@ -1,6 +1,6 @@
 package ui
 
-import MQTT.Broker
+import MQTT.MQTTClient
 import javafx.application.Platform
 import javafx.fxml.FXML
 import javafx.geometry.Insets
@@ -17,15 +17,20 @@ class FXController {
 
     @FXML
     fun onActionOpenConnectionClicked(){
-        val dialog: Dialog<Pair<String, String>> = Dialog()
+        val dialog: Dialog<Pair<Pair<String,String>,Pair<String,String>>> = Dialog()
         dialog.setTitle("Connection Dialog")
         dialog.setHeaderText("")
         val loginButtonType = ButtonType("Open Connection", ButtonBar.ButtonData.OK_DONE)
         dialog.dialogPane.buttonTypes.addAll(loginButtonType, ButtonType.CANCEL)
-        val username = TextField()
-        username.promptText = "URL / IP"
-        val password = TextField()
-        password.promptText = "Port"
+        val AGILAIP = TextField()
+        AGILAIP.promptText = "AGILA URL / IP"
+        val AGILAPort = TextField()
+        AGILAPort.promptText = "AGILA Port"
+
+        val MQTTIP = TextField()
+        MQTTIP.promptText = "MQTT URL / IP"
+        val MQTTPort = TextField()
+        MQTTPort.promptText = "AGILA Port"
 
         val grid = GridPane()
         grid.hgap = 10.0
@@ -33,15 +38,15 @@ class FXController {
         grid.padding = Insets(20.0, 150.0, 10.0, 10.0)
 
         grid.add(Label("URL / IP:"), 0, 0)
-        grid.add(username, 1, 0)
+        grid.add(AGILAIP, 1, 0)
         grid.add(Label("Port:"), 0, 1)
-        grid.add(password, 1, 1)
+        grid.add(AGILAPort, 1, 1)
 
 
         val loginButton: Node = dialog.dialogPane.lookupButton(loginButtonType)
         loginButton.setDisable(true)
 
-        username.textProperty().addListener { observable, oldValue, newValue ->
+        AGILAIP.textProperty().addListener { observable, oldValue, newValue ->
             loginButton.setDisable(
                 newValue.trim().isEmpty()
             )
@@ -49,18 +54,19 @@ class FXController {
 
         dialog.dialogPane.content = grid
 
-        Platform.runLater { username.requestFocus() }
+        Platform.runLater { AGILAIP.requestFocus() }
 
-        dialog.setResultConverter(Callback<ButtonType, Pair<String,String>?> setResultConverter@{ dialogButton: ButtonType ->
+        dialog.setResultConverter(Callback<ButtonType, Pair<Pair<String,String>,Pair<String,String>>?> setResultConverter@{ dialogButton: ButtonType ->
             if (dialogButton == loginButtonType) {
-                return@setResultConverter Pair(username.text, password.text)
+                return@setResultConverter Pair(Pair(AGILAIP.text, AGILAPort.text),Pair(MQTTIP.text,MQTTPort.text))
             }
             null
         })
 
         val result = dialog.showAndWait()
 
-        SessionController.updateFromServer(result.get().first,result.get().second.toInt())
+        SessionController.updateFromServer(result.get().first.first,result.get().first.second.toInt())
+        MQTTClient.setServerURLandPort(result.get().second.first,result.get().second.second.toInt())
     }
 
     @FXML
@@ -83,6 +89,7 @@ class FXController {
 
     fun redecorateDigitalTwinStructure() {
         if (SessionController.selectedDT != null) {
+            MQTTClient.checkoutProject(SessionController.selectedDT!!.parentProject !!, SessionController.selectedDT!!.id)
 
             DigitalTwinStructure.root = TreeItem(SessionController.selectedDT!!.name)
             var componentsItem :TreeItem<String> = TreeItem("Components")

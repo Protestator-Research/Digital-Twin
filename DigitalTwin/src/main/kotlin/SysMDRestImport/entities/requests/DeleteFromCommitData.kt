@@ -1,0 +1,3 @@
+package SysMDRestImport.entities.requests
+
+class DeleteFromCommitData

@@ -1,0 +1,3 @@
+package BaseEntities
+
+interface OwningMembership: Membership

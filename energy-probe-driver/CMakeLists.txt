@@ -22,7 +22,7 @@ set(HEADER_FILES
         include/MeasurePoint.h
         include/DataPointObserver.h src/DirectConnectionManager.cpp include/DirectConnectionManager.h)
 
-add_library(EnergyProbeDriver 
+add_library( shared EnergyProbeDriver 
         src/EnergyProbe.cpp
         src/Device.cpp
         src/Fifo.cpp

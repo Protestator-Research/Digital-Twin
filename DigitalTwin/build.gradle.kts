@@ -27,22 +27,6 @@ repositories {
         }
     }
 
-    // SysMD
-    maven("https://cpsgit.informatik.uni-kl.de/api/v4/projects/117/packages/maven") {
-        name = "GitLab"
-        credentials(HttpHeaderCredentials::class) {
-            name = "Deploy-Token"
-            value = "jDN-qwxvyFW9DxXPqCJL"
-        }
-        authentication { create<HttpHeaderAuthentication>("header") }
-    }
-
-    // Jetpack Compose development
-    maven {
-        url = uri("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-        name = "Compose for Desktop DEV"
-    }
-
     // LaTeX Rendering for UI
     maven ("https://jitpack.io")
 }
@@ -56,14 +40,6 @@ dependencies {
         implementation("com.github.tukcps:jaadd:$jaaddVersion")
     }
 
-    if (file("../sysmd").exists()) {
-        println("  *** using SysMD from local clone in ./sysmd           ***")
-        implementation(project(":sysmd"))
-    } else {
-        println("  *** using SysMD $sysmdVersion from CPS Maven repo     ***")
-        implementation("com.github.tukcps:sysmd:$sysmdVersion")
-    }
-
     implementation("io.moquette:moquette-broker:0.16")
 
     // Needed for annotations for Spring Boot in package rest
@@ -71,6 +47,19 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.14.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.+")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.+")
+
+    implementation(platform("com.hivemq:hivemq-mqtt-client-websocket:1.3.0"))
+    implementation(platform("com.hivemq:hivemq-mqtt-client-proxy:1.3.0"))
+    implementation(platform("com.hivemq:hivemq-mqtt-client-epoll:1.3.0"))
+    implementation("com.hivemq:hivemq-mqtt-client-reactor:1.3.0")
+
+    // Parsing markdown to AST
+    implementation("org.commonmark:commonmark:0.21.0")
+    implementation("org.commonmark:commonmark-ext-gfm-tables:0.21.0")
+    implementation("org.commonmark:commonmark-ext-image-attributes:0.21.0")
+    implementation("org.commonmark:commonmark-ext-yaml-front-matter:0.21.0")
+
+    implementation("org.springframework:spring-web:5.3.27")
 
 
     testImplementation(kotlin("test"))
@@ -85,7 +74,7 @@ kotlin {
 }
 
 application {
-    mainClass.set("MainKt")
+    mainClass.set("DT-Server.kt")
 }
 
 

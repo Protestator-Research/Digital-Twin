@@ -1,0 +1,62 @@
+package ImportedSysMDExceptions
+
+import BaseEntities.Element
+import BaseEntities.TextualRepresentation
+import Parser.Scanner
+
+
+/**
+ * General exception class that is also used for persisting in issues list.
+ * Each entry has:
+ * @param message Mandatory textual description
+ * @param textualRepresentation the textual representation in which the error has occurred
+ * @param token the token where the error has occurred
+ * @param element the element in which the error has occurred
+ * @param
+ */
+open class SysMDException(
+    override var message: String,
+    var textualRepresentation: TextualRepresentation? = null,
+    var token: Scanner.Definitions.Token? = null,
+    var element: Element? = null,
+    override val cause: Throwable? = null
+): Exception(message, cause) {
+
+    /**
+     * A method for comparison that is simple to prevent duplicates.
+     * Does not consider cause and token that can be different from different runs for the same error.
+     */
+    override fun equals(other: Any?): Boolean {
+        return when (other) {
+            null -> false
+            !is SysMDException -> false
+            else -> message == other.message && element == other.element && token?.lineNo == other.token?.lineNo
+        }
+    }
+
+    /**
+     * The hash code as needed for equals and the *set* of errors in the status.
+     */
+    override fun hashCode(): Int {
+        var result = message.hashCode()
+        // result = 31 * result + (textualRepresentation?.hashCode() ?: 0)
+        // result = 31 * result + (token?.hashCode() ?: 0)
+        result = 31 * result + (element?.hashCode() ?: 0)
+        return result
+    }
+
+    /**
+     * To string
+     */
+    override fun toString(): String {
+        var string = ""
+        if (token != null) {
+            string += "Line ${token!!.lineNo}, near ${token!!.string} "
+        }
+        if (element != null) {
+            string += "in ${element!!.effectiveName} "
+        }
+        string += message
+        return string
+    }
+}

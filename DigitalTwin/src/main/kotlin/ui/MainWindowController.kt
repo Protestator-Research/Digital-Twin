@@ -3,11 +3,12 @@ package ui
 import DTSessionManager
 import DigitalTwinSession
 import Parser.DigitalTwinParser
-import com.github.tukcps.sysmd.rest.AgilaRepository
-import com.github.tukcps.sysmd.rest.ElementDAO
-import com.github.tukcps.sysmd.rest.Rest
-import com.github.tukcps.sysmd.rest.entities.DigitalTwin
-import com.github.tukcps.sysmd.rest.entities.Project
+import SysMDRestImport.AgilaRepository
+import SysMDRestImport.ElementDAO
+import SysMDRestImport.Rest
+import SysMDRestImport.entities.DigitalTwin
+import SysMDRestImport.entities.Project
+
 import javafx.application.Platform
 import java.util.*
 import kotlin.collections.HashMap
@@ -75,6 +76,9 @@ class MainWindowController
                     branch?.head?.id?.let { downloadAllProjectData(project.id, it) }
                 }
             }
+
+
+
             val parser = selectedDT?.connectedModels?.let { DigitalTwinParser(elements, it) }
             if (parser != null) {
                 parser.filterToSelectedElements()

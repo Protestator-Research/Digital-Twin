@@ -17,7 +17,6 @@ class MainWindow: Application() {
         SessionController = MainWindowController(::updateState)
         val fxmlLoader = FXMLLoader()
         fxmlLoader.location = MainWindow::class.java.getResource("MainWindow.fxml")
-//        fxmlLoader.getController<FXController>().SessionController=Controller
         val parent: Parent = fxmlLoader.load()
         scene = Scene(parent)
         primaryStage.title="MainWindow"

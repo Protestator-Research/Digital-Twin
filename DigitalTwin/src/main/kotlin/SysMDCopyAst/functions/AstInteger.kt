@@ -1,0 +1,67 @@
+package SysMDCopyAst.functions
+
+import ImportedSysMDExceptions.SemanticError
+import ImportedSysMDQuantities.VectorQuantity
+import ImportedSysMDServices.AgilaSession
+import SysMDCopyAst.AstNode
+import com.github.tukcps.jaadd.AADD
+import com.github.tukcps.jaadd.IDD
+import kotlin.math.ceil
+import kotlin.math.floor
+
+
+/**
+ * The function Real : Int -> Real converts an integer to a real.
+ */
+class AstInteger(model: AgilaSession, args: ArrayList<AstNode>) :
+    AstFunction("Integer", model, 1, args) {
+
+    init {
+        if (parameters.size != 1)
+            throw SemanticError("function Real expects 1 parameter")
+    }
+
+    override fun initialize() {
+        upQuantity = when (getParam(0).upQuantity.values[0]) {
+            is AADD -> VectorQuantity(mutableListOf(model.builder.Integers))
+            else -> throw SemanticError("function Real parameter must be of type Real")
+        }
+        evalUp()
+        downQuantity = upQuantity.clone()
+        require( downQuantity.values[0] is IDD)
+    }
+
+
+    @Throws(SemanticError::class)
+    override fun evalUp() {
+        val results = mutableListOf<IDD>()
+        getParam(0).aadds.forEach {
+            val min = floor(it.min).toLong()
+            val max = ceil(it.max).toLong()
+            results.add(model.builder.rangeIDD(min, max))
+        }
+        upQuantity = VectorQuantity(results)
+
+    }
+
+    override fun evalDown() {
+        val results = mutableListOf<AADD>()
+        downQuantity.idds().forEach {
+            val min = if(it.min == Long.MIN_VALUE) Double.NEGATIVE_INFINITY else it.min.toDouble()
+            val max = if(it.max == Long.MAX_VALUE) Double.POSITIVE_INFINITY else it.max.toDouble()
+            results.add(model.builder.range(min, max))
+        }
+        getParam(0).downQuantity = VectorQuantity(results,upQuantity.unit,upQuantity.unitSpec)
+    }
+
+
+    override fun toExpressionString(): String {
+        return "not(${getParam(0).toExpressionString()})"
+    }
+
+    override fun clone(): AstInteger {
+        val parClone = ArrayList<AstNode>()
+        for (p in parameters) parClone.add(p.clone())
+        return AstInteger(model, parClone)
+    }
+}

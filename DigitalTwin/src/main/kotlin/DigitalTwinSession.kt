@@ -1,13 +1,18 @@
+import BaseEntities.*
+import BaseEntities.Class
 import Elements.*
+import ImportedSysMDServices.AgilaSessionImpl
+import ImportedSysMDServices.SessionSettings
+import ImportedSysMDServices.SessionStatus
+import Parser.DigitalTwinParser
+import SysMDRestImport.AgilaRepository
+import SysMDRestImport.ElementDAO
+import SysMDRestImport.Rest
+import SysMDRestImport.entities.DigitalTwin
+import SysMDRestImport.entities.Project
 import com.github.tukcps.jaadd.DDBuilder
 import com.github.tukcps.jaadd.values.IntegerRange
-import com.github.tukcps.sysmd.entities.*
-import com.github.tukcps.sysmd.rest.AgilaRepository
-import com.github.tukcps.sysmd.rest.Rest
-import com.github.tukcps.sysmd.rest.entities.Project
-import com.github.tukcps.sysmd.services.*
 import simulation.GraphManager
-import simulation.GraphNode
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -234,8 +239,6 @@ class DigitalTwinSession(
                 }
             }
         }
-
-        println("Remodel")
     }
 
 
@@ -297,10 +300,37 @@ class DigitalTwinSession(
 
     fun connectToDigitalTwin(projectId:UUID, twinId:UUID) {
         currentProjects = AgilaRepository.getProjects()
+        var selectedDT: DigitalTwin? = null
+//        var branch: Branch? = null
+        var allElements:MutableList<ElementDAO>? = null
         for(project in currentProjects){
             if(project.id == projectId) {
                 val digitalTwins = AgilaRepository.getDigitalTwinsFromProject(projectId)
+                for(digitaltwin in digitalTwins) {
+                    if(digitaltwin.id == twinId) {
+                        selectedDT = digitaltwin
+                    }
+                }
+//                branch = selectedDT?.let { AgilaRepository.getBranchById(projectId, it.branchId) }
+                allElements = AgilaRepository.getAllElements(projectId, selectedDT?.commitId)
             }
+        }
+        if(allElements!=null)
+        {
+            println("Successfull Digital Twin Chosen -> creating now the entrypoints for the twin")
+            val parser = selectedDT?.connectedModels?.let { DigitalTwinParser(allElements !!, it) }
+            if (parser != null) {
+                parser.filterToSelectedElements()
+                parser.parseElements()
+                parser.reloadDocumentsIfNeccesary()
+                createTopicsForDTServer()
+            }
+        }
+    }
+
+    fun createTopicsForDTServer(){
+        for(element in SystemElements) {
+            element.value.addRecursiveComponentsToBroker("${element.key}")
         }
     }
 

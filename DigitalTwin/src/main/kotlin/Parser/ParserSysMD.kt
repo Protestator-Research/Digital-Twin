@@ -1,27 +1,28 @@
 package Parser
 
+import BaseEntities.*
+import BaseEntities.Annotation
+import BaseEntities.implementation.AnnotationImplementation
+import BaseEntities.implementation.MultiplicityImplementation
+import ImportedSysMDExceptions.ElementNotFoundException
+import ImportedSysMDExceptions.SemanticError
+import ImportedSysMDExceptions.SysMDError
+import ImportedSysMDQuantities.Quantity
+import ImportedSysMDQuantities.Unit
+import ImportedSysMDQuantities.VectorQuantity
+import ImportedSysMDServices.AgilaSession
+import ImportedSysMDServices.report
+import ImportedSysMDServices.reportInfo
+import ImportedSysMDServices.resolveName
+import Parser.Scanner.Definitions.Token.Kind.*
+import Parser.Scanner.Definitions.Token.*
+import SysMDCopyAst.*
+import SysMDCopyAst.functions.AstHasA
+import SysMDCopyAst.functions.AstIsA
+import SysMDCopyAst.functions.AstNot
 import com.github.tukcps.jaadd.*
 import com.github.tukcps.jaadd.values.IntegerRange
 import com.github.tukcps.jaadd.values.XBool
-import com.github.tukcps.sysmd.ast.*
-import com.github.tukcps.sysmd.ast.functions.AstHasA
-import com.github.tukcps.sysmd.ast.functions.AstIsA
-import com.github.tukcps.sysmd.ast.functions.AstNot
-import com.github.tukcps.sysmd.entities.*
-import com.github.tukcps.sysmd.entities.implementation.AnnotationImplementation
-import com.github.tukcps.sysmd.entities.implementation.MultiplicityImplementation
-import com.github.tukcps.sysmd.exceptions.*
-import com.github.tukcps.sysmd.parser.*
-import com.github.tukcps.sysmd.parser.Scanner.Definitions.Token
-import com.github.tukcps.sysmd.parser.Scanner.Definitions.Token.Kind.*
-import com.github.tukcps.sysmd.quantities.Quantity
-import com.github.tukcps.sysmd.quantities.Unit
-import com.github.tukcps.sysmd.quantities.VectorQuantity
-import com.github.tukcps.sysmd.services.AgilaSession
-import com.github.tukcps.sysmd.services.report
-import com.github.tukcps.sysmd.services.reportInfo
-import com.github.tukcps.sysmd.services.resolveName
-
 
 /**
  * This class provides a parser for the language SysMD, a mix of near-SysML v2 and Markdown.
@@ -941,7 +942,7 @@ class SysMDParser(
      * Helper function that checks if the token is start, and if so executes production rule,
      * otherwise it returns default
      */
-    private fun <T> optionalWhen(start: Token.Kind, default: T, rule: SysMDParser.() -> T): T =
+    private fun <T> optionalWhen(start: Definitions.Token.Kind, default: T, rule: SysMDParser.() -> T): T =
         if (token.kind == start) rule() else default
 
 
@@ -950,7 +951,7 @@ class SysMDParser(
      * consume it and apply the following production rule. The rule produces a result of type T.
      * The default result is given as parameter of the same type.
      */
-    private fun <T> optionalConsume(start: Token.Kind, default: T? = null, rule: SysMDParser.() -> T? = { null }): T? =
+    private fun <T> optionalConsume(start: Definitions.Token.Kind, default: T? = null, rule: SysMDParser.() -> T? = { null }): T? =
         if (this.token.kind == start) {
             consume(start)
             rule()
@@ -960,7 +961,7 @@ class SysMDParser(
     /**
      * Consumes a token and returns its kind.
      */
-    private fun consumeToken(): Token.Kind {
+    private fun consumeToken(): Definitions.Token.Kind {
         nextToken()
         return consumedToken.kind
     }
@@ -973,7 +974,7 @@ class SysMDParser(
     private fun handleError(exception: Exception) {
 
         // report error.
-        if (exception is SysMDException) {
+        if (exception is ImportedSysMDExceptions.SysMDException) {
             model.report(exception)
         } else
             model.report(SysMDError("Exception: ${exception.message}"))
