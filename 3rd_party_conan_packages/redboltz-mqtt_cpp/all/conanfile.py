@@ -14,8 +14,13 @@ class MqttCPPConan(ConanFile):
     homepage = "https://github.com/redboltz/mqtt_cpp"
     topics = ("mqtt", "boost", "asio")
     settings = "os", "arch", "compiler", "build_type"
-    # generators = "cmake"
+    options = {"shared": [True, False], "fPIC": [True, False], "build_tests": [True,False], "build_examples": [True,False]}
+    default_options = {"shared": False, "fPIC": True, "build_tests": True, "build_examples": False}
     no_copy_source = True
+
+    def config_options(self):
+        if self.settings.os == "Windows":
+            self.options.rm_safe("fPIC")
 
     @property
     def _source_subfolder(self):
@@ -40,18 +45,46 @@ class MqttCPPConan(ConanFile):
         if self.settings.compiler.get_safe("cppstd"):
             build.check_min_cppstd(self, 14)
 
-        # minimum_version = self._compilers_minimum_version.get(str(self.settings.compiler), False)
-        # if minimum_version:
-            # if tools.Version(self.settings.compiler.version) < minimum_version:
-                # raise ConanInvalidConfiguration("{} requires C++14, which your compiler does not support.".format(self.name))
-        # else:
-            # self.output.warn("{} requires C++14. Your compiler is unknown. Assuming it supports C++14.".format(self.name))
             
     def source(self):
         files.get(conanfile=self,url="https://github.com/redboltz/mqtt_cpp/archive/refs/tags/v13.2.1.tar.gz",
                   destination=self._source_subfolder, strip_root=True)
 
+    def layout(self):
+        cmake_layout(self)
+
+    def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+        tc = CMakeToolchain(self)
+
+        dep_boost = self.dependencies["boost"]
+
+        if(dep_boost.options.shared):
+            tc.variables["MQTT_USE_STATIC_BOOST"]="OFF"
+        else:
+            tc.variables["MQTT_USE_STATIC_BOOST"]="ON"
+
+        if(self.options.build_tests):
+            tc.variables["MQTT_BUILD_TESTS"]="ON"
+        else:
+            tc.variables["MQTT_BUILD_TESTS"]="OFF"
+
+        if(self.options.build_examples):
+            tc.variables["MQTT_BUILD_EXAMPLES"]="ON"
+        else:
+            tc.variables["MQTT_BUILD_EXAMPLES"]="OFF"
+
+        tc.generate()
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure(build_script_folder=self._source_subfolder)
+        cmake.build()
+
     def package(self):
+        cmake = CMake(self)
+        cmake.install()
         files.copy(conanfile=self,pattern="LICENSE_1_0.txt", dst="licenses", src=self._source_subfolder)
         files.copy(conanfile=self,pattern="*.hpp", dst="include", src=os.path.join(self._source_subfolder, "include"))
 
