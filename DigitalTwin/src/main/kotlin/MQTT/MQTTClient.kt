@@ -14,7 +14,7 @@ object MQTTClient {
     private var writer = objectMapper.writer().withDefaultPrettyPrinter()
 
     private var ServerUrl:String = "localhost"
-    private var ServerPort:Int = 1883
+    private var ServerPort:Int = 1884
 
     private var client:Mqtt3BlockingClient
 

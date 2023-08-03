@@ -4,6 +4,7 @@ import Elements.*
 import ImportedSysMDServices.AgilaSessionImpl
 import ImportedSysMDServices.SessionSettings
 import ImportedSysMDServices.SessionStatus
+import MQTT.Broker
 import Parser.DigitalTwinParser
 import SysMDRestImport.AgilaRepository
 import SysMDRestImport.ElementDAO
@@ -330,7 +331,8 @@ class DigitalTwinSession(
 
     fun createTopicsForDTServer(){
         for(element in SystemElements) {
-            element.value.addRecursiveComponentsToBroker("${element.key}")
+            Broker.pushTopic("${element.key}")
+            element.value.addRecursiveComponentsToBroker("${element.key}/")
         }
     }
 

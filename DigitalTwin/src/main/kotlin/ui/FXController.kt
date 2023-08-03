@@ -30,17 +30,22 @@ class FXController {
         val MQTTIP = TextField()
         MQTTIP.promptText = "MQTT URL / IP"
         val MQTTPort = TextField()
-        MQTTPort.promptText = "AGILA Port"
+        MQTTPort.promptText = "MQTT Port"
 
         val grid = GridPane()
         grid.hgap = 10.0
         grid.vgap = 10.0
         grid.padding = Insets(20.0, 150.0, 10.0, 10.0)
 
-        grid.add(Label("URL / IP:"), 0, 0)
+        grid.add(Label("Backend URL / IP:"), 0, 0)
         grid.add(AGILAIP, 1, 0)
-        grid.add(Label("Port:"), 0, 1)
+        grid.add(Label("Bakcned Port:"), 0, 1)
         grid.add(AGILAPort, 1, 1)
+
+        grid.add(Label("MQTT URL / IP:"), 0, 2)
+        grid.add(MQTTIP, 1, 2)
+        grid.add(Label("MQTT Port:"), 0, 3)
+        grid.add(MQTTPort, 1, 3)
 
 
         val loginButton: Node = dialog.dialogPane.lookupButton(loginButtonType)

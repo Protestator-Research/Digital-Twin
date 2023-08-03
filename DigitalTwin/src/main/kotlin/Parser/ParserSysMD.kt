@@ -416,6 +416,24 @@ class SysMDParser(
                 feature.dependency = exprString.toString().trim()
             }
         }
+
+        if(tokenIs(MEASURABLE))
+        {
+            feature.isMeasurable = true
+            nextToken()
+        }
+
+        if(tokenIs(INPUT))
+        {
+            feature.isInput = true
+            nextToken()
+        }
+
+        if(tokenIs(OUTPUT))
+        {
+            feature.isOutput = true
+            nextToken()
+        }
     }
 
 
