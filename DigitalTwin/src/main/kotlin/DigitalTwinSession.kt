@@ -331,8 +331,7 @@ class DigitalTwinSession(
 
     fun createTopicsForDTServer(){
         for(element in SystemElements) {
-            Broker.pushTopic("${element.key}")
-            element.value.addRecursiveComponentsToBroker("${element.key}/")
+            element.value.addRecursiveComponentsToBroker("${element.key}")
         }
     }
 
