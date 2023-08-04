@@ -5,5 +5,6 @@
 \contentsline {chapter}{\numberline {4}Implementation}{7}{chapter.4}%
 \contentsline {chapter}{\numberline {5}Results}{9}{chapter.5}%
 \contentsline {chapter}{\numberline {6}Conclusion}{11}{chapter.6}%
-\contentsline {chapter}{\numberline {A}Additional information}{13}{appendix.A}%
-\contentsline {chapter}{Literature}{18}{appendix*.7}%
+\contentsline {chapter}{\numberline {7}Future Work}{13}{chapter.7}%
+\contentsline {chapter}{\numberline {A}Additional information}{15}{appendix.A}%
+\contentsline {chapter}{Literature}{20}{appendix*.7}%
