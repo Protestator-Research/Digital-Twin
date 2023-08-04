@@ -5,6 +5,8 @@
 #include <chrono>
 #include <thread>
 
+
+
 namespace REALTWESTER {
     RealTwester::RealTwester() {
         SessionManager = ENERGY_PROBE_DRIVER::DriverSessionManager::getSessionManager();
@@ -32,7 +34,8 @@ namespace REALTWESTER {
 
     }
 
-    void RealTwester::tryConnectingToAgila() {
+    void RealTwester::tryToConnectToMQTTAPI() {
+        std::cout << "Starting Client" << std::endl;
 
     }
 

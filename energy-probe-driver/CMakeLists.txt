@@ -20,15 +20,17 @@ set(HEADER_FILES
         include/DriverSessionManager.h
         include/energy_probe_driver_global.h
         include/MeasurePoint.h
-        include/DataPointObserver.h src/DirectConnectionManager.cpp include/DirectConnectionManager.h)
+        include/DataPointObserver.h
+        include/DirectConnectionManager.h)
 
-add_library( shared EnergyProbeDriver 
+add_library( EnergyProbeDriver SHARED
         src/EnergyProbe.cpp
         src/Device.cpp
         src/Fifo.cpp
         src/DriverSessionManager.cpp
         src/MeasurePoint.cpp
         src/DataPointObserver.cpp
+        src/DirectConnectionManager.cpp
         ${HEADER_FILES})
 
 
@@ -43,6 +45,8 @@ target_link_libraries(${PROJECT_NAME} ${UDEV_LIBRARIES} Threads::Threads)
 else(UNIX)
 target_link_libraries(${PROJECT_NAME} ws2_32.lib setupapi.lib Threads::Threads)
 endif(UNIX)
+
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION lib/)
 # install(EXPORT ${PROJECT_NAME}_targets DESTINATION lib/)

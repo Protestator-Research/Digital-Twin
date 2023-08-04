@@ -5,7 +5,7 @@
 
 #include <nlohmann/json.hpp> 
 
-#include "Exceptions/ServerNotReachableException.h"
+#include "../../Exceptions/ServerNotReachableException.h"
 
 
 namespace REALTWESTER {

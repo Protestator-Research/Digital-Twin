@@ -13,7 +13,7 @@ object MQTTClient {
     private val objectMapper = ObjectMapper()
     private var writer = objectMapper.writer().withDefaultPrettyPrinter()
 
-    private var ServerUrl:String = "localhost"
+    private var ServerUrl:String = "cpsiot2.cs.uni-kl.de"
     private var ServerPort:Int = 1884
 
     private var client:Mqtt3BlockingClient

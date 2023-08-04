@@ -1,7 +1,7 @@
 #pragma once
 
-#include "digitwester_global.h"
-#include "Data/DataPoint.h"
+#include "../../digitwester_global.h"
+#include "../../Data/DataPoint.h"
 
 #include <string>
 #include <memory>

@@ -13,7 +13,7 @@ namespace REALTWESTER {
 
         void tryDetectingTheProbe();
 
-        void tryConnectingToAgila();
+        void tryToConnectToMQTTAPI();
 
         void startService();
 

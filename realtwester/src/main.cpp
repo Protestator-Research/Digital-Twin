@@ -2,7 +2,7 @@
 
 int main() {
     auto twester = new REALTWESTER::RealTwester();
-    twester->tryConnectingToAgila();
+    twester->tryToConnectToMQTTAPI();
     twester->tryDetectingTheProbe();
     twester->startService();
 }
