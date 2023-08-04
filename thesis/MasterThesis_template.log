@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.12) (preloaded format=pdflatex 2023.1.8)  5 JUL 2023 17:33
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (MiKTeX 22.12) (preloaded format=pdflatex 2023.1.8)  4 AUG 2023 15:31
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -643,7 +643,7 @@ File: l3backend-pdftex.def 2022-10-26 L3 backend support: PDF output (pdfTeX)
 )
 (MasterThesis_template.aux (preface.aux) (kurzfassung.aux) (abstract.aux)
 (introduction.aux) (related.aux) (approach.aux) (implementation.aux)
-(results.aux) (conclusion.aux) (appendix.aux))
+(results.aux) (conclusion.aux) (futurework.aux) (appendix.aux))
 \openout1 = `MasterThesis_template.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 19.
@@ -805,20 +805,23 @@ File: t1lmss.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 
  (introduction.tex
 Chapter 1.
-) [1
+
+LaTeX Warning: Command \textellipsis invalid in math mode on input line 15.
+
+[1
 
 
-]
+]) [2]
 \openout2 = `related.aux'.
 
- (related.tex [2
+ (related.tex
+Chapter 2.
+) [3
 
 
 
 
 ]
-Chapter 2.
-) [3]
 \openout2 = `approach.aux'.
 
  (approach.tex [4
@@ -861,7 +864,7 @@ Chapter 6.
 ) [11]
 \openout2 = `futurework.aux'.
 
- (./futurework.tex [12
+ (futurework.tex [12
 
 
 
@@ -870,12 +873,12 @@ Chapter 6.
 Chapter 7.
 LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 4
 .
-(/usr/share/texmf-dist/tex/latex/lm/ts1lmr.fd
+(C:\Program Files\MiKTeX\tex/latex/lm\ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-)) [13{/usr/share/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}]
+)) [13]
 \openout2 = `appendix.aux'.
 
- (appendix.tex [12
+ (appendix.tex [14
 
 
 
@@ -895,37 +898,43 @@ Appendix A.
 \openout7 = `MasterThesis_template.lol'.
 
 )
-[17] (MasterThesis_template.bbl [18
+[19] (MasterThesis_template.bbl [20
 
 
 
-]) [19]
+]
+
+LaTeX Warning: Empty `thebibliography' environment on input line 3.
+
+) [21]
 No file weblink.bbl.
 (MasterThesis_template.aux (preface.aux) (kurzfassung.aux) (abstract.aux)
 (introduction.aux) (related.aux) (approach.aux) (implementation.aux)
-(results.aux) (conclusion.aux) (appendix.aux))
+(results.aux) (conclusion.aux) (futurework.aux) (appendix.aux))
 Package rerunfilecheck Info: File `MasterThesis_template.out' has not changed.
-(rerunfilecheck)             Checksum: 044C1B6E28C459427C17C3D92450A0F5;828.
+(rerunfilecheck)             Checksum: 90B38E3CD0006FE5DFB0017D34F4CF30;929.
  ) 
 Here is how much of TeX's memory you used:
- 17376 strings out of 476406
- 289127 string characters out of 2799357
- 1853787 words of memory out of 3000000
- 37251 multiletter control sequences out of 15000+600000
- 567938 words of font info for 65 fonts, out of 8000000 for 9000
+ 17441 strings out of 476406
+ 290960 string characters out of 2799357
+ 1856787 words of memory out of 3000000
+ 37303 multiletter control sequences out of 15000+600000
+ 561245 words of font info for 64 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 102i,11n,145p,1046b,480s stack positions out of 10000i,1000n,20000p,200000b,80000s
-{C:/Program Files/MiKTeX/fonts/enc/dvips/lm/lm-rm.enc}{C:/Program Files/MiKTe
-X/fonts/enc/dvips/lm/lm-ec.enc}<C:/Program Files/MiKTeX/fonts/type1/public/lm/l
-mbx10.pfb><C:/Program Files/MiKTeX/fonts/type1/public/lm/lmbx12.pfb><C:/Program
- Files/MiKTeX/fonts/type1/public/lm/lmcsc10.pfb><C:/Program Files/MiKTeX/fonts/
-type1/public/lm/lmr10.pfb><C:/Program Files/MiKTeX/fonts/type1/public/lm/lmr12.
-pfb><C:/Program Files/MiKTeX/fonts/type1/public/lm/lmr8.pfb><C:/Program Files/M
-iKTeX/fonts/type1/public/lm/lmri10.pfb><C:/Program Files/MiKTeX/fonts/type1/pub
-lic/lm/lmss10.pfb>
-Output written on MasterThesis_template.pdf (31 pages, 218828 bytes).
+ 102i,12n,145p,1046b,480s stack positions out of 10000i,1000n,20000p,200000b,80000s
+{C:/Program Files/MiKTeX/fonts/enc/dvips/lm/lm-ts1.enc}{C:/Program Files/MiKT
+eX/fonts/enc/dvips/lm/lm-rm.enc}{C:/Program Files/MiKTeX/fonts/enc/dvips/lm/lm-
+mathit.enc}{C:/Program Files/MiKTeX/fonts/enc/dvips/lm/lm-ec.enc}<C:/Program Fi
+les/MiKTeX/fonts/type1/public/lm/lmbx10.pfb><C:/Program Files/MiKTeX/fonts/type
+1/public/lm/lmbx12.pfb><C:/Program Files/MiKTeX/fonts/type1/public/lm/lmcsc10.p
+fb><C:/Program Files/MiKTeX/fonts/type1/public/lm/lmmi10.pfb><C:/Program Files/
+MiKTeX/fonts/type1/public/lm/lmmi8.pfb><C:/Program Files/MiKTeX/fonts/type1/pub
+lic/lm/lmr10.pfb><C:/Program Files/MiKTeX/fonts/type1/public/lm/lmr12.pfb><C:/P
+rogram Files/MiKTeX/fonts/type1/public/lm/lmr8.pfb><C:/Program Files/MiKTeX/fon
+ts/type1/public/lm/lmss10.pfb>
+Output written on MasterThesis_template.pdf (33 pages, 225838 bytes).
 PDF statistics:
- 237 PDF objects out of 1000 (max. 8388607)
- 49 named destinations out of 1000 (max. 500000)
- 85 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 262 PDF objects out of 1000 (max. 8388607)
+ 53 named destinations out of 1000 (max. 500000)
+ 93 words of extra memory for PDF output out of 10000 (max. 10000000)
 

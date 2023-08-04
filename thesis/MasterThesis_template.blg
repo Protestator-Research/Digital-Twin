@@ -19,52 +19,56 @@ Reallocating 'name_of_file' (item size: 1) to 12 items.
 A level-1 auxiliary file: results.aux
 Reallocating 'name_of_file' (item size: 1) to 15 items.
 A level-1 auxiliary file: conclusion.aux
+Reallocating 'name_of_file' (item size: 1) to 15 items.
+A level-1 auxiliary file: futurework.aux
 Reallocating 'name_of_file' (item size: 1) to 13 items.
 A level-1 auxiliary file: appendix.aux
 Reallocating 'name_of_file' (item size: 1) to 11 items.
 Reallocating 'name_of_file' (item size: 1) to 9 items.
 The style file: alphadin.bst
+I found no \citation commands---while reading file MasterThesis_template.aux
 Reallocating 'singl_function' (item size: 4) to 100 items.
 Database file #1: literature.bib
 Reallocating 'wiz_functions' (item size: 4) to 6000 items.
-You've used 2 entries,
+You've used 0 entries,
             3183 wiz_defined-function locations,
-            670 strings with 5056 characters,
-and the built_in function-call counts, 1806 in all, are:
-= -- 203
-> -- 48
-< -- 61
-+ -- 66
-- -- 17
-* -- 143
-:= -- 314
-add.period$ -- 2
-call.type$ -- 2
-change.case$ -- 13
-chr.to.int$ -- 2
-cite$ -- 2
-duplicate$ -- 39
-empty$ -- 106
-format.name$ -- 26
-if$ -- 345
+            654 strings with 4641 characters,
+and the built_in function-call counts, 26 in all, are:
+= -- 0
+> -- 0
+< -- 0
++ -- 0
+- -- 0
+* -- 2
+:= -- 12
+add.period$ -- 0
+call.type$ -- 0
+change.case$ -- 0
+chr.to.int$ -- 0
+cite$ -- 0
+duplicate$ -- 0
+empty$ -- 1
+format.name$ -- 0
+if$ -- 2
 int.to.chr$ -- 1
 int.to.str$ -- 0
-missing$ -- 3
-newline$ -- 17
-num.names$ -- 6
-pop$ -- 11
+missing$ -- 0
+newline$ -- 3
+num.names$ -- 0
+pop$ -- 0
 preamble$ -- 1
-purify$ -- 17
+purify$ -- 0
 quote$ -- 0
-skip$ -- 75
+skip$ -- 2
 stack$ -- 0
-substring$ -- 189
-swap$ -- 14
-text.length$ -- 12
-text.prefix$ -- 1
+substring$ -- 0
+swap$ -- 0
+text.length$ -- 0
+text.prefix$ -- 0
 top$ -- 0
-type$ -- 16
+type$ -- 0
 warning$ -- 0
-while$ -- 18
-width$ -- 3
-write$ -- 33
+while$ -- 0
+width$ -- 0
+write$ -- 2
+(There was 1 error message)

@@ -1,9 +1,0 @@
-\babel@toc {english}{}\relax 
-\contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}%
-\contentsline {chapter}{\numberline {2}Related Work}{3}{chapter.2}%
-\contentsline {chapter}{\numberline {3}Approach}{5}{chapter.3}%
-\contentsline {chapter}{\numberline {4}Implementation}{7}{chapter.4}%
-\contentsline {chapter}{\numberline {5}Results}{9}{chapter.5}%
-\contentsline {chapter}{\numberline {6}Conclusion}{11}{chapter.6}%
-\contentsline {chapter}{\numberline {A}Additional information}{13}{appendix.A}%
-\contentsline {chapter}{Literature}{18}{appendix*.7}%
