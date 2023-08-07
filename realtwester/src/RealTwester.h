@@ -3,6 +3,8 @@
 #include "digitwester_global.h"
 #include <memory>
 #include <DriverSessionManager.h>
+
+//#include "Connections/MQTT/MQTTConnectionManager.h"
 // #include <include/DriverSessionManager.h>
 
 namespace REALTWESTER {
@@ -19,5 +21,6 @@ namespace REALTWESTER {
 
     private:
         ENERGY_PROBE_DRIVER::DriverSessionManager* SessionManager;
+        //CONNECTION::MQTT::MQTTConnectionManager* ConnectionManager;
     };
 }

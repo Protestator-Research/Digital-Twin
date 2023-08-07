@@ -23,7 +23,11 @@ add_executable(digitwester
         src/Connections/REST/RestAPIConnector.h
         src/Connections/REST/RestAPIConnector.cpp
         src/Connections/MQTT/MQTTConnectionManager.h
-        src/Connections/MQTT/MQTTConnectionManager.cpp)
+        src/Connections/MQTT/MQTTConnectionManager.cpp
+        src/Connections/MQTT/MQTTPersistence.h
+        src/Connections/MQTT/MQTTPersistence.cpp
+        src/Logging/LoggingService.h
+        src/Logging/LoggingService.cpp)
 
 if(energyprobedriver)
         target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json energyprobedriver::energyprobedriver Threads::Threads PahoMqttCpp::paho-mqttpp3-static eclipse-paho-mqtt-c::paho-mqtt3as-static)
@@ -33,7 +37,7 @@ else (energyprobedriver)
 endif (energyprobedriver)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION "."
         RUNTIME DESTINATION bin

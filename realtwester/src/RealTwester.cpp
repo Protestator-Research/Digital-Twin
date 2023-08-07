@@ -5,11 +5,14 @@
 #include <chrono>
 #include <thread>
 
+#include "Logging/LoggingService.h"
 
 
 namespace REALTWESTER {
     RealTwester::RealTwester() {
-        SessionManager = ENERGY_PROBE_DRIVER::DriverSessionManager::getSessionManager();
+        LOGGING::LoggingService::getInstance();
+    	SessionManager = ENERGY_PROBE_DRIVER::DriverSessionManager::getSessionManager();
+        //ConnectionManager = new CONNECTION::MQTT::MQTTConnectionManager();
     }
 
     RealTwester::~RealTwester()
