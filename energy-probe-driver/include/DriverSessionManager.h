@@ -91,7 +91,8 @@ namespace ENERGY_PROBE_DRIVER {
         int mMaxEnabledChannel = -1;
 
 		std::vector<std::shared_ptr<DataPointObserver>> Observers;
-		std::unique_ptr<EnergyProbe> EnergyProbeObject;
+		std::unique_ptr<EnergyProbe> EnergyProbe1Object;
+        std::unique_ptr<EnergyProbe> EnergyProbe2Object;
 
         std::unique_ptr<std::thread> GetDataThread;
         bool ThreadHasToRun = false;

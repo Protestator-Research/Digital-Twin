@@ -35,7 +35,7 @@ namespace REALTWESTER::CONNECTION::MQTT
 		std::map<std::string, mqtt::topic*> TopicMap;
 
 		const std::string CLIENT_ID = "realtwester";
-		const std::string SERVER = "mqtt://cpsiot2.cs.uni-kl.de:1884";
+		const std::string SERVER = "tcp://cpsiot2.cs.uni-kl.de:1884";
 		const std::chrono::duration<long> BUFFER_PERIOD = std::chrono::seconds(5);
 		const int MAX_BUFFERED_MESSAGES = 120;
 		const int QOS = 1;

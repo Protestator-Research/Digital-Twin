@@ -12,7 +12,7 @@ namespace REALTWESTER {
     RealTwester::RealTwester() {
         LOGGING::LoggingService::getInstance();
     	SessionManager = ENERGY_PROBE_DRIVER::DriverSessionManager::getSessionManager();
-        //ConnectionManager = new CONNECTION::MQTT::MQTTConnectionManager();
+        ConnectionManager = new CONNECTION::MQTT::MQTTConnectionManager();
     }
 
     RealTwester::~RealTwester()
