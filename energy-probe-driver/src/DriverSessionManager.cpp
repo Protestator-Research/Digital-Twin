@@ -112,7 +112,7 @@ namespace ENERGY_PROBE_DRIVER {
 
     void DriverSessionManager::startGatheringData() {
         EnergyProbe1Object->start();
-        EnergyProbe2Object->start();
+//        EnergyProbe2Object->start();
         ThreadHasToRun = true;
         GetDataThread = std::make_unique<std::thread>(std::bind(&DriverSessionManager::getDataThreadMethod,this));
     }
@@ -120,14 +120,14 @@ namespace ENERGY_PROBE_DRIVER {
     void DriverSessionManager::getDataThreadMethod() {
         while(ThreadHasToRun){
             EnergyProbe1Object->processBuffer();
-            EnergyProbe2Object->processBuffer();
+//            EnergyProbe2Object->processBuffer();
         }
     }
 
     void DriverSessionManager::stopGatheringData() {
         ThreadHasToRun = false;
         EnergyProbe1Object->stop();
-        EnergyProbe2Object->stop();
+//        EnergyProbe2Object->stop();
         GetDataThread->join();
         GetDataThread.reset();
     }
@@ -146,9 +146,9 @@ namespace ENERGY_PROBE_DRIVER {
         EnergyProbe1Object->prepareChannels();
         EnergyProbe1Object->init("/dev/ttyACM0");
 
-        EnergyProbe2Object = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo, this);
-        EnergyProbe2Object->prepareChannels();
-        EnergyProbe2Object->init("/dev/ttyACM1");
+//        EnergyProbe2Object = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo, this);
+//        EnergyProbe2Object->prepareChannels();
+//        EnergyProbe2Object->init("/dev/ttyACM1");
     }
 
     void DriverSessionManager::compileData() {
