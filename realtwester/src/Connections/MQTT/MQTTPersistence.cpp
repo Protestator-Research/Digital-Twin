@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fstream>
+#include <algorithm>
 //#endif
 
 REALTWESTER::CONNECTION::MQTT::MQTTPersistence::MQTTPersistence(const std::string& encodeKey) :
