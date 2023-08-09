@@ -14,8 +14,8 @@ namespace REALTWESTER {
     	SessionManager = ENERGY_PROBE_DRIVER::DriverSessionManager::getSessionManager();
         ConnectionManager = new CONNECTION::MQTT::MQTTConnectionManager();
         DataPointObserver = std::make_shared<ENERGY_PROBE_DRIVER::DataPointObserver>([this](std::shared_ptr<ENERGY_PROBE_DRIVER::MeasurePoint> dataPoint){
-            std::cout<<"Voltage: "<<dataPoint->getVoltage()<<std::endl;
-            ConnectionManager->publishToTopic("DeltaSigma/inputVoltage", dataPoint->getVoltage());
+//            std::cout<<"Voltage: "<<dataPoint->getVoltage()<<std::endl;
+            ConnectionManager->publishToTopic(dataPoint->getTopic(), dataPoint->getVoltage());
         });
     }
 
@@ -45,7 +45,10 @@ namespace REALTWESTER {
 
     void RealTwester::startService() {
         SessionManager->startGatheringData();
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+
+        while (true)
+            std::this_thread::sleep_for(std::chrono::seconds(10));
+
         SessionManager->stopGatheringData();
     }
 }

@@ -146,6 +146,10 @@ namespace ENERGY_PROBE_DRIVER {
         EnergyProbe1Object->prepareChannels();
         EnergyProbe1Object->init("/dev/ttyACM0");
 
+        EnergyProbe1Object->addTopicToMeasurementValue(0, "DeltaSigma/outputVoltage");
+        EnergyProbe1Object->addTopicToMeasurementValue(1, "DeltaSigma/outputVoltage");
+        EnergyProbe1Object->addTopicToMeasurementValue(2, "DeltaSigma/integrator1/inputVoltage");
+
 //        EnergyProbe2Object = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo, this);
 //        EnergyProbe2Object->prepareChannels();
 //        EnergyProbe2Object->init("/dev/ttyACM1");

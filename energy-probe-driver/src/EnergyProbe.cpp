@@ -268,7 +268,9 @@ namespace ENERGY_PROBE_DRIVER {
                 // update remaining data fields
                 remaining--;
 
-                gSessionData->informObserver(std::make_shared<MeasurePoint>(data2));
+                gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[mNumFields - remaining][0], Topics[0]));
+                gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[mNumFields - remaining][1], Topics[1]));
+                gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[mNumFields - remaining][2], Topics[2]));
 
                 // write data
                 if (outLength >= sizeof(outBuffer)) {
@@ -641,4 +643,11 @@ namespace ENERGY_PROBE_DRIVER {
 		return comport;
 	}
 
-	}
+    void EnergyProbe::addTopicToMeasurementValue(int channelInput, std::string topic) {
+        if(channelInput>=3)
+            throw std::length_error("Channel needs to < 3");
+
+        Topics[channelInput] = topic;
+    }
+
+}
