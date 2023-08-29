@@ -1,6 +1,7 @@
 #include "MQTTConnectionManager.h"
 
 #include <mqtt/topic.h>
+#include <thread>
 
 #include "MQTTPersistence.h"
 #include "../../Logging/LoggingService.h"
@@ -65,47 +66,52 @@ void REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::publishToTopic(std::s
 
 void REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::publishToTopic(std::string topic, std::string value)
 {
-	if (!TopicMap.contains(topic))
-		TopicMap.insert_or_assign(topic, generateTopic(topic));
 
-	std::string generatedPayload = "{" + value + "}";
-	try {
-		TopicMap[topic]->publish(std::move(generatedPayload));
-	}
-	catch (const mqtt::exception& ex)
-	{
-		LOGGING::LoggingService::error(ex.get_error_str());
-	}
+    auto thread = std::thread([this, topic, value] {
+        if (!TopicMap.contains(topic))
+            TopicMap.insert_or_assign(topic, generateTopic(topic));
+
+        std::string generatedPayload = "{" + value + "}";
+        try {
+            TopicMap[topic]->publish(std::move(generatedPayload));
+        }
+        catch (const mqtt::exception &ex) {
+            LOGGING::LoggingService::error(ex.get_error_str());
+        }
+    });
 }
 
 void REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::publishToTopic(std::string topic, double value)
 {
-	if (!TopicMap.contains(topic))
-		TopicMap.insert_or_assign(topic, generateTopic(topic));
+    auto thread = std::thread([this, topic, value] {
+        if (!TopicMap.contains(topic))
+            TopicMap.insert_or_assign(topic, generateTopic(topic));
 
-	std::string generatedPayload = "{" + std::to_string(value) + "}";
-	try {
-		TopicMap[topic]->publish(std::move(generatedPayload));
-	}
-	catch (const mqtt::exception& ex)
-	{
-		LOGGING::LoggingService::error(ex.get_error_str());
-	}
+        std::string generatedPayload = "{" + std::to_string(value) + "}";
+        try {
+            TopicMap[topic]->publish(std::move(generatedPayload));
+        }
+        catch (const mqtt::exception &ex) {
+            LOGGING::LoggingService::error(ex.get_error_str());
+        }
+    });
 }
 
 void REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::publishToTopic(std::string topic, float value)
 {
-	if (!TopicMap.contains(topic))
-		TopicMap.insert_or_assign(topic, generateTopic(topic));
+    auto thread = std::thread([this, topic, value]{
+        if (!TopicMap.contains(topic))
+            TopicMap.insert_or_assign(topic, generateTopic(topic));
 
-	std::string generatedPayload = "{" + std::to_string(value) + "}";
-	try {
-		TopicMap[topic]->publish(std::move(generatedPayload));
-	}
-	catch (const mqtt::exception& ex)
-	{
-		LOGGING::LoggingService::error(ex.get_error_str());
-	}
+        std::string generatedPayload = "{" + std::to_string(value) + "}";
+        try {
+            TopicMap[topic]->publish(std::move(generatedPayload));
+        }
+        catch (const mqtt::exception& ex)
+        {
+            LOGGING::LoggingService::error(ex.get_error_str());
+        }
+    });
 }
 
 mqtt::topic* REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::generateTopic(std::string topic)

@@ -12,7 +12,11 @@ namespace REALTWESTER {
     RealTwester::RealTwester() {
         LOGGING::LoggingService::getInstance();
     	SessionManager = ENERGY_PROBE_DRIVER::DriverSessionManager::getSessionManager();
-        //ConnectionManager = new CONNECTION::MQTT::MQTTConnectionManager();
+        ConnectionManager = new CONNECTION::MQTT::MQTTConnectionManager();
+        DataPointObserver = std::make_shared<ENERGY_PROBE_DRIVER::DataPointObserver>([this](std::shared_ptr<ENERGY_PROBE_DRIVER::MeasurePoint> dataPoint){
+//            std::cout<<"Voltage: "<<dataPoint->getVoltage()<<std::endl;
+            ConnectionManager->publishToTopic(dataPoint->getTopic(), dataPoint->getVoltage());
+        });
     }
 
     RealTwester::~RealTwester()
@@ -24,27 +28,27 @@ namespace REALTWESTER {
         SessionManager->enableChannel(0);
         SessionManager->setShuntResistorForChannel(0,20);
 
-        SessionManager->enableChannel(1);
-        SessionManager->setShuntResistorForChannel(1,30);
+//        SessionManager->enableChannel(1);
+//        SessionManager->setShuntResistorForChannel(1,30);
 
         SessionManager->compileData();
 
         SessionManager->detectAndCreateEnergyProbe();
 
-        if (SessionManager->getNumberOfProbes() < 0) {
+        SessionManager->registerObserver(DataPointObserver);
+
+        if (SessionManager->getNumberOfProbes() < 2) {
             throw new std::length_error("Not enough Probes detected!");
         }
 
     }
 
-    void RealTwester::tryToConnectToMQTTAPI() {
-        std::cout << "Starting Client" << std::endl;
-
-    }
-
     void RealTwester::startService() {
         SessionManager->startGatheringData();
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        while (true)
+            std::this_thread::sleep_for(std::chrono::seconds(10));
+
         SessionManager->stopGatheringData();
     }
 }

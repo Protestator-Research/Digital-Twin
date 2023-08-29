@@ -27,7 +27,9 @@ add_executable(digitwester
         src/Connections/MQTT/MQTTPersistence.h
         src/Connections/MQTT/MQTTPersistence.cpp
         src/Logging/LoggingService.h
-        src/Logging/LoggingService.cpp)
+        src/Logging/LoggingService.cpp
+        src/Exceptions/NotInitializedException.cpp
+        src/Exceptions/NotInitializedException.h)
 
 if(energyprobedriver)
         target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json energyprobedriver::energyprobedriver Threads::Threads PahoMqttCpp::paho-mqttpp3-static eclipse-paho-mqtt-c::paho-mqtt3as-static)

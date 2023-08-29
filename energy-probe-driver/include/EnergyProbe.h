@@ -18,6 +18,8 @@
 #define ENERGYPROBE_H
 
 #include "Device.h"
+#include <string>
+
 namespace ENERGY_PROBE_DRIVER {
 	class EnergyProbe : public Device
 	{
@@ -25,11 +27,13 @@ namespace ENERGY_PROBE_DRIVER {
 		EnergyProbe(Fifo* fifo, DriverSessionManager* session);
 		virtual ~EnergyProbe();
 
-		virtual void prepareChannels();
-		virtual void init(const char* devicename);
-		virtual void start();
-		virtual void stop();
-		virtual void processBuffer();
+		void prepareChannels() override;
+		void init(const char* devicename) override;
+		void start() override;
+		void stop() override;
+		void processBuffer() override;
+
+        void addTopicToMeasurementValue(int channelInput, std::string topic);
 
 	private:
 		int readAll(char* ptr, size_t size); // returns number of bytes read
@@ -54,10 +58,19 @@ namespace ENERGY_PROBE_DRIVER {
 		const char* mComport;
 		char mFields[MAX_EPROBE_CHANNELS];
 
+        std::string Topics[3];
+
+
 		// Intentionally unimplemented
 		//TODO Singleton Pattern?!
-		EnergyProbe(const EnergyProbe&) = delete;
-		EnergyProbe& operator=(const EnergyProbe&) = delete;
+		/**
+		 * copy constructor is per design deleted
+		 */
+        EnergyProbe(const EnergyProbe&) = delete;
+		/**
+		 *  Equals operator is per design deleted
+		 */
+        EnergyProbe& operator=(const EnergyProbe&) = delete;
 	};
 }
 #endif // ENERGYPROBE_H

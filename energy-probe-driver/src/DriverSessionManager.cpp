@@ -111,20 +111,23 @@ namespace ENERGY_PROBE_DRIVER {
 	}
 
     void DriverSessionManager::startGatheringData() {
-        EnergyProbeObject->start();
+        EnergyProbe1Object->start();
+//        EnergyProbe2Object->start();
         ThreadHasToRun = true;
         GetDataThread = std::make_unique<std::thread>(std::bind(&DriverSessionManager::getDataThreadMethod,this));
     }
 
     void DriverSessionManager::getDataThreadMethod() {
         while(ThreadHasToRun){
-            EnergyProbeObject->processBuffer();
+            EnergyProbe1Object->processBuffer();
+//            EnergyProbe2Object->processBuffer();
         }
     }
 
     void DriverSessionManager::stopGatheringData() {
         ThreadHasToRun = false;
-        EnergyProbeObject->stop();
+        EnergyProbe1Object->stop();
+//        EnergyProbe2Object->stop();
         GetDataThread->join();
         GetDataThread.reset();
     }
@@ -139,9 +142,17 @@ namespace ENERGY_PROBE_DRIVER {
         sem_init(&senderSem, 0, 0);
         Fifo* fifo = new Fifo(1 << 15, 1 << 20, &senderSem);
 
-        EnergyProbeObject = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo, this);
-        EnergyProbeObject->prepareChannels();
-        EnergyProbeObject->init("/dev/ttyACM0");
+        EnergyProbe1Object = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo, this);
+        EnergyProbe1Object->prepareChannels();
+        EnergyProbe1Object->init("/dev/ttyACM0");
+
+        EnergyProbe1Object->addTopicToMeasurementValue(0, "DeltaSigma/outputVoltage");
+        EnergyProbe1Object->addTopicToMeasurementValue(1, "DeltaSigma/outputVoltage");
+        EnergyProbe1Object->addTopicToMeasurementValue(2, "DeltaSigma/integrator1/inputVoltage");
+
+//        EnergyProbe2Object = std::make_unique<ENERGY_PROBE_DRIVER::EnergyProbe>(fifo, this);
+//        EnergyProbe2Object->prepareChannels();
+//        EnergyProbe2Object->init("/dev/ttyACM1");
     }
 
     void DriverSessionManager::compileData() {

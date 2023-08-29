@@ -4,6 +4,7 @@
 #include <filesystem>
 
 #include "../RealTwester.h"
+#include "../Exceptions/NotInitializedException.h"
 
 REALTWESTER::LOGGING::LoggingService* REALTWESTER::LOGGING::LoggingService::Myself = nullptr;
 
@@ -20,7 +21,7 @@ void REALTWESTER::LOGGING::LoggingService::log(std::string stringToLog)
 	if (Myself != nullptr)
 		Myself->logging(stringToLog);
 	else
-		throw std::exception("Logging needs to initialized");
+		throw EXCEPTION::NotInitializedException((std::string &) "LoggingService");
 }
 
 void REALTWESTER::LOGGING::LoggingService::error(std::string stringToError)
