@@ -26,7 +26,11 @@ namespace REALTWESTER {
 
     void RealTwester::tryDetectingTheProbe() {
         SessionManager->enableChannel(0);
-        SessionManager->setShuntResistorForChannel(0,20);
+        SessionManager->setShuntResistorForChannel(0,1);
+        SessionManager->enableChannel(1);
+        SessionManager->setShuntResistorForChannel(1, 1);
+        SessionManager->enableChannel(2);
+        SessionManager->setShuntResistorForChannel(2, 1);
 
 //        SessionManager->enableChannel(1);
 //        SessionManager->setShuntResistorForChannel(1,30);
