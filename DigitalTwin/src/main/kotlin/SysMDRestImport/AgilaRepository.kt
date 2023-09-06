@@ -238,8 +238,11 @@ object AgilaRepository: BasicRepository {
     override fun getAllElements(projectId: UUID, commitId: UUID?): MutableList<ElementDAO> {
         Rest.login("/users/login", user_key, admin_unsername, password_key, admin_password)
 
+        println(projectId)
+        println(commitId)
+
         val elementResponse = if(serverSessionId!=null)
-                Rest.get("/projects/$projectId/commits/$commitId/elements", serverSessionId.toString())
+                Rest.get("/projects/$projectId/commits/$commitId/elements", "")
             else
                 Rest.get("/projects/$projectId/commits/$commitId/elements", internalSessionId.toString())
 

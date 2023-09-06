@@ -72,8 +72,9 @@ class MainWindowController
         if(selectedDT!=null){
             for(project in projects){
                 if(selectedDT!!.parentProject==project.id){
-                    val branch = project.defaultBranch?.let { AgilaRepository.getBranchById(project.id, it.id) }
-                    branch?.head?.id?.let { downloadAllProjectData(project.id, it) }
+                    downloadAllProjectData(projectId = selectedDT!!.parentProject!!, commitId = selectedDT!!.commitId)
+//                    val branch = project.defaultBranch?.let { AgilaRepository.getBranchById(project.id, it.id) }
+//                    branch?.head?.id?.let { downloadAllProjectData(project.id, it) }
                 }
             }
 
