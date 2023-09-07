@@ -3,9 +3,9 @@ package MQTT
 import MQTT.entities.DigitalTwinLoadingRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.hivemq.client.mqtt.MqttClient
+import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient
-import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient
-import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient
+import java.nio.charset.StandardCharsets
 import java.util.*
 
 
@@ -16,7 +16,7 @@ object MQTTClient {
     private var ServerUrl:String = "cpsiot2.cs.uni-kl.de"
     private var ServerPort:Int = 1884
 
-    private var client:Mqtt3BlockingClient
+    private var client:Mqtt3AsyncClient
 
     init {
         client = MqttClient.builder()
@@ -24,7 +24,7 @@ object MQTTClient {
             .serverHost(ServerUrl)
             .serverPort(ServerPort)
             .useMqttVersion3()
-            .build().toBlocking()
+            .build().toAsync()
         client.connect()
     }
 
@@ -49,10 +49,29 @@ object MQTTClient {
             .serverHost(ServerUrl)
             .serverPort(ServerPort)
             .useMqttVersion3()
-            .build().toBlocking()
+            .build().toAsync()
         client.connect()
     }
 
+    fun subscribeToTopic(topic:String){
+        client.subscribeWith()
+            .topicFilter(topic)
+            .callback { publish ->
+                if(publish.payload.isPresent){
+                    val string_Value = StandardCharsets.UTF_8.decode(publish.payload.get()).toString()
+                    print(string_Value)
+                }
+            }
+            .send()
+            .whenComplete { subAck, throwable ->
+                if (throwable != null) {
+                    println("Subscribing issue")
+                } else {
+                    println("Successfully Subscribed")
+                }
+            }
+
+    }
     fun disconnectFromServer(){
         client.disconnect()
     }
