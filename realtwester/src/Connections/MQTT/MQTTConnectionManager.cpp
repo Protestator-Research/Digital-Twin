@@ -99,7 +99,7 @@ void REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::publishToTopic(std::s
 
 void REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::publishToTopic(std::string topic, float value)
 {
-    auto thread = std::thread([this, topic, value]{
+    // auto thread = std::thread([this, topic, value]{
         if (!TopicMap.contains(topic))
             TopicMap.insert_or_assign(topic, generateTopic(topic));
 
@@ -110,8 +110,10 @@ void REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::publishToTopic(std::s
         catch (const mqtt::exception& ex)
         {
             LOGGING::LoggingService::error(ex.get_error_str());
-        }
-    });
+        }catch (const std::exception& ex) {
+			LOGGING::LoggingService::error(ex.what());
+		}
+    // });
 }
 
 mqtt::topic* REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::generateTopic(std::string topic)

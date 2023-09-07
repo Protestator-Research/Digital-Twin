@@ -220,6 +220,10 @@ namespace ENERGY_PROBE_DRIVER {
 						outBuffer[outLength++] = last_value[index][2];
 						outBuffer[outLength++] = last_value[index][3];
 
+						gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[index][0], Topics[0]));
+                		gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[index][1], Topics[1]));
+                		gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[index][2], Topics[2]));
+
 						// write data
 						if (outLength >= sizeof(outBuffer)) {
 							writeData(outBuffer, outLength);
@@ -394,8 +398,8 @@ namespace ENERGY_PROBE_DRIVER {
 
 		// Energy Probe supports fewer channels than are permitted in configuration
 		// Check user hasn't over-configured.
-		if (gSessionData->getMaxEnabledChannels() >= MAX_EPROBE_CHANNELS) {
-			printf("Incorrect configuration: channel %d is configured, but Arm Energy Probe supports ch0-ch%d. v\r\n", gSessionData->getMaxEnabledChannels(), MAX_EPROBE_CHANNELS-1);
+		if (gSessionData->getMaxEnabledChannels() > MAX_EPROBE_CHANNELS) {
+			printf("Incorrect configuration: %d channel are configured, but Arm Energy Probe supports ch0-ch%d. v\r\n", gSessionData->getMaxEnabledChannels(), MAX_EPROBE_CHANNELS-1);
 			//        handleException();
             return;
 		}

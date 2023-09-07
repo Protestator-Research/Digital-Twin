@@ -14,7 +14,7 @@ namespace REALTWESTER {
     	SessionManager = ENERGY_PROBE_DRIVER::DriverSessionManager::getSessionManager();
         ConnectionManager = new CONNECTION::MQTT::MQTTConnectionManager();
         DataPointObserver = std::make_shared<ENERGY_PROBE_DRIVER::DataPointObserver>([this](std::shared_ptr<ENERGY_PROBE_DRIVER::MeasurePoint> dataPoint){
-//            std::cout<<"Voltage: "<<dataPoint->getVoltage()<<std::endl;
+           std::cout<<dataPoint->getTopic() + " Voltage: "<<dataPoint->getVoltage()<<std::endl;
             ConnectionManager->publishToTopic(dataPoint->getTopic(), dataPoint->getVoltage());
         });
     }
@@ -26,7 +26,7 @@ namespace REALTWESTER {
 
     void RealTwester::tryDetectingTheProbe() {
         SessionManager->enableChannel(0);
-        SessionManager->setShuntResistorForChannel(0,1);
+        SessionManager->setShuntResistorForChannel(0, 1);
         SessionManager->enableChannel(1);
         SessionManager->setShuntResistorForChannel(1, 1);
         SessionManager->enableChannel(2);
@@ -41,9 +41,9 @@ namespace REALTWESTER {
 
         SessionManager->registerObserver(DataPointObserver);
 
-        if (SessionManager->getNumberOfProbes() < 2) {
-            throw new std::length_error("Not enough Probes detected!");
-        }
+        // if (SessionManager->getNumberOfProbes() < 2) {
+            // throw new std::length_error("Not enough Probes detected!");
+        // }
 
     }
 
