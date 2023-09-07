@@ -140,6 +140,18 @@ class FXController {
         }
     }
 
+    @FXML
+    fun mouseClickOnDTTreeItem(){
+        val selectedItems = DigitalTwinStructure.selectionModel.selectedItems
+        for (item in selectedItems)
+        {
+            tableColumnsMap[item.value] = TableColumn(item.value)
+            DTDataTable.columns.add(tableColumnsMap[item.value])
+        }
+    }
+
     lateinit var DigitalTwinLabel:Label
     lateinit var DigitalTwinStructure:TreeView<String>
+    lateinit var DTDataTable:TableView<String>
+    var tableColumnsMap:HashMap<String,TableColumn<String,Float>> = hashMapOf()
 }

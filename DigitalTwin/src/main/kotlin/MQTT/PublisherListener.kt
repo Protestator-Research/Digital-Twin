@@ -45,6 +45,9 @@ class PublisherListener : AbstractInterceptHandler() {
             GlobalTopics.EXIT.callString -> {
 
             }
+            else -> {
+
+            }
         }
     }
 

@@ -316,15 +316,19 @@ class DigitalTwinSession(
                 allElements = AgilaRepository.getAllElements(projectId, selectedDT?.commitId)
             }
         }
-        if(allElements!=null)
-        {
-            println("Successfull Digital Twin Chosen -> creating now the entrypoints for the twin")
-            val parser = selectedDT?.connectedModels?.let { DigitalTwinParser(allElements !!, it) }
-            if (parser != null) {
-                parser.filterToSelectedElements()
-                parser.parseElements()
-                parser.reloadDocumentsIfNeccesary()
-                createTopicsForDTServer()
+        if (selectedDT != null) {
+            if(!loadedDTs.contains(selectedDT.id)) {
+                if (allElements != null) {
+                    println("Successfull Digital Twin Chosen -> creating now the entrypoints for the twin")
+                    val parser = selectedDT?.connectedModels?.let { DigitalTwinParser(allElements!!, it) }
+                    if (parser != null) {
+                        parser.filterToSelectedElements()
+                        parser.parseElements()
+                        parser.reloadDocumentsIfNeccesary()
+                        createTopicsForDTServer()
+                    }
+                }
+                loadedDTs.add(selectedDT.id)
             }
         }
     }
@@ -340,4 +344,5 @@ class DigitalTwinSession(
     val SystemElements = hashMapOf<String, SysMDElement>()
     val graphs = hashMapOf<String, GraphManager>()
     val connections = hashMapOf<String,String>()
+    val loadedDTs = arrayListOf<UUID>()
 }

@@ -45,7 +45,6 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.SeparatorMenuItem?>
 <?import javafx.scene.control.SplitPane?>
-<?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.AnchorPane?>
@@ -117,10 +116,6 @@
                         <DatePicker fx:id="ToDateSelect" layoutX="381.0" layoutY="15.0" prefHeight="25.0" prefWidth="136.0" AnchorPane.rightAnchor="148.0" />
                         <Button fx:id="DownloadDataButton" layoutX="533.0" layoutY="15.0" mnemonicParsing="false" onAction="#onDownloadButtonClicked" prefHeight="25.0" prefWidth="68.0" text="Get Data" AnchorPane.rightAnchor="64.0" />
                         <TableView fx:id="DTDataTable" layoutX="15.0" layoutY="54.0" prefHeight="471.0" prefWidth="853.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="54.0">
-                          <columns>
-                            <TableColumn prefWidth="75.0" text="C1" />
-                            <TableColumn prefWidth="75.0" text="C2" />
-                          </columns>
                            <opaqueInsets>
                               <Insets />
                            </opaqueInsets>
@@ -142,7 +137,7 @@
         </ScrollPane>
             <AnchorPane prefHeight="200.0" prefWidth="200.0">
                <children>
-                  <TreeView fx:id="DigitalTwinStructure" prefHeight="547.0" prefWidth="308.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                  <TreeView fx:id="DigitalTwinStructure" onMouseClicked="#mouseClickOnDTTreeItem" prefHeight="547.0" prefWidth="308.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
                </children>
             </AnchorPane>
 <!--        <AnchorPane>-->
