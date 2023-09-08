@@ -1,19 +1,41 @@
 package ui
 
+import DTSessionManager
 import Elements.SysMDElement
 import MQTT.MQTTClient
+import MQTT.entities.DigitalTwinDataPoint
+import MQTT.entities.DigitalTwinLoadingRequest
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import javafx.application.Platform
 import javafx.fxml.FXML
 import javafx.geometry.Insets
 import javafx.scene.Node
+import javafx.scene.chart.CategoryAxis
+import javafx.scene.chart.LineChart
+import javafx.scene.chart.NumberAxis
+import javafx.scene.chart.XYChart
 import javafx.scene.control.*
+import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.GridPane
 import javafx.util.Callback
+import java.sql.Timestamp
+import java.text.SimpleDateFormat
+import java.util.Date
+
 
 class FXController {
 
+    val xAxis:CategoryAxis = CategoryAxis()
+    val yAxis:NumberAxis = NumberAxis()
+    lateinit var lineChart : LineChart<String, Number>
+    private val sdf1 = SimpleDateFormat("mm:ss.SSS")
+    private val objectMapper = ObjectMapper()
+
     init {
         SessionController.setFxSessionController(this)
+
+//        lineChart = LineChart<String, Number>(xAxis,yAxis)
     }
 
     @FXML
@@ -109,7 +131,6 @@ class FXController {
                 componentItem.children.add(propertyItem)
                 var components = TreeItem("Components")
                 for (ckey in DTSessionManager.dtSession.SystemElements[key]!!.consistsOfComponents) {
-//                    var comp = TreeItem(ckey.key)
                     components.children.add(getTreeForComponent(ckey.key, ckey.value))
                 }
                 componentItem.children.add(components)
@@ -149,9 +170,24 @@ class FXController {
             val mqttTesterName = checkForPropertiesAndCreateMQTTTree(item)
             println(mqttTesterName)
             if (mqttTesterName.isNotEmpty()) {
-                tableColumnsMap[item.value] = TableColumn(item.value)
-                DTDataTable.columns.add(tableColumnsMap[item.value])
-                MQTTClient.subscribeToTopic(mqttTesterName)
+
+                lineChatsMap[mqttTesterName] = XYChart.Series<String, Number>()
+                lineChatsMap[mqttTesterName]?.name = mqttTesterName
+//                lineChatsMap[item.value]?.title = mqttTesterName
+//                DTDataTable.columns.add(tableColumnsMap[item.value])
+                MQTTClient.subscribeToTopic(mqttTesterName, {
+                    Platform.runLater{
+                        var dataElement = objectMapper.readValue<DigitalTwinDataPoint>(it)
+
+//                        println("Float Value: ${it.toFloat()}")
+//                        println("Data point: ${sdf1.format(Timestamp(System.currentTimeMillis())).toString()}")
+                        lineChatsMap[mqttTesterName]?.data?.add(XYChart.Data(dataElement.current_time, dataElement.value))
+                        if(lineChatsMap[mqttTesterName]?.data?.size!! > 20){
+                            lineChatsMap[mqttTesterName]?.data?.remove(lineChatsMap[mqttTesterName]?.data?.first() !!)
+                        }
+                    }
+                })
+                lineChart.data.add(lineChatsMap[mqttTesterName]!!)
             }
         }
     }
@@ -185,5 +221,7 @@ class FXController {
     lateinit var DigitalTwinLabel:Label
     lateinit var DigitalTwinStructure:TreeView<String>
     lateinit var DTDataTable:TableView<String>
-    var tableColumnsMap:HashMap<String,TableColumn<String,Float>> = hashMapOf()
+    lateinit var MainAnchorPane:AnchorPane
+
+    var lineChatsMap:HashMap<String, XYChart.Series<String, Number>> = hashMapOf()
 }

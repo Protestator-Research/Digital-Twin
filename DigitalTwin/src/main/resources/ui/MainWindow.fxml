@@ -45,7 +45,6 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.SeparatorMenuItem?>
 <?import javafx.scene.control.SplitPane?>
-<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.HBox?>
@@ -99,7 +98,7 @@
         </AnchorPane>
         <ScrollPane prefHeight="537.0" prefWidth="972.0">
           <content>
-            <AnchorPane id="Content" minHeight="-1.0" minWidth="-1.0" prefHeight="994.0" prefWidth="889.0" snapToPixel="false">
+            <AnchorPane id="Content" fx:id="MainAnchorPane" minHeight="-1.0" minWidth="-1.0" prefHeight="994.0" prefWidth="889.0" snapToPixel="false">
               <children>
                 <Label fx:id="DigitalTwinLabel" alignment="CENTER" layoutX="14.0" layoutY="14.0" style="&#10;" text="No Twin Selected" textAlignment="CENTER" wrapText="false" AnchorPane.leftAnchor="15.0">
                            <font>
@@ -109,18 +108,12 @@
                       <Color red="0.624" green="0.624" blue="0.624" fx:id="x2" />
                            </textFill>
                         </Label>
-                        <Button fx:id="PlayButton" layoutX="613.0" layoutY="15.0" mnemonicParsing="false" onAction="#onPlayButtonClicked" text="Play" AnchorPane.rightAnchor="14.0" />
                         <DatePicker fx:id="FromDateSelect" layoutX="214.0" layoutY="15.0" prefHeight="25.0" prefWidth="143.0" AnchorPane.rightAnchor="308.0" />
                         <Label layoutX="184.0" layoutY="19.0" text="From" AnchorPane.rightAnchor="453.0" />
                         <Label layoutX="364.0" layoutY="19.0" text="To" AnchorPane.rightAnchor="287.0" />
                         <DatePicker fx:id="ToDateSelect" layoutX="381.0" layoutY="15.0" prefHeight="25.0" prefWidth="136.0" AnchorPane.rightAnchor="148.0" />
-                        <Button fx:id="DownloadDataButton" layoutX="533.0" layoutY="15.0" mnemonicParsing="false" onAction="#onDownloadButtonClicked" prefHeight="25.0" prefWidth="68.0" text="Get Data" AnchorPane.rightAnchor="64.0" />
-                        <TableView fx:id="DTDataTable" layoutX="15.0" layoutY="54.0" prefHeight="471.0" prefWidth="853.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="54.0">
-                           <opaqueInsets>
-                              <Insets />
-                           </opaqueInsets>
-                        </TableView>
-                        <LineChart fx:id="DTDataChart" layoutX="16.0" layoutY="563.0" prefHeight="431.0" prefWidth="850.0" AnchorPane.leftAnchor="16.0" AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="563.0">
+                        <Button fx:id="DownloadDataButton" layoutX="533.0" layoutY="15.0" mnemonicParsing="false" onAction="#onDownloadButtonClicked" prefHeight="26.0" prefWidth="117.0" text="Get Data" AnchorPane.rightAnchor="15.0" />
+                        <LineChart fx:id="lineChart" animated="false" layoutX="10.0" layoutY="66.0" prefHeight="400.0" prefWidth="869.0" title="Measurements">
                           <xAxis>
                             <CategoryAxis side="BOTTOM" />
                           </xAxis>

@@ -53,13 +53,14 @@ object MQTTClient {
         client.connect()
     }
 
-    fun subscribeToTopic(topic:String){
+    fun subscribeToTopic(topic:String, callback:(String)->Unit){
         client.subscribeWith()
             .topicFilter(topic)
             .callback { publish ->
                 if(publish.payload.isPresent){
                     val string_Value = StandardCharsets.UTF_8.decode(publish.payload.get()).toString()
-                    print(string_Value)
+//                    println(string_Value)
+                    callback(string_Value)
                 }
             }
             .send()
