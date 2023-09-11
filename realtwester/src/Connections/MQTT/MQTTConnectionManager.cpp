@@ -6,6 +6,13 @@
 #include "MQTTPersistence.h"
 #include "../../Logging/LoggingService.h"
 
+#include <iostream>
+#include <ctime>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
+
+
 REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::MQTTConnectionManager()
 {
 	LOGGING::LoggingService::log("Initializing MQTT Client");
@@ -103,8 +110,17 @@ void REALTWESTER::CONNECTION::MQTT::MQTTConnectionManager::publishToTopic(std::s
         if (!TopicMap.contains(topic))
             TopicMap.insert_or_assign(topic, generateTopic(topic));
 
-        std::string generatedPayload = "{" + std::to_string(value) + "}";
-        try {
+		auto now = std::chrono::system_clock::now();
+		auto t = std::time(nullptr);
+    	auto tm = std::localtime(&t);
+		auto ms = duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+		std::ostringstream oss;
+    	oss << std::put_time(tm, "%d-%m-%Y %H-%M-%S");
+		oss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+
+        std::string generatedPayload = "{\r\n\"current_time\": \""+ oss.str() + "\",\r\n\"value\": " + std::to_string(value) + "\r\n}";
+        
+		try {
             TopicMap[topic]->publish(std::move(generatedPayload));
         }
         catch (const mqtt::exception& ex)

@@ -220,9 +220,9 @@ namespace ENERGY_PROBE_DRIVER {
 						outBuffer[outLength++] = last_value[index][2];
 						outBuffer[outLength++] = last_value[index][3];
 
-						gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[index][0], Topics[0]));
-                		gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[index][1], Topics[1]));
-                		gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[index][2], Topics[2]));
+						gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[index][0] & 0x0F, Topics[0]));
+                		gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[index][1] & 0x0F, Topics[1]));
+                		gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[index][2] & 0x0F, Topics[2]));
 
 						// write data
 						if (outLength >= sizeof(outBuffer)) {
@@ -272,9 +272,9 @@ namespace ENERGY_PROBE_DRIVER {
                 // update remaining data fields
                 remaining--;
 
-                gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[mNumFields - remaining][0], Topics[0]));
-                gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[mNumFields - remaining][1], Topics[1]));
-                gSessionData->informObserver(std::make_shared<MeasurePoint>(last_value[mNumFields - remaining][2], Topics[2]));
+                gSessionData->informObserver(std::make_shared<MeasurePoint>(data1 & 0x30, Topics[0]));
+                gSessionData->informObserver(std::make_shared<MeasurePoint>(data2 & 0x30, Topics[1]));
+                gSessionData->informObserver(std::make_shared<MeasurePoint>(data1 & 0x30, Topics[2]));
 
                 // write data
                 if (outLength >= sizeof(outBuffer)) {
