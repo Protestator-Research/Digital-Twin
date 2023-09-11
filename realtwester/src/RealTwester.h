@@ -5,6 +5,7 @@
 
 #include <DriverSessionManager.h>
 // #include <include/DriverSessionManager.h>
+#include "RaspberryPiTester/DriverSessionManager.h"
 #include "Connections/MQTT/MQTTConnectionManager.h"
 #include <DataPointObserver.h>
 
@@ -22,7 +23,8 @@ namespace REALTWESTER {
         void startService();
 
     private:
-        ENERGY_PROBE_DRIVER::DriverSessionManager* SessionManager;
+        // ENERGY_PROBE_DRIVER::DriverSessionManager* SessionManager;
+        REALTWESTER::RASPI::DriverSessionManager* SessionManager;
         CONNECTION::MQTT::MQTTConnectionManager* ConnectionManager;
 
         std::shared_ptr<ENERGY_PROBE_DRIVER::DataPointObserver> DataPointObserver;

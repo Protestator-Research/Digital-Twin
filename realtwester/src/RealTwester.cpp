@@ -11,7 +11,8 @@
 namespace REALTWESTER {
     RealTwester::RealTwester() {
         LOGGING::LoggingService::getInstance();
-    	SessionManager = ENERGY_PROBE_DRIVER::DriverSessionManager::getSessionManager();
+    	// SessionManager = ENERGY_PROBE_DRIVER::DriverSessionManager::getSessionManager();
+        SessionManager = new REALTWESTER::RASPI::DriverSessionManager();
         ConnectionManager = new CONNECTION::MQTT::MQTTConnectionManager();
         DataPointObserver = std::make_shared<ENERGY_PROBE_DRIVER::DataPointObserver>([this](std::shared_ptr<ENERGY_PROBE_DRIVER::MeasurePoint> dataPoint){
            float correctedValue = (dataPoint->getVoltage()/10.0f);
@@ -26,26 +27,25 @@ namespace REALTWESTER {
     }
 
     void RealTwester::tryDetectingTheProbe() {
-        SessionManager->enableChannel(0);
-        SessionManager->setShuntResistorForChannel(0, 1);
-        SessionManager->enableChannel(1);
-        SessionManager->setShuntResistorForChannel(1, 1);
-        SessionManager->enableChannel(2);
-        SessionManager->setShuntResistorForChannel(2, 1);
+        // SessionManager->enableChannel(0);
+        // SessionManager->setShuntResistorForChannel(0, 1);
+        // SessionManager->enableChannel(1);
+        // SessionManager->setShuntResistorForChannel(1, 1);
+        // SessionManager->enableChannel(2);
+        // SessionManager->setShuntResistorForChannel(2, 1);
 
 //        SessionManager->enableChannel(1);
 //        SessionManager->setShuntResistorForChannel(1,30);
 
-        SessionManager->compileData();
+        // SessionManager->compileData();
 
-        SessionManager->detectAndCreateEnergyProbe();
+        // SessionManager->detectAndCreateEnergyProbe();
 
         SessionManager->registerObserver(DataPointObserver);
 
         // if (SessionManager->getNumberOfProbes() < 2) {
             // throw new std::length_error("Not enough Probes detected!");
         // }
-
     }
 
     void RealTwester::startService() {

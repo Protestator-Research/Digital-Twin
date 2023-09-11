@@ -15,7 +15,7 @@ class CppLinuxSerialConan(ConanFile):
     topics = ("mqtt", "boost", "asio")
     settings = "os", "arch", "compiler", "build_type"
     options = {"shared": [True, False], "fPIC": [True, False], "build_tests": [True,False]}
-    default_options = {"shared": False, "fPIC": True, "build_tests": True}
+    default_options = {"shared": True, "fPIC": True, "build_tests": True}
     no_copy_source = True
 
     def config_options(self):

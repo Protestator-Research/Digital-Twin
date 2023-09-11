@@ -7,7 +7,6 @@ find_package(energyprobedriver CONFIG)
 find_package(Threads REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
 find_package(eclipse-paho-mqtt-c REQUIRED)
-find_package(cpp_serial REQUIRED)
 
 add_executable(digitwester
         src/RealTwester.cpp
@@ -30,7 +29,12 @@ add_executable(digitwester
         src/Logging/LoggingService.h
         src/Logging/LoggingService.cpp
         src/Exceptions/NotInitializedException.cpp
-        src/Exceptions/NotInitializedException.h)
+        src/Exceptions/NotInitializedException.h
+        src/RaspberryPiTester/DriverSessionManager.cpp
+        src/RaspberryPiTester/DriverSessionManager.h
+        src/RaspberryPiTester/Exception.hpp
+        src/RaspberryPiTester/SerialPort.hpp
+        src/RaspberryPiTester/SerialPort.cpp)
 
 if(energyprobedriver)
         target_link_libraries(${PROJECT_NAME} CURL::libcurl nlohmann_json::nlohmann_json energyprobedriver::energyprobedriver Threads::Threads PahoMqttCpp::paho-mqttpp3-static eclipse-paho-mqtt-c::paho-mqtt3as-static)
