@@ -7,6 +7,7 @@ find_package(energyprobedriver CONFIG)
 find_package(Threads REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
 find_package(eclipse-paho-mqtt-c REQUIRED)
+find_package(cpp_serial REQUIRED)
 
 add_executable(digitwester
         src/RealTwester.cpp
