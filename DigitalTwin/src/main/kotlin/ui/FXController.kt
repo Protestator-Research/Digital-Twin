@@ -1,13 +1,13 @@
 package ui
 
-import DTSessionManager
 import Elements.SysMDElement
 import MQTT.MQTTClient
-import MQTT.entities.DigitalTwinDataPoint
-import MQTT.entities.DigitalTwinLoadingRequest
+import MQTT.entities.EnergyProbeData
+import SysMDRestImport.entities.requests.DigitalTwinDataRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import javafx.application.Platform
+import javafx.collections.ObservableList
 import javafx.fxml.FXML
 import javafx.geometry.Insets
 import javafx.scene.Node
@@ -16,26 +16,22 @@ import javafx.scene.chart.LineChart
 import javafx.scene.chart.NumberAxis
 import javafx.scene.chart.XYChart
 import javafx.scene.control.*
-import javafx.scene.layout.AnchorPane
 import javafx.scene.layout.GridPane
 import javafx.util.Callback
-import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import java.util.Date
-
 
 class FXController {
 
-    val xAxis:CategoryAxis = CategoryAxis()
-    val yAxis:NumberAxis = NumberAxis()
-    lateinit var lineChart : LineChart<String, Number>
+    val xAxis: CategoryAxis = CategoryAxis()
+    val yAxis: NumberAxis = NumberAxis()
+    @FXML
+    lateinit var DTDataChart : LineChart<String, Number>
     private val sdf1 = SimpleDateFormat("mm:ss.SSS")
     private val objectMapper = ObjectMapper()
 
+
     init {
         SessionController.setFxSessionController(this)
-
-//        lineChart = LineChart<String, Number>(xAxis,yAxis)
     }
 
     @FXML
@@ -74,7 +70,7 @@ class FXController {
         val loginButton: Node = dialog.dialogPane.lookupButton(loginButtonType)
         loginButton.setDisable(true)
 
-        AGILAIP.textProperty().addListener { observable, oldValue, newValue ->
+        AGILAIP.textProperty().addListener { _, _, newValue ->
             loginButton.setDisable(
                 newValue.trim().isEmpty()
             )
@@ -131,6 +127,7 @@ class FXController {
                 componentItem.children.add(propertyItem)
                 var components = TreeItem("Components")
                 for (ckey in DTSessionManager.dtSession.SystemElements[key]!!.consistsOfComponents) {
+//                    var comp = TreeItem(ckey.key)
                     components.children.add(getTreeForComponent(ckey.key, ckey.value))
                 }
                 componentItem.children.add(components)
@@ -170,24 +167,27 @@ class FXController {
             val mqttTesterName = checkForPropertiesAndCreateMQTTTree(item)
             println(mqttTesterName)
             if (mqttTesterName.isNotEmpty()) {
+                tableColumnsMap[mqttTesterName] = TableColumn(item.value)
 
                 lineChatsMap[mqttTesterName] = XYChart.Series<String, Number>()
                 lineChatsMap[mqttTesterName]?.name = mqttTesterName
-//                lineChatsMap[item.value]?.title = mqttTesterName
-//                DTDataTable.columns.add(tableColumnsMap[item.value])
-                MQTTClient.subscribeToTopic(mqttTesterName, {
-                    Platform.runLater{
-                        var dataElement = objectMapper.readValue<DigitalTwinDataPoint>(it)
 
-//                        println("Float Value: ${it.toFloat()}")
-//                        println("Data point: ${sdf1.format(Timestamp(System.currentTimeMillis())).toString()}")
-                        lineChatsMap[mqttTesterName]?.data?.add(XYChart.Data(dataElement.current_time, dataElement.value))
-                        if(lineChatsMap[mqttTesterName]?.data?.size!! > 20){
-                            lineChatsMap[mqttTesterName]?.data?.remove(lineChatsMap[mqttTesterName]?.data?.first() !!)
+                MQTTClient.subscribeToTopic(mqttTesterName, {
+                    var dataElement = objectMapper.readValue<EnergyProbeData>(it)
+                    Platform.runLater {
+                        lineChatsMap[mqttTesterName]?.data?.add(
+                            XYChart.Data(
+                                dataElement.current_time,
+                                dataElement.value
+                            )
+                        )
+                        if (lineChatsMap[mqttTesterName]?.data?.size!! > 40) {
+                            lineChatsMap[mqttTesterName]?.data?.remove(lineChatsMap[mqttTesterName]?.data?.first()!!)
                         }
                     }
                 })
-                lineChart.data.add(lineChatsMap[mqttTesterName]!!)
+
+                DTDataChart.data.add(lineChatsMap[mqttTesterName]!!)
             }
         }
     }
@@ -218,10 +218,15 @@ class FXController {
         return ""
     }
 
+    @FXML
+    fun writeVauesToTableAndGraph(topic:String, value: String){
+        tableColumnsDataMap[topic]?.add(value)
+    }
+
     lateinit var DigitalTwinLabel:Label
     lateinit var DigitalTwinStructure:TreeView<String>
-    lateinit var DTDataTable:TableView<String>
-    lateinit var MainAnchorPane:AnchorPane
-
+//    lateinit var DTDataTable:TableView<ObservableList<String>>
+    var tableColumnsMap:HashMap<String,TableColumn<ObservableList<String>, String>> = hashMapOf()
+    var tableColumnsDataMap:HashMap<String,ObservableList<String>> = hashMapOf()
     var lineChatsMap:HashMap<String, XYChart.Series<String, Number>> = hashMapOf()
 }

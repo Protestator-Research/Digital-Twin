@@ -118,4 +118,9 @@ class MainWindowController
 
     }
 
+    fun propagateValueToMainWindow(topic:String, value:String){
+        val newValue=value.removePrefix("{").removeSuffix("}")
+
+    }
+
 }
