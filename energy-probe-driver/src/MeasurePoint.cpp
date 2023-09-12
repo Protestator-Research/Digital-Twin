@@ -11,6 +11,12 @@ namespace ENERGY_PROBE_DRIVER
         Topic = topic;
 	}
 
+	MeasurePoint::MeasurePoint(float value, std::string topic)
+	{
+        Voltage = value;
+        Topic = topic;
+	}
+
 	float MeasurePoint::getVoltage()
 	{
 		return Voltage;

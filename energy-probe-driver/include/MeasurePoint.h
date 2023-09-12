@@ -9,6 +9,7 @@ namespace ENERGY_PROBE_DRIVER {
 	public:
 		MeasurePoint() = delete;
 		MeasurePoint(int buffer, std::string topic);
+		MeasurePoint(float value, std::string topic);
 
         virtual ~MeasurePoint() = default;
 
