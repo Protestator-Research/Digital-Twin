@@ -11,6 +11,7 @@ import SysMDRestImport.ElementDAO
 import SysMDRestImport.Rest
 import SysMDRestImport.entities.DigitalTwin
 import SysMDRestImport.entities.Project
+import SysMDRestImport.entities.requests.RealTwinDataRequest
 import com.github.tukcps.jaadd.DDBuilder
 import com.github.tukcps.jaadd.values.IntegerRange
 import simulation.GraphManager
@@ -307,6 +308,7 @@ class DigitalTwinSession(
         for(project in currentProjects){
             if(project.id == projectId) {
                 val digitalTwins = AgilaRepository.getDigitalTwinsFromProject(projectId)
+                loadedProject = projectId
                 for(digitaltwin in digitalTwins) {
                     if(digitaltwin.id == twinId) {
                         selectedDT = digitaltwin
@@ -317,7 +319,7 @@ class DigitalTwinSession(
             }
         }
         if (selectedDT != null) {
-            if(!loadedDTs.contains(selectedDT.id)) {
+            if(loadedDT != selectedDT.id) {
                 if (allElements != null) {
                     println("Successfull Digital Twin Chosen -> creating now the entrypoints for the twin")
                     val parser = selectedDT?.connectedModels?.let { DigitalTwinParser(allElements!!, it) }
@@ -328,7 +330,7 @@ class DigitalTwinSession(
                         createTopicsForDTServer()
                     }
                 }
-                loadedDTs.add(selectedDT.id)
+                loadedDT = selectedDT.id
             }
         }
     }
@@ -339,10 +341,30 @@ class DigitalTwinSession(
         }
     }
 
+    fun postDataToDigitalTwinAndBackend(data: RealTwinDataRequest) {
+        AgilaRepository.postRealTwinData(projectId = loadedProject, digitalTwinId = loadedDT, data)
+
+        for(key in data.data.keys){
+            var keyParts = key.split("/")
+            var prop:SysMDProperty<*>? = null
+            if(SystemElements.containsKey(keyParts.first()))
+                prop = SystemElements[keyParts.first()]?.getPropertyRecursive(keyParts,0)
+
+            for(element in data.data[key] !!) {
+                if(prop!! is SysMDPropertyDouble)
+                    (prop as SysMDPropertyDouble).setNewValue(element.toDouble())
+            }
+
+            for(graph in graphs.values)
+                graph.propagateValues()
+        }
+    }
+
     val componentsMap = hashMapOf<String,SysMDElement>()
     val globalProperties = hashMapOf<String, SysMDProperty<*>>()
     val SystemElements = hashMapOf<String, SysMDElement>()
     val graphs = hashMapOf<String, GraphManager>()
     val connections = hashMapOf<String,String>()
-    val loadedDTs = arrayListOf<UUID>()
+    var loadedDT:UUID = UUID.randomUUID()
+    var loadedProject:UUID = UUID.randomUUID()
 }

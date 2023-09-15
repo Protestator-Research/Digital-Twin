@@ -629,4 +629,8 @@ object AgilaRepository: BasicRepository {
             mutableListOf<DigitalTwin>()
         }
     }
+
+    fun postRealTwinData(projectId: UUID, digitalTwinId:UUID, data:RealTwinDataRequest){
+        Rest.post("/projects/${projectId}/real-twin-data/${digitalTwinId}", writer.writeValueAsString(data), "")
+    }
 }

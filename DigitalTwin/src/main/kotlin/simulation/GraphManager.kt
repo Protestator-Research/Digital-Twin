@@ -115,6 +115,12 @@ class GraphManager {
             return arrayListOf(getNodeRecursive(address,node, index) !!)
     }
 
+    fun propagateValues() {
+        for(node in allAvailableNodes.values){
+            node.propagate()
+        }
+    }
+
     val inputs = hashMapOf<String,GraphNode>()
     val outputs = hashMapOf<String,GraphNode>()
 

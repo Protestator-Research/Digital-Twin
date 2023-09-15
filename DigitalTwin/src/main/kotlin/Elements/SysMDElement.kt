@@ -7,31 +7,31 @@ abstract class SysMDElement {
     fun addProperty(name:String, type:SysMDType?) {
         properties[name] = when (type) {
             SysMDType.ANY -> TODO()
-            SysMDType.NUMBER -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.INTEGER -> SysMDProperty<Int>(currentValue = 0,type = type)
-            SysMDType.BOOLEAN -> SysMDProperty<Boolean>(currentValue = false,type = type)
-            SysMDType.REAL -> SysMDProperty<Double>(currentValue = 0.0,type = type)
+            SysMDType.NUMBER -> SysMDPropertyNumber(currentValue = 0.0,type = type)
+            SysMDType.INTEGER -> SysMDPropertyInteger(currentValue = 0,type = type)
+            SysMDType.BOOLEAN -> SysMDPropertyBoolean(currentValue = false,type = type)
+            SysMDType.REAL -> SysMDPropertyDouble(currentValue = 0.0,type = type)
             SysMDType.QUANTITY -> TODO()
             SysMDType.SCALAR_VALUE -> TODO()
-            SysMDType.STRING -> SysMDProperty<String>(currentValue = "",type = type)
+            SysMDType.STRING -> SysMDPropertyString(currentValue = "",type = type)
             SysMDType.REQUIREMENT -> TODO()
-            SysMDType.PERFORMANCE -> SysMDProperty<Double>(currentValue = 0.0,type = type)
+            SysMDType.PERFORMANCE -> SysMDPropertyDouble(currentValue = 0.0,type = type)
             SysMDType.QUALITY -> TODO()
-            SysMDType.WORK -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.MASS -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.TIME -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.POWER -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.LENGTH -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.SPEED -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.ACCELLERATION -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.AREA -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.VOLUME -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.CURRENT -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.CURRENCY -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.TEMPRETURE -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.VOLTAGE -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.CAPACITIY -> SysMDProperty<Double>(currentValue = 0.0,type = type)
-            SysMDType.RESISTANCE -> SysMDProperty<Double>(currentValue = 0.0,type = type)
+            SysMDType.WORK -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.MASS -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.TIME -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.POWER -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.LENGTH -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.SPEED -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.ACCELLERATION -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.AREA -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.VOLUME -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.CURRENT -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.CURRENCY -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.TEMPRETURE -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.VOLTAGE -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.CAPACITIY -> SysMDPropertyDouble(currentValue = 0.0,type = type)
+            SysMDType.RESISTANCE -> SysMDPropertyDouble(currentValue = 0.0,type = type)
             SysMDType.ELEMENT -> TODO()
             SysMDType.FUNCTION -> TODO()
             SysMDType.COMPONENT -> TODO()
@@ -40,13 +40,13 @@ abstract class SysMDElement {
             SysMDType.SOFTWARE -> TODO()
             SysMDType.PROCESSOR -> TODO()
             SysMDType.DISPLAY -> TODO()
-            SysMDType.COMMENT -> SysMDProperty<String>(currentValue = "",type = type)
+            SysMDType.COMMENT -> SysMDPropertyString(currentValue = "",type = type)
             SysMDType.shows -> TODO()
             SysMDType.implmenents -> TODO()
             SysMDType.implementedBy -> TODO()
             SysMDType.executes -> TODO()
             SysMDType.executedby -> TODO()
-            SysMDType.ERROR -> SysMDProperty<Double>(currentValue = 1234567889.1235456789, type=type)
+            SysMDType.ERROR -> SysMDPropertyDouble(currentValue = 1234567889.1235456789, type=type)
             null -> throw Exception("Expected a Type --> Not Valid")
         }
     }
@@ -92,6 +92,14 @@ abstract class SysMDElement {
 //        Broker.pushTopic()
     }
 
+    fun getPropertyRecursive(values:List<String>, index:Int) : SysMDProperty<*>? {
+        if(properties.containsKey(values[index])) {
+            return properties[values[index]]
+        } else if(consistsOfComponents.containsKey(values[index])) {
+            return consistsOfComponents[values[index]]?.getPropertyRecursive(values, index+1)
+        }
+        return null
+    }
 
     val connectionType:ConnectionType = ConnectionType.UNDEFINED
     var properties:HashMap<String,SysMDProperty<*>> = hashMapOf()
