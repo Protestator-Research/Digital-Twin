@@ -631,6 +631,8 @@ object AgilaRepository: BasicRepository {
     }
 
     fun postRealTwinData(projectId: UUID, digitalTwinId:UUID, data:RealTwinDataRequest){
-        Rest.post("/projects/${projectId}/real-twin-data/${digitalTwinId}", writer.writeValueAsString(data), "")
+        val payload =  writer.writeValueAsString(data)
+        println(payload)
+        Rest.post("/projects/${projectId}/real-twin-data/${digitalTwinId}",payload, "")
     }
 }

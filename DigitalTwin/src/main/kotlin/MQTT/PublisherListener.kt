@@ -41,7 +41,7 @@ class PublisherListener : AbstractInterceptHandler() {
 
             }
             else -> {
-                val payload:EnergyProbeData = objectMapper.readValue<EnergyProbeData>(msg!!.payload.toString())
+                val payload:EnergyProbeData = objectMapper.readValue<EnergyProbeData>(decodedPayload)
                 if(dataPoints[msg!!.topicName]==null)
                 {
                     dataPoints[msg!!.topicName] = arrayListOf()
