@@ -25,7 +25,9 @@ object MQTTClient {
             .serverPort(ServerPort)
             .useMqttVersion3()
             .build().toAsync()
-        client.connect()
+        val result = client.connect()
+        result.join()
+        println(result)
     }
 
     fun checkoutProject(projectId:UUID, dtId:UUID) {

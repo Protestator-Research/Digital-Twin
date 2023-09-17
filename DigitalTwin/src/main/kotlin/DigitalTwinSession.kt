@@ -342,7 +342,7 @@ class DigitalTwinSession(
     }
 
     fun postDataToDigitalTwinAndBackend(data: RealTwinDataRequest) {
-        AgilaRepository.postRealTwinData(projectId = loadedProject, digitalTwinId = loadedDT, data)
+//        AgilaRepository.postRealTwinData(projectId = loadedProject, digitalTwinId = loadedDT, data)
 
         for(key in data.data.keys){
             var keyParts = key.split("/")

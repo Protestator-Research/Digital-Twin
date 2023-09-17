@@ -82,4 +82,13 @@ object Broker {
 
         mqttBroker.internalPublish(message, "INTRLPUB")
     }
+
+    fun publishToTopic(topic:String, payload:String) {
+        var message = MqttMessageBuilders.publish()
+            .topicName(topic)
+            .retained(true)
+            .qos(MqttQoS.EXACTLY_ONCE)
+            .payload(Unpooled.copiedBuffer(payload.toByteArray()))
+            .build()
+    }
 }

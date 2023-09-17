@@ -9,9 +9,13 @@ open class SysMDProperty<T>(
 ) {
     var measurable : Boolean = false
     var id:UUID?=null
+    var topic:String=""
 
     fun <V:T>setNewValue(newValue:V){
         currentValue = newValue
+        if(topic != ""){
+            MQTT.Broker.publishToTopic(topic, "")
+        }
     }
 }
 
