@@ -33,6 +33,7 @@ class MainWindowController
 
     init {
         Rest.baseURI= "cpsiot2.cs.uni-kl.de"
+//        Rest.baseURI= "192.168.0.14"
         Rest.port = 8081
         projects = AgilaRepository.getProjects()
         getDigitalTwinsOfProjects()
