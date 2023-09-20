@@ -13,10 +13,10 @@ import org.springframework.web.client.RestTemplate
 object Rest {
     // Will result in "http://baseURI:port/entryURI
     private val protocol = "http://"
-    var baseURI = "cpsiot2.cs.uni-kl.de"
+    var baseURI = "cps-agila.cs.rptu.de"
 //    var baseURI = "192.168.0.14"
     var entryURI: String = "/agila-server"
-    var port: Int = 8081
+    var port: Int = 8080
 
     private var auth: String = "none"
     private val objectMapper = ObjectMapper()

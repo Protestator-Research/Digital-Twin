@@ -13,7 +13,7 @@ object MQTTClient {
     private val objectMapper = ObjectMapper()
     private var writer = objectMapper.writer().withDefaultPrettyPrinter()
 
-    private var ServerUrl:String = "cpsiot2.cs.uni-kl.de"
+    private var ServerUrl:String = "cps-agila.cs.rptu.de"
 //    private var ServerUrl:String = "192.168.0.14"
     private var ServerPort:Int = 1884
 
