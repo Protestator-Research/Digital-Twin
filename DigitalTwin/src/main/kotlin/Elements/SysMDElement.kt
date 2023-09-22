@@ -80,16 +80,19 @@ abstract class SysMDElement {
     fun addRecursiveComponentsToBroker(currentPath:String)
     {
         for(prop_keys in properties) {
-            if(prop_keys.value.measurable)
+            if((prop_keys.value.measurable)||(prop_keys.value.controllable)) {
                 Broker.pushTopic("$currentPath/${prop_keys.key}")
-        }
-        for (component in consistsOfComponents) {
-            var newTopicName = "$currentPath/${component.key}"
-//            Broker.pushTopic(newTopicName)
-            component.value.addRecursiveComponentsToBroker(newTopicName)
+//                if (properties[prop_keys.key]?.topic != "") {
+                    println("Current Toptic: ${properties[prop_keys.key]?.topic} Set To Topic $currentPath/${prop_keys.key}")
+                    properties[prop_keys.key]?.topic = "$currentPath/${prop_keys.key}"
+            }
         }
 
-//        Broker.pushTopic()
+
+        for (component in consistsOfComponents) {
+            var newTopicName = "$currentPath/${component.key}"
+            component.value.addRecursiveComponentsToBroker(newTopicName)
+        }
     }
 
     fun getPropertyRecursive(values:List<String>, index:Int) : SysMDProperty<*>? {

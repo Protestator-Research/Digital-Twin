@@ -1,6 +1,7 @@
 package MQTT
 
 import DTSessionManager
+import DigitalTwinSession
 import MQTT.entities.DigitalTwinLoadingRequest
 import MQTT.entities.EnergyProbeData
 import SysMDRestImport.AgilaRepository
@@ -13,7 +14,7 @@ import io.moquette.interception.messages.InterceptPublishMessage
 
 
 
-class PublisherListener : AbstractInterceptHandler() {
+class PublisherListener(val digitalTwinSession:DigitalTwinSession ) : AbstractInterceptHandler() {
     private val objectMapper = ObjectMapper()
     private var writer = objectMapper.writer().withDefaultPrettyPrinter()
 
@@ -35,26 +36,32 @@ class PublisherListener : AbstractInterceptHandler() {
         when(msg!!.topicName){
             GlobalTopics.CONNECT_TO_TWIN.callString -> {
                 val loadingReq:DigitalTwinLoadingRequest = objectMapper.readValue<DigitalTwinLoadingRequest>(decodedPayload)
-                DTSessionManager.dtSession.connectToDigitalTwin(projectId = loadingReq.projectID, twinId = loadingReq.twinID)
+                digitalTwinSession.connectToDigitalTwin(projectId = loadingReq.projectID, twinId = loadingReq.twinID)
             }
             GlobalTopics.EXIT.callString -> {
 
             }
             else -> {
-                val payload:EnergyProbeData = objectMapper.readValue<EnergyProbeData>(decodedPayload)
-                if(dataPoints[msg!!.topicName]==null)
-                {
-                    dataPoints[msg!!.topicName] = arrayListOf()
-                }
-                dataPoints[msg!!.topicName]?.add(payload.value)
-                if(dataPoints[msg!!.topicName]?.size !! > 10) {
-                    val payload = RealTwinDataRequest()
-                    payload.data = dataPoints
-                    DTSessionManager.dtSession.postDataToDigitalTwinAndBackend(payload)
+                if (!Broker.listener.ignorablePoints.contains(msg!!.topicName)) {
+                    val payload: EnergyProbeData = objectMapper.readValue<EnergyProbeData>(decodedPayload)
+                    if (dataPoints[msg!!.topicName] == null) {
+                        dataPoints[msg!!.topicName] = arrayListOf()
+                    }
+                    dataPoints[msg!!.topicName]?.add(payload.value)
+                    val RTpayload = RealTwinDataRequest()
+                    RTpayload.data = dataPoints
+                    digitalTwinSession.postDataToDigitalTwinAndBackend(RTpayload, msg!!.topicName)
+                    dataPoints.clear()
                 }
             }
         }
     }
 
     val dataPoints:HashMap<String, ArrayList<Float>> = hashMapOf()
+    val ignorablePoints:ArrayList<String> = arrayListOf()
+    val inputTopics = arrayListOf<String>(
+        "DeltaSigma/inputVoltage",
+        "DeltaSigma/outputVoltage",
+        "DeltaSigma/integrator1/outputVoltage",
+        "DeltaSigma/integrator2/outputVoltage")
 }

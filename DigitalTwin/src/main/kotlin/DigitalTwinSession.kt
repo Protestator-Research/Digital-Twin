@@ -59,7 +59,7 @@ class DigitalTwinSession(
                                 if (componentsMap[qualifiedName] != null) {
                                     componentsMap[completeName]?.consistsOfComponents?.set(
                                         "$partName$i",
-                                        componentsMap[qualifiedName]!!
+                                        componentsMap[qualifiedName]!!.copyOfElement(UUID.randomUUID())
                                     )
                                 }
                             }
@@ -68,7 +68,7 @@ class DigitalTwinSession(
                             if (componentsMap[qualifiedName] != null) {
                                 componentsMap[completeName]?.consistsOfComponents?.set(
                                     partName,
-                                    componentsMap[qualifiedName]!!
+                                    componentsMap[qualifiedName]!!.copyOfElement(UUID.randomUUID())
                                 )
                             }
                         }
@@ -187,7 +187,11 @@ class DigitalTwinSession(
                             println("${element.first.javaClass}")
                             println("Connection Source ${(element.first.ref as Association).source}")
                             println("Connection Target ${(element.first.ref as Association).target}")
-                            connections[(element.first.ref as Association).source.toString().removeSuffix("?]").removePrefix("[")] = (element.first.ref as Association).target.toString().removeSuffix("?]").removePrefix("[")
+
+                            if(connections[(element.first.ref as Association).source.toString().removeSuffix("?]").removePrefix("[")]==null)
+                                connections[(element.first.ref as Association).source.toString().removeSuffix("?]").removePrefix("[")] = arrayListOf()
+
+                            connections[(element.first.ref as Association).source.toString().removeSuffix("?]").removePrefix("[")]?.add((element.first.ref as Association).target.toString().removeSuffix("?]").removePrefix("["))
                         } else if ((element.second as Specialization).target.first().toString()
                                 .removeSuffix("?") == "hasValue"
                         ) {
@@ -237,8 +241,10 @@ class DigitalTwinSession(
             graph.registerSystemNode(sys.value)
             for(element in connections)
             {
-                if(element.key.contains(sys.key)){
-                    graph.connectTwoNodes(element.key, element.value)
+                if(element.key.contains(sys.key)) {
+                    for (value in element.value) {
+                        graph.connectTwoNodes(element.key, value)
+                    }
                 }
             }
         }
@@ -296,7 +302,7 @@ class DigitalTwinSession(
 
         when (addressElements.size-index) {
             addressElements.size -> return getPropertyFromAddress(addressElements,index+1,SystemElements[addressElements[index]])
-            1 -> return elem?.getProperty(addressElements[index]) ?: SysMDProperty<Double>(currentValue = -123456789.123456789, type=SysMDType.ERROR)
+            1 -> return elem?.getProperty(addressElements[index]) ?: SysMDPropertyDouble(currentValue = -123456789.123456789, type=SysMDType.ERROR)
             else -> return getPropertyFromAddress(addressElements,index+1, elem?.consistsOfComponents!![addressElements[index]])
         }
     }
@@ -342,14 +348,17 @@ class DigitalTwinSession(
         }
     }
 
-    fun postDataToDigitalTwinAndBackend(data: RealTwinDataRequest) {
+    /**
+     * Propagates the Values to the Agila Backend and to the Digital Twin Server
+     */
+    fun postDataToDigitalTwinAndBackend(data: RealTwinDataRequest, topic:String) {
 //        AgilaRepository.postRealTwinData(projectId = loadedProject, digitalTwinId = loadedDT, data)
 
         for(key in data.data.keys){
             var keyParts = key.split("/")
             var prop:SysMDProperty<*>? = null
             if(SystemElements.containsKey(keyParts.first()))
-                prop = SystemElements[keyParts.first()]?.getPropertyRecursive(keyParts,0)
+                prop = SystemElements[keyParts.first()]?.getPropertyRecursive(keyParts,1)
 
             for(element in data.data[key] !!) {
                 if(prop!! is SysMDPropertyDouble)
@@ -357,7 +366,7 @@ class DigitalTwinSession(
             }
 
             for(graph in graphs.values)
-                graph.propagateValues()
+                graph.propagateValues(topic)
         }
     }
 
@@ -365,7 +374,7 @@ class DigitalTwinSession(
     val globalProperties = hashMapOf<String, SysMDProperty<*>>()
     val SystemElements = hashMapOf<String, SysMDElement>()
     val graphs = hashMapOf<String, GraphManager>()
-    val connections = hashMapOf<String,String>()
+    val connections = hashMapOf<String,ArrayList<String>>()
     var loadedDT:UUID = UUID.randomUUID()
     var loadedProject:UUID = UUID.randomUUID()
 }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.hivemq.client.mqtt.MqttClient
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient
+import io.netty.handler.codec.mqtt.MqttConnectPayload
 import java.nio.charset.StandardCharsets
 import java.util.*
 
@@ -15,7 +16,7 @@ object MQTTClient {
 
     private var ServerUrl:String = "cps-agila.cs.rptu.de"
 //    private var ServerUrl:String = "192.168.0.14"
-    private var ServerPort:Int = 1884
+    private var ServerPort:Int = 1883
 
     private var client:Mqtt3AsyncClient
 
@@ -41,6 +42,13 @@ object MQTTClient {
             .payload(writer.writeValueAsBytes(dtReq))
             .send()
         println(result)
+    }
+
+    fun publishToTopic(topic: String, payload: String) {
+        val result = client.publishWith()
+            .topic(topic)
+            .payload(payload.encodeToByteArray())
+            .send()
     }
 
     fun setServerURLandPort(url:String,port:Int){

@@ -7,10 +7,22 @@ class SysMDComponent : SysMDElement() {
     override fun copyOfElement(id:UUID?): SysMDElement {
         val returnValue = SysMDComponent()
 
-        returnValue.consistsOfComponents = this.consistsOfComponents.clone() as HashMap<String, SysMDElement>
-        returnValue.inputs = this.inputs.clone() as HashMap<String, SysMDProperty<*>>
-        returnValue.outputs = this.outputs.clone() as HashMap<String, SysMDProperty<*>>
-        returnValue.properties = this.properties.clone() as HashMap<String, SysMDProperty<*>>
+        for(elem in consistsOfComponents)
+        {
+            returnValue.consistsOfComponents[elem.key] = elem.value.copyOfElement(UUID.randomUUID())
+        }
+
+        for(elem in inputs){
+            returnValue.inputs[elem.key]=elem.value.copyOfProperty()
+        }
+
+        for(elem in outputs){
+            returnValue.outputs[elem.key]=elem.value.copyOfProperty()
+        }
+
+        for(elem in properties){
+            returnValue.properties[elem.key]=elem.value.copyOfProperty()
+        }
 
         returnValue.id = id
 

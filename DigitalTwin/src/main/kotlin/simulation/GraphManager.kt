@@ -38,9 +38,13 @@ class GraphManager {
         }
     }
 
-
+    /**
+     * Connects two nodes with the given Address from SysMD
+     */
     fun connectTwoNodes(AdressNode1:String,AdressNode2:String) {
+        println("Connect Node $AdressNode2 to $AdressNode1")
         if((getNodeRecursive(AdressNode2.split("::"))!=null)&&(getNodeRecursive(AdressNode1.split("::"))!=null)) {
+            println("In Reality connected Nodes ${getNodeRecursive(AdressNode1.split("::"))?.SysMDProperty?.topic} to ${getNodeRecursive(AdressNode1.split("::"))?.SysMDProperty?.topic}")
             getNodeRecursive(AdressNode1.split("::"))?.ConnectedNodes?.add(getNodeRecursive(AdressNode2.split("::"))!!)
             getNodeRecursive(AdressNode2.split("::"))?.ConnectedNodes?.add(getNodeRecursive(AdressNode1.split("::"))!!)
         }else {
@@ -69,56 +73,54 @@ class GraphManager {
         }
     }
 
-    private fun getNodeRecursive(address:List<String>,node:GraphNode? = null,index:Int = 1) : GraphNode? {
-        if((index>1)&&(node==null))
+    /**
+     * Checks the list recursive and Returns the fitting node for the path
+     */
+    private fun getNodeRecursive(address:List<String>,index:Int = 1) : GraphNode? {
+        if(index == address.size)
             return null
-//            throw Exception("Error in Model.")
 
-        if(allAvailableNodes.keys.contains(address[index]))
+        if(allAvailableNodes.isNullOrEmpty())
+            return null
+
+        if(allAvailableNodes.containsKey(address[index]) && (allAvailableNodes[address[index]]?.ownGraph != null) && (allAvailableNodes[address[index]]?.ownGraph?.allAvailableNodes?.size !!>0)) {
+            return allAvailableNodes[address[index]]?.ownGraph?.getNodeRecursive(address,index+1)
+        } else if(allAvailableNodes.containsKey(address[index])){
             return allAvailableNodes[address[index]]
-
-        when (address.size - index) {
-            address.size - 1 -> return getNodeRecursive(address,allAvailableNodes[address[index]],index + 1)
-            1 -> return node?.ownGraph?.allAvailableNodes?.get(address[index]) ?: null
-            else -> return getNodeRecursive(address, node?.ownGraph?.allAvailableNodes?.get(address[index]),index + 1)
+        }else {
+            return null
         }
     }
 
     private fun getNodesWithJustANumberAtTheEnd(address: List<String>, node: GraphNode? = null, index: Int = 1) : List<GraphNode?>? {
-        if(getNodeRecursive(address, node, index)==null) {
-            val returnValue:ArrayList<GraphNode?> = arrayListOf()
-            for(i in 1..9)
-            {
-                var newAddress:String = address[index]+i
-
-                if((index>1)&&(node==null))
-                    return null
-
-                if(allAvailableNodes.keys.contains(newAddress))
-                    returnValue.add(allAvailableNodes[newAddress] !!)
-
-                when (address.size - index) {
-                    address.size - 1 ->
-                        getNodesWithJustANumberAtTheEnd(address,allAvailableNodes[newAddress],index + 1)?.forEach({
-                            if(it!=null)
-                                returnValue.add(it)
-                        })
-                    else -> getNodesWithJustANumberAtTheEnd(address, node?.ownGraph?.allAvailableNodes?.get(newAddress),index + 1)?.forEach({
-                        if(it!=null)
-                            returnValue.add(it)
-                    })
-                }
-            }
-            return returnValue
-        }
-        else
-            return arrayListOf(getNodeRecursive(address,node, index) !!)
+//        if(getNodeRecursive(address, index)==null) {
+//            val returnValue:ArrayList<GraphNode?> = arrayListOf()
+//            for(i in 1..9)
+//            {
+//                var newAddress:String = address[index]+i
+//
+//                if((index>1)&&(node==null))
+//                    return null
+//
+//                if(allAvailableNodes.containsKey(address[index]) && (allAvailableNodes[address[index]]?.ownGraph?.allAvailableNodes?.size !!>0)) {
+//                    return allAvailableNodes[address[index]]?.ownGraph?.getNodeRecursive(address,index+1)
+//                } else if(allAvailableNodes.containsKey(address[index])){
+//                    return allAvailableNodes[address[index]]
+//                }else {
+//                    return null
+//                }
+//            }
+//            return returnValue
+//        }
+//        else
+//            return arrayListOf(getNodeRecursive(address, index) !!)
+        return null
     }
 
-    fun propagateValues() {
-        for(node in allAvailableNodes.values){
-            node.propagate()
-        }
+    fun propagateValues(topic:String) {
+        val node = getNodeRecursive(topic.split("/"))
+        node?.propagate()
+
     }
 
     val inputs = hashMapOf<String,GraphNode>()
