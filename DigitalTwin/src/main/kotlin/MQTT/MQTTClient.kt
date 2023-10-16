@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.hivemq.client.mqtt.MqttClient
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient
 import com.hivemq.client.mqtt.mqtt3.Mqtt3BlockingClient
+import io.netty.handler.codec.mqtt.MqttConnectPayload
 import java.nio.charset.StandardCharsets
 import java.util.*
 
@@ -41,6 +42,13 @@ object MQTTClient {
             .payload(writer.writeValueAsBytes(dtReq))
             .send()
         println(result)
+    }
+
+    fun publishToTopic(topic: String, payload: String) {
+        val result = client.publishWith()
+            .topic(topic)
+            .payload(payload.encodeToByteArray())
+            .send()
     }
 
     fun setServerURLandPort(url:String,port:Int){

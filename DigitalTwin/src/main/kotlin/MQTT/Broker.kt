@@ -1,5 +1,6 @@
 package MQTT
 
+import DTSessionManager
 import MQTT.entities.DigitalTwinLoadingRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.moquette.broker.Server
@@ -23,6 +24,8 @@ object Broker {
     private var writer = objectMapper.writer().withDefaultPrettyPrinter()
 
     val mqttBroker: Server = Server()
+    val listener = PublisherListener(DTSessionManager.dtSession)
+
     fun startServer() {
 
         // Load class path for configuration
@@ -31,7 +34,7 @@ object Broker {
 
         // Start MQTT broker
         println("Start MQTT broker...")
-        val userHandlers: List<*> = listOf<Any>(PublisherListener())
+        val userHandlers: List<*> = listOf<Any>(listener)
         try {
             mqttBroker.startServer(classPathConfig, userHandlers as MutableList<out InterceptHandler>?)
         } catch (e: IOException) {
@@ -84,11 +87,13 @@ object Broker {
     }
 
     fun publishToTopic(topic:String, payload:String) {
-        var message = MqttMessageBuilders.publish()
-            .topicName(topic)
-            .retained(true)
-            .qos(MqttQoS.EXACTLY_ONCE)
-            .payload(Unpooled.copiedBuffer(payload.toByteArray()))
-            .build()
+        if(listener.inputTopics.contains(topic))
+            return
+
+//        println("publish to Topic is called with topic $topic")
+        if(!listener.ignorablePoints.contains(topic))
+            listener.ignorablePoints.add(topic)
+
+        MQTTClient.publishToTopic(topic, payload)
     }
 }

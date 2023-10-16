@@ -90,8 +90,10 @@ class GraphNode(
                             (node.SysMDProperty as SysMDPropertyDouble).setNewValue((SysMDProperty as SysMDPropertyDouble).currentValue)
 
                     SysMDType.VOLTAGE ->
-                        if((node.SysMDProperty!! is SysMDPropertyDouble) && (SysMDProperty!! is SysMDPropertyDouble))
+                        if ((node.SysMDProperty!! is SysMDPropertyDouble) && (SysMDProperty!! is SysMDPropertyDouble))
                             (node.SysMDProperty as SysMDPropertyDouble).setNewValue((SysMDProperty as SysMDPropertyDouble).currentValue)
+                        else
+                            println("Error --> Should not be the case")
 
                     SysMDType.CAPACITIY ->
                         if((node.SysMDProperty!! is SysMDPropertyDouble) && (SysMDProperty!! is SysMDPropertyDouble))
@@ -100,6 +102,8 @@ class GraphNode(
                     SysMDType.RESISTANCE ->
                         if((node.SysMDProperty!! is SysMDPropertyDouble) && (SysMDProperty!! is SysMDPropertyDouble))
                             (node.SysMDProperty as SysMDPropertyDouble).setNewValue((SysMDProperty as SysMDPropertyDouble).currentValue)
+                        else
+                            println("Error --> Should not be the case")
 
                     SysMDType.ELEMENT -> TODO()
                     SysMDType.FUNCTION -> TODO()
@@ -121,8 +125,10 @@ class GraphNode(
                     SysMDType.ERROR ->
                         if((node.SysMDProperty!! is SysMDPropertyDouble) && (SysMDProperty!! is SysMDPropertyDouble))
                             (node.SysMDProperty as SysMDPropertyDouble).setNewValue((SysMDProperty as SysMDPropertyDouble).currentValue)
-
-                    null -> TODO()
+                        else
+                            println("Error --> Should not be the case")
+                    null -> println("Nullcase")
+                    else -> {}
                 }
             }
         }
