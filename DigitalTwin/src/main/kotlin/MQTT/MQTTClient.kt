@@ -71,7 +71,6 @@ object MQTTClient {
                 if(publish.payload.isPresent){
                     val string_Value = StandardCharsets.UTF_8.decode(publish.payload.get()).toString()
                     callback(string_Value)
-//                    println(publish.topic.toString() + string_Value)
                 }
             }
             .send()
