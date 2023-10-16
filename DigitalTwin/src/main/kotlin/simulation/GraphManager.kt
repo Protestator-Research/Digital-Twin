@@ -120,7 +120,6 @@ class GraphManager {
     fun propagateValues(topic:String) {
         val node = getNodeRecursive(topic.split("/"))
         node?.propagate()
-
     }
 
     val inputs = hashMapOf<String,GraphNode>()
