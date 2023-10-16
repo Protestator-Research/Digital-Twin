@@ -15,7 +15,7 @@ object MQTTClient {
 
     private var ServerUrl:String = "cps-agila.cs.rptu.de"
 //    private var ServerUrl:String = "192.168.0.14"
-    private var ServerPort:Int = 1884
+    private var ServerPort:Int = 1883
 
     private var client:Mqtt3AsyncClient
 
@@ -63,7 +63,6 @@ object MQTTClient {
                 if(publish.payload.isPresent){
                     val string_Value = StandardCharsets.UTF_8.decode(publish.payload.get()).toString()
                     callback(string_Value)
-//                    println(publish.topic.toString() + string_Value)
                 }
             }
             .send()
