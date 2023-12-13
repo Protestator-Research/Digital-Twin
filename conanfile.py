@@ -23,6 +23,8 @@ class CppDigitalTwinRecipe(ConanFile):
 
     def requirements(self):
         self.requires("redboltz-mqtt_cpp/13.2.1")
+        self.requires("libcurl/8.4.0")
+        self.requires("nlohmann_json/3.11.3")
         #if self.settings.os != "Windows":
         #    self.requires("libudev/system")
         

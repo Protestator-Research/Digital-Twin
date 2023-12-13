@@ -4,10 +4,11 @@ project(CppDigitalTwinServer CXX)
 
 find_package(mqtt_cpp REQUIRED CONFIG)
 
-add_executable(${PROJECT_NAME}
+add_executable(CppDigitalTwinServer
         src/main.cpp)
 
-target_link_libraries(${PROJECT_NAME} mqtt_cpp::mqtt_cpp)
+target_link_libraries(CppDigitalTwinServer
+        mqtt_cpp::mqtt_cpp)
 
 # if(energyprobedriver)
 #
