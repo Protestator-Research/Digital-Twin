@@ -4,7 +4,7 @@ project(CppBackendCommunication CXX)
 
 find_package(curl REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(boost REQUIRED COMPONENTS UUID)
+find_package(libuuid REQUIRED CONFIG)
 
 add_library(CppBackendCommunication
         src/CommunicationService.h
@@ -13,11 +13,16 @@ add_library(CppBackendCommunication
         src/Entities/Project.hpp
         src/Entities/Element.hpp
         src/Entities/DigitalTwin.hpp
-        src/Entities/Branch.hpp)
+        src/Entities/Branch.hpp
+        src/APIImplementations/SysMLAPIImplementation.cpp
+        src/APIImplementations/SysMLAPIImplementation.h
+        src/Entities/User.hpp
+        src/Entities/IEntitie.h)
 
 target_link_libraries(CppBackendCommunication
         CURL::libcurl
-        nlohmann_json::nlohmann_json)
+        nlohmann_json::nlohmann_json
+        libuuid::libuuid)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION "."
         RUNTIME DESTINATION bin

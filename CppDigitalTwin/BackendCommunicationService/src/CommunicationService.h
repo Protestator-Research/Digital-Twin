@@ -9,6 +9,8 @@
 // External Classes
 //---------------------------------------------------------
 #include <vector>
+#include <string>
+#include <uuid/uuid.h>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
@@ -20,9 +22,6 @@
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
-namespace boost::uuids {
-    class uuid;
-}
 
 
 namespace BACKEND_COMMUNICATION {
@@ -36,25 +35,40 @@ namespace BACKEND_COMMUNICATION {
     class CommunicationService {
     public:
         /**
-         * C-Tor
+         * Default C-Tor. Sets all parameters to the default values. This might not fit for your instance of the AGILA Backend.
          */
-        CommunicationService();
+        CommunicationService() = default;
+        /**
+         * Constructor allows for the settings for the connection to the AGILA Backend.
+         * @param serverAddress Address of the Server. The server address can be an IP address or a url.
+         * @param port Port of the AGILA Backend server.
+         */
+        CommunicationService(std::string serverAddress, unsigned int port);
+        /**
+        * Constructor allows for the settings for the connection to the AGILA Backend.
+        * @param serverAddress Address of the Server. The server address can be an IP address or a url.
+        */
+        explicit CommunicationService(std::string serverAddress);
+
         /**
          * D-Tor
          */
         virtual ~CommunicationService() = default;
 
         /**
-         *
-         * @param commitId
-         * @param projectId
-         * @return
+         * Creates a connection to the REST endpoint of the given AGILA Backend server,  to get all Elements of a Commit and Project, distinguished by its uuid.
+         * @param commitId UUID of the commit
+         * @param projectId UUID of the project
+         * @return An std::vector of the Elements
+         * @see uuid_t
+         * @see std::vector
+         * @see ENTITIES::Element
          */
-        std::vector<ENTITIES::Element> getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId);
+        std::vector<ENTITIES::Element> getAllElements(uuid_t commitId, uuid_t projectId);
 
         /**
-         *
-         * @return
+         * Creates a connection to the REST endpoint of the given AGILA Backend sever, to get all saved projects within the instance of the Backend
+         * @return An std::vector of the Projects
          */
         std::vector<ENTITIES::Project> getAllProjects();
 
@@ -64,14 +78,14 @@ namespace BACKEND_COMMUNICATION {
          * @param projectId
          * @return
          */
-        ENTITIES::DigitalTwin getDigitalTwinWithID(boost::uuids::uuid digitalTwinId, boost::uuids::uuid projectId);
+        ENTITIES::DigitalTwin getDigitalTwinWithID(uuid_t digitalTwinId, uuid_t projectId);
 
         /**
          *
          * @param projectId
          * @return
          */
-        std::vector<ENTITIES::Branch> getAllBranchesForProjectWithID(boost::uuids::uuid projectId);
+        std::vector<ENTITIES::Branch> getAllBranchesForProjectWithID(uuid_t projectId);
 
         /**
          *
@@ -79,9 +93,22 @@ namespace BACKEND_COMMUNICATION {
          * @param commitId
          * @return
          */
-        ENTITIES::Commit getCommitWithId(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
+        ENTITIES::Commit getCommitWithId(uuid_t projectId, uuid_t commitId);
+
+        /**
+         * Sets and checks internally the user, that the server is connected to.
+         * @param username
+         * @param password
+         * @return
+         */
+        bool setUserForLoginInBackend(std::string username, std::string password);
 
     private:
+        const std::string REST_PROTOCOL = "http://";
+        const std::string ENTRY_URI = "/agila-server";
+        std::string ServerAddress = "localhost";
+        unsigned int Port = 8080;
+
 
     };
 }
