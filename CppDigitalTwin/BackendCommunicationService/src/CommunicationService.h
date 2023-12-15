@@ -73,32 +73,33 @@ namespace BACKEND_COMMUNICATION {
         std::vector<ENTITIES::Project> getAllProjects();
 
         /**
-         *
-         * @param digitalTwinId
-         * @param projectId
-         * @return
+         * Downloads the Digital Twin data with its ID and the project id.
+         * @param digitalTwinId UUID ("@id") of the digital twin
+         * @param projectId UUID ("@id") of the project.
+         * @return The digital twins metadata.
          */
         ENTITIES::DigitalTwin getDigitalTwinWithID(uuid_t digitalTwinId, uuid_t projectId);
 
         /**
-         *
-         * @param projectId
-         * @return
+         * Download all branches for a project, with the projects id.
+         * @param projectId UUID ("@id") of the project.
+         * @return All Branches of the Project.
          */
         std::vector<ENTITIES::Branch> getAllBranchesForProjectWithID(uuid_t projectId);
 
         /**
-         *
-         * @param projectId
-         * @param commitId
-         * @return
+         * Download the commits with its commit id and project id identifying the specific commit.
+         * @param projectId UUID ("@id") of the project.
+         * @param commitId UUID ("@id") of the project
+         * @return The complete Commit
+         * @see ENTITIES::Commit
          */
         ENTITIES::Commit getCommitWithId(uuid_t projectId, uuid_t commitId);
 
         /**
          * Sets and checks internally the user, that the server is connected to.
-         * @param username
-         * @param password
+         * @param username The username or email of the user to login.
+         * @param password The password of the user to login.
          * @return
          */
         bool setUserForLoginInBackend(std::string username, std::string password);
