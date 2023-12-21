@@ -110,6 +110,6 @@ namespace BACKEND_COMMUNICATION {
         std::string ServerAddress = "localhost";
         unsigned int Port = 8080;
 
-
+        std::string BarrierString = "";
     };
 }

@@ -26,7 +26,14 @@ namespace BACKEND_COMMUNICATION {
      * @author Moritz Herzog <herzogm@rptu.de>
      */
     class SysMLAPIImplementation {
-
+    public:
+        /**
+         * Logins in the user and returns the
+         * @param username
+         * @param passwod
+         * @return
+         */
+        static std::string loginUserWithPassword(std::string username, std::string passwod);
     };
 }
 
