@@ -11,6 +11,7 @@
 #include <vector>
 #include <string>
 #include <uuid/uuid.h>
+#include <curl/curl.h>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
@@ -28,12 +29,29 @@ namespace BACKEND_COMMUNICATION {
     class SysMLAPIImplementation {
     public:
         /**
-         * Logins in the user and returns the
-         * @param username
-         * @param passwod
+         * Deleted Constructor, because the Interface is Static
+         */
+        SysMLAPIImplementation() = delete;
+
+        virtual ~SysMLAPIImplementation() = default;
+
+        /**
+         *
+         * @param address
          * @return
          */
-        static std::string loginUserWithPassword(std::string username, std::string passwod);
+        static bool connectToServer(std::string address);
+
+        /**
+         *
+         */
+        static void disconnectAndCleanUp();
+
+        static std::string loginUserWithPassword(std::string username, std::string password);
+    private:
+        static CURL* ServerConnection;
+        static std::string ServerAddress;
+
     };
 }
 

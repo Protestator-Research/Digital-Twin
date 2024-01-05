@@ -15,6 +15,8 @@
 //---------------------------------------------------------
 #include "CommunicationService.h"
 
+#include "APIImplementations/SysMLAPIImplementation.h"
+
 namespace BACKEND_COMMUNICATION {
     CommunicationService::CommunicationService(std::string serverAddress, unsigned int port) {
         ServerAddress = std::move(serverAddress);
@@ -47,6 +49,7 @@ namespace BACKEND_COMMUNICATION {
     }
 
     bool CommunicationService::setUserForLoginInBackend(std::string username, std::string password) {
-        return false;
+        BarrierString = SysMLAPIImplementation::loginUserWithPassword(username,password);
+        return !BarrierString.empty();
     }
 }

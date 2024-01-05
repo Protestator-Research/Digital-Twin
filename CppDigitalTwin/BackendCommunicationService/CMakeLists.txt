@@ -17,7 +17,11 @@ add_library(CppBackendCommunication
         src/APIImplementations/SysMLAPIImplementation.cpp
         src/APIImplementations/SysMLAPIImplementation.h
         src/Entities/User.hpp
-        src/Entities/IEntitie.h)
+        src/Entities/IEntitie.h
+        src/Exeptions/ConnectionError.cpp
+        src/Exeptions/ConnectionError.h
+        src/Exeptions/NotEnoughMemoryError.cpp
+        src/Exeptions/NotEnoughMemoryError.h)
 
 target_link_libraries(CppBackendCommunication
         CURL::libcurl
