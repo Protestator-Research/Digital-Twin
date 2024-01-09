@@ -49,6 +49,8 @@ namespace BACKEND_COMMUNICATION {
 
         static std::string loginUserWithPassword(std::string username, std::string password);
     private:
+        static size_t WriteBufferCallback(char *contents, size_t size, size_t nmemb, void* userp);
+
         static CURL* ServerConnection;
         static std::string ServerAddress;
 
