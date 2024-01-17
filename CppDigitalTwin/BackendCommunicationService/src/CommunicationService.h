@@ -37,7 +37,7 @@ namespace BACKEND_COMMUNICATION {
         /**
          * Default C-Tor. Sets all parameters to the default values. This might not fit for your instance of the AGILA Backend.
          */
-        CommunicationService() = default;
+        CommunicationService() = delete;
         /**
          * Constructor allows for the settings for the connection to the AGILA Backend.
          * @param serverAddress Address of the Server. The server address can be an IP address or a url.

@@ -5,5 +5,6 @@ project(DigitalTwin CXX)
 add_subdirectory(./CppDigitalTwin/BackendCommunicationService)
 add_subdirectory(./CppDigitalTwin/DigitalTwinLib)
 add_subdirectory(./CppDigitalTwin/DTServer)
+add_subdirectory(./CppDigitalTwin/PhysicalTwinCommunicationService)
 
 #add_subdirectory(./realtwester)
