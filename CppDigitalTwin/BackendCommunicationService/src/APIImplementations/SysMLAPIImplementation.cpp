@@ -13,6 +13,7 @@
 
 namespace BACKEND_COMMUNICATION {
     CURL* SysMLAPIImplementation::ServerConnection = nullptr;
+    std::string SysMLAPIImplementation::ServerAddress = "https://cps-agila.cs.uni-kl.de/agila-server";
 
     std::string SysMLAPIImplementation::loginUserWithPassword(std::string username, std::string passwod) {
         CURLcode ServerResult;

@@ -8,8 +8,8 @@ find_package(libuuid REQUIRED CONFIG)
 find_package(mqtt_cpp REQUIRED CONFIG)
 
 add_library(CppPhysicalTwinCommunication
-        src/CommunicationService.cpp
-        src/CommunicationService.h)
+        src/PTCommunicationService.cpp
+        src/PTCommunicationService.h)
 
 target_link_libraries(CppPhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp)

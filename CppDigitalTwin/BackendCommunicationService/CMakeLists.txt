@@ -7,8 +7,8 @@ find_package(nlohmann_json REQUIRED)
 find_package(libuuid REQUIRED CONFIG)
 
 add_library(CppBackendCommunication
-        src/CommunicationService.h
-        src/CommunicationService.cpp
+        src/BECommunicationService.h
+        src/BECommunicationService.cpp
         src/Entities/Commit.hpp
         src/Entities/Project.hpp
         src/Entities/Element.hpp

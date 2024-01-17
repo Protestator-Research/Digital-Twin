@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <string>
 #include <cstdlib>
 
 #include <BECommunicationService.h>
@@ -28,6 +29,8 @@ namespace DIGITAL_TWIN_SERVER {
         DIGITAL_TWIN_LIB::DigitalTwinManager* DigitalTwinManager = nullptr;
         PHYSICAL_TWIN_COMMUNICATION::CommunicationService* PhysicalTwinCommunicationService = nullptr;
 
+        std::string AgilaBackendServerAdress = "cps-agila.cs.rptu.de";
+        int AgilaBackendPort = 8080;
 
         int ErrorCode = EXIT_SUCCESS;
     };

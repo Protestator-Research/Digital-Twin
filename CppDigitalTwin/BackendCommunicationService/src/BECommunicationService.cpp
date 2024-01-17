@@ -21,6 +21,7 @@ namespace BACKEND_COMMUNICATION {
     CommunicationService::CommunicationService(std::string serverAddress, unsigned int port) {
         ServerAddress = std::move(serverAddress);
         Port = port;
+        SysMLAPIImplementation::connectToServer(REST_PROTOCOL + ServerAddress + ":" + std::to_string(Port) + ENTRY_URI);
     }
 
     CommunicationService::CommunicationService(std::string serverAddress) {

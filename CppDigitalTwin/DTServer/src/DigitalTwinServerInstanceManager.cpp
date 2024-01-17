@@ -12,7 +12,9 @@ namespace DIGITAL_TWIN_SERVER {
     }
 
     void DigitalTwinServerInstanceManager::createInstance() {
-
+        BackendCommunicationService = new BACKEND_COMMUNICATION::CommunicationService(AgilaBackendServerAdress,AgilaBackendPort);
+        DigitalTwinManager = new DIGITAL_TWIN_LIB::DigitalTwinManager();
+        PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService();
     }
 
     void DigitalTwinServerInstanceManager::runInstance() {
