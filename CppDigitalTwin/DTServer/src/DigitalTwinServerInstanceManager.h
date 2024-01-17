@@ -27,6 +27,7 @@ namespace DIGITAL_TWIN_SERVER {
         DIGITAL_TWIN_LIB::DigitalTwinManager* DigitalTwinManager = nullptr;
 
 
+
         int ErrorCode = EXIT_SUCCESS;
     };
 }

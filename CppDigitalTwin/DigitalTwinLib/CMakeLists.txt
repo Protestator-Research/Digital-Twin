@@ -12,7 +12,11 @@ add_library(CppDigitalTwinLib
         src/DigitalTwinManager.cpp
         src/DigitalTwinManager.h)
 
-#target_link_libraries(DigitalTwinLib)
+target_include_directories(CppDigitalTwinLib PUBLIC
+        ../PhysicalTwinCommunicationService/src/)
+
+target_link_libraries(CppDigitalTwinLib
+        CppPhysicalTwinCommunication)
 
 install(TARGETS CppDigitalTwinLib DESTINATION "."
         RUNTIME DESTINATION bin

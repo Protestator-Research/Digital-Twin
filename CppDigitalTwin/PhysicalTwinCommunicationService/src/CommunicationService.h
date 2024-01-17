@@ -2,8 +2,7 @@
 // Created by Moritz Herzog on 17.01.24.
 //
 
-#ifndef DIGITALTWIN_COMMUNICATIONSERVICE_H
-#define DIGITALTWIN_COMMUNICATIONSERVICE_H
+#pragma once
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
     class CommunicationService {
@@ -11,5 +10,3 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     };
 }
 
-
-#endif //DIGITALTWIN_COMMUNICATIONSERVICE_H

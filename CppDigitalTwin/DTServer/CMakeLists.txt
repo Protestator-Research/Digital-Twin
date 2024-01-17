@@ -11,11 +11,13 @@ add_executable(CppDigitalTwinServer
 
 target_include_directories(CppDigitalTwinServer PUBLIC
         ../BackendCommunicationService/src/
-        ../DigitalTwinLib/src/)
+        ../DigitalTwinLib/src/
+        ../PhysicalTwinCommunicationService/src/)
 
 target_link_libraries(CppDigitalTwinServer
         CppBackendCommunication
         CppDigitalTwinLib
+        CppPhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp)
 
 # if(energyprobedriver)
