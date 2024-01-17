@@ -6,8 +6,9 @@
 
 #include <cstdlib>
 
-#include <CommunicationService.h>
+#include <BECommunicationService.h>
 #include <DigitalTwinManager.h>
+#include <PTCommunicationService.h>
 
 
 namespace DIGITAL_TWIN_SERVER {
@@ -25,7 +26,7 @@ namespace DIGITAL_TWIN_SERVER {
     private:
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService = nullptr;
         DIGITAL_TWIN_LIB::DigitalTwinManager* DigitalTwinManager = nullptr;
-
+        PHYSICAL_TWIN_COMMUNICATION::CommunicationService* PhysicalTwinCommunicationService = nullptr;
 
 
         int ErrorCode = EXIT_SUCCESS;
