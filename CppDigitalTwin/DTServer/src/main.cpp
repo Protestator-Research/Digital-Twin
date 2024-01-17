@@ -1,4 +1,3 @@
-//---------------------------------------------------------
 // Created by Moritz Herzog on 13.12.23.
 // Contians only the definition of the Main method for the Digital Twin Server.
 //---------------------------------------------------------
