@@ -9,19 +9,23 @@
 // External Classes
 //---------------------------------------------------------
 #include <utility>
+#include <iostream>
 
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
 #include "BECommunicationService.h"
+#include "Exeptions/ConnectionError.h"
 
 #include "APIImplementations/SysMLAPIImplementation.h"
 
 namespace BACKEND_COMMUNICATION {
     CommunicationService::CommunicationService(std::string serverAddress, unsigned int port) {
+        std::cout<<"Create Communication Service"<<std::endl;
         ServerAddress = std::move(serverAddress);
         Port = port;
-        SysMLAPIImplementation::connectToServer(REST_PROTOCOL + ServerAddress + ":" + std::to_string(Port) + ENTRY_URI);
+        if(!SysMLAPIImplementation::connectToServer(REST_PROTOCOL + ServerAddress + ":" + std::to_string(Port) + ENTRY_URI))
+            throw EXCEPTIONS::ConnectionError(EXCEPTIONS::CONNECTION_ERROR_TYPE::COULD_NOT_CONNECT);
     }
 
     CommunicationService::CommunicationService(std::string serverAddress) {
@@ -51,6 +55,7 @@ namespace BACKEND_COMMUNICATION {
 
     bool CommunicationService::setUserForLoginInBackend(std::string username, std::string password) {
         BarrierString = SysMLAPIImplementation::loginUserWithPassword(username,password);
+        std::cout<<"Barrier Received: "<< BarrierString<<std::endl;
         return !BarrierString.empty();
     }
 }

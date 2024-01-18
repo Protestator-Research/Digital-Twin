@@ -7,7 +7,9 @@
 namespace DIGITAL_TWIN_SERVER {
     DigitalTwinServerInstanceManager::~DigitalTwinServerInstanceManager() {
         if(ErrorCode==EXIT_SUCCESS){
-
+            delete BackendCommunicationService;
+            delete DigitalTwinManager;
+            delete PhysicalTwinCommunicationService;
         }
     }
 
@@ -18,7 +20,7 @@ namespace DIGITAL_TWIN_SERVER {
     }
 
     void DigitalTwinServerInstanceManager::runInstance() {
-
+        BackendCommunicationService->setUserForLoginInBackend("admin@cps", "admin");
     }
 
     int DigitalTwinServerInstanceManager::getRunTimeCode() {

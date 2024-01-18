@@ -13,7 +13,7 @@
 
 namespace BACKEND_COMMUNICATION {
     CURL* SysMLAPIImplementation::ServerConnection = nullptr;
-    std::string SysMLAPIImplementation::ServerAddress = "https://cps-agila.cs.uni-kl.de/agila-server";
+    std::string SysMLAPIImplementation::ServerAddress = "http://cps-agila.cs.uni-kl.de:8080/agila-server";
 
     std::string SysMLAPIImplementation::loginUserWithPassword(std::string username, std::string passwod) {
         CURLcode ServerResult;
@@ -23,15 +23,19 @@ namespace BACKEND_COMMUNICATION {
 
         if(ServerConnection) {
             std::string loginReadBuffer;
+            std::string headers;
 
             curl_easy_setopt(ServerConnection, CURLOPT_URL, (ServerAddress + "/users/login").c_str());
             curl_easy_setopt(ServerConnection, CURLOPT_POSTFIELDS, data.dump().c_str());
             curl_easy_setopt(ServerConnection, CURLOPT_WRITEFUNCTION, WriteBufferCallback);
             curl_easy_setopt(ServerConnection, CURLOPT_WRITEDATA, &loginReadBuffer);
+            curl_easy_setopt(ServerConnection, CURLOPT_HEADERFUNCTION, WriteBufferCallback);
+            curl_easy_setopt(ServerConnection, CURLOPT_HEADERDATA, &headers);
 
             ServerResult = curl_easy_perform(ServerConnection);
             if(ServerResult == CURLE_OK) {
-                std::cout<<"Successfull Answer:"<<std::endl<<loginReadBuffer;
+                std::cout<<"Successfull Answer:"<<std::endl<<loginReadBuffer<<std::endl;
+                std::cout<<"Headers:"<<std::endl<<headers<<std::endl;
             } else {
                 throw new BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
                         static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
