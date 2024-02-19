@@ -20,7 +20,7 @@ namespace DIGITAL_TWIN_SERVER {
     }
 
     void DigitalTwinServerInstanceManager::runInstance() {
-        BackendCommunicationService->setUserForLoginInBackend("admin@cps", "admin");
+        BackendCommunicationService->setUserForLoginInBackend("admin@cps.de", "admin");
     }
 
     int DigitalTwinServerInstanceManager::getRunTimeCode() {

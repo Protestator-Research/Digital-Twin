@@ -22,6 +22,7 @@ class CppDigitalTwinRecipe(ConanFile):
     exports_sources = "CMakeLists.txt", "src/*"
 
     def requirements(self):
+        self.requires("gtest/1.14.0")
         self.requires("redboltz-mqtt_cpp/13.2.1")
         self.requires("libcurl/8.4.0")
         self.requires("nlohmann_json/3.11.3")
