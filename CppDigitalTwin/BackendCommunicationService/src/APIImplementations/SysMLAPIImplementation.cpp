@@ -1,22 +1,34 @@
 //
 // Created by Moritz Herzog on 14.12.23.
 //
+//---------------------------------------------------------
+// Constants, Definitions, Pragmas
+//---------------------------------------------------------
 
-#include "SysMLAPIImplementation.h"
-
-#include "../Exeptions/NotEnoughMemoryError.h"
-#include "../Exeptions/ConnectionError.h"
-
+//---------------------------------------------------------
+// External Classes
+//---------------------------------------------------------
 #include <iostream>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <BaseFuctions/StringExtention.hpp>
+
+//---------------------------------------------------------
+// Internal Classes
+//---------------------------------------------------------
+#include "SysMLAPIImplementation.h"
+#include "../Exeptions/NotEnoughMemoryError.h"
+#include "../Exeptions/ConnectionError.h"
+
+
 
 namespace BACKEND_COMMUNICATION {
+
     CURL* SysMLAPIImplementation::ServerConnection = nullptr;
     std::string SysMLAPIImplementation::ServerAddress = "http://cps-agila.cs.uni-kl.de:8080/agila-server";
 
-    std::string SysMLAPIImplementation::loginUserWithPassword(std::string username, std::string passwod) {
-        std::string barrierString = "";
+    std::string SysMLAPIImplementation::loginUserWithPassword(std::string const& username, std::string const& passwod) {
+        std::string barrierString;
 
         CURLcode ServerResult;
         nlohmann::json jsonData;
@@ -41,13 +53,15 @@ namespace BACKEND_COMMUNICATION {
                 std::cout<<"Successfull Answer:"<<std::endl<<loginReadBuffer<<std::endl;
                 std::cout<<"Headers:"<<std::endl<<headers<<std::endl;
 
-
+                auto splittedAnswer = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(loginReadBuffer,' ');
+                barrierString = splittedAnswer[2];
 
             } else {
-                throw new BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
+                throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
                         static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
             }
         }
+        return barrierString;
     }
 
     void SysMLAPIImplementation::disconnectAndCleanUp() {

@@ -1,10 +1,11 @@
 //
-// Created by Moritz Herzog on 14.12.23.
+// Created by Moritz Herzog on 19.02.24.
 //
 //---------------------------------------------------------
 // Constants, Definitions, Pragmas
 //---------------------------------------------------------
-#pragma once
+#ifndef DIGITALTWIN_IENTITY_H
+#define DIGITALTWIN_IENTITY_H
 //---------------------------------------------------------
 // External Classes
 //---------------------------------------------------------
@@ -17,18 +18,24 @@
 // Forwarding
 //---------------------------------------------------------
 
-namespace BACKEND_COMMUNICATION::ENTITIES {
+
+namespace SysMLv2::Entities {
     /**
-     * Baseclass for the Entities. It defines necessary methods that are implemented later on.
+     * Defines the interface for all SysMLv2 classes.
+     * @class IEntity
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-    class IEntitie {
+    class IEntity {
     public:
+
         /**
-         * Generates the REST content for the API call.
-         * @return REST content in form of a string.
+         * Allows the serialization of the Object to a JSON String.
+         * @return JSON String of the Object
          */
-        virtual std::string generateRestCall() = 0;
+        virtual std::string serializeToJson() = 0;
     };
 }
+
+
+#endif //DIGITALTWIN_IENTITY_H

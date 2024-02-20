@@ -47,7 +47,7 @@ namespace BACKEND_COMMUNICATION {
          */
         static void disconnectAndCleanUp();
 
-        static std::string loginUserWithPassword(std::string username, std::string password);
+        static std::string loginUserWithPassword(const std::string& username,const std::string& password);
     private:
         static size_t WriteBufferCallback(char *contents, size_t size, size_t nmemb, void* userp);
 

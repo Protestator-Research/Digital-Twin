@@ -1,12 +1,17 @@
+
 find_package(GTest REQUIRED)
+find_package(boost REQUIRED)
 
 add_executable(CpsBaseLibTests
         main.cpp
-        BaseFunctions/StringExtentionTest.cpp)
+        BaseFunctions/StringExtentionTest.cpp
+        SysMLv2Standard/entities/SerializationTests.cpp
+        BaseFunctions/ListsExtentionTests.cpp)
 
 target_include_directories(CpsBaseLibTests PRIVATE
                                     ../src/)
 target_link_libraries(CpsBaseLibTests
+                                    boost::boost
                                     GTest::gtest_main
                                     CPSBaseLib)
 

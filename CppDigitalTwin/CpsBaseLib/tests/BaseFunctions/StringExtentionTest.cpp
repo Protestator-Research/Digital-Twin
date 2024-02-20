@@ -4,6 +4,9 @@
 #include "../../src/BaseFuctions/StringExtention.hpp"
 #include <gtest/gtest.h>
 
+/**
+ *
+ */
 TEST(StringExtention,SplittingString_Valid) {
     std::string contentString = "This is a test.";
     char delimiter = ' ';
