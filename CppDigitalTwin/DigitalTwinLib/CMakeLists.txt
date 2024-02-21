@@ -18,6 +18,12 @@ target_include_directories(CppDigitalTwinLib PUBLIC
 target_link_libraries(CppDigitalTwinLib
         CppPhysicalTwinCommunication)
 
+if(MSVC)
+    target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX)
+else()
+    target_compile_options(CppDigitalTwinLib PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
 install(TARGETS CppDigitalTwinLib DESTINATION "."
         RUNTIME DESTINATION bin
         ARCHIVE DESTINATION lib

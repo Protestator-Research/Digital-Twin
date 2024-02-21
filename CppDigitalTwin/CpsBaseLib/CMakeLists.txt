@@ -31,6 +31,12 @@ install(TARGETS CPSBaseLib DESTINATION "src"
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib)
 
+if(MSVC)
+    target_compile_options(CPSBaseLib PRIVATE /W4 /WX)
+else()
+    target_compile_options(CPSBaseLib PRIVATE -Wall -Wextra -Wpedantic)# -Werror)
+endif()
+
 option(RUN_TESTS "Build the tests" ON)
 
 if(RUN_TESTS)

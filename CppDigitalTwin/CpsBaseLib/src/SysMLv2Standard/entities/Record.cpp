@@ -73,7 +73,7 @@ namespace SysMLv2::Entities {
     }
 
     std::string Record::serializeToJson() {
-
+        return "";
     }
 
 

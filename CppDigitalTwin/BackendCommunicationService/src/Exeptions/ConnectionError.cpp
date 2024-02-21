@@ -275,7 +275,7 @@ namespace BACKEND_COMMUNICATION::EXCEPTIONS {
         }
         returnValue += "\r\nError Code: ";
         returnValue += std::to_string(ErrorType);
-        return returnValue.c_str();
+        return new char;//returnValue.c_str();
     }
 
 

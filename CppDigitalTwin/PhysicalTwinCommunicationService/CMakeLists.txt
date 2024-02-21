@@ -17,3 +17,9 @@ install(TARGETS CppPhysicalTwinCommunication DESTINATION "."
         RUNTIME DESTINATION bin
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib)
+
+if(MSVC)
+    target_compile_options(CppPhysicalTwinCommunication PRIVATE /W4 /WX)
+else()
+    target_compile_options(CppPhysicalTwinCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()

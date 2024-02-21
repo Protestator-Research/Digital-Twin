@@ -9,25 +9,34 @@ namespace SysMLv2::Entities {
 
     }
 
-    Project::Project(Project &other) : Record() {
+    Project::Project(Project &other) : Record(other) {
 
     }
 
     Project::Project(std::string JsonString) : Record() {
-
+        JsonString;
     }
 
     Project::Project(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description,
                      std::time_t creationDate, boost::uuids::uuid defaultBranchId,
                      std::list<boost::uuids::uuid> branchesIdList, std::list<boost::uuids::uuid> commitIdList,
                      std::list<boost::uuids::uuid> headIdList) : Record(id,alias,name,description) {
-
+        creationDate;
+        defaultBranchId;
+        branchesIdList;
+        commitIdList;
+        headIdList;
     }
 
     Project::Project(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description,
                      std::time_t creationDate, boost::uuids::uuid defaultBranchId, std::list<Identity> branchesIdList,
                      std::list<Identity> commitIdList, std::list<Identity> headIdList) : Record(id,alias,name,description) {
-
+        creationDate;
+        description;
+        defaultBranchId;
+        branchesIdList;
+        commitIdList;
+        headIdList;
     }
 
     Project &Project::operator=(const Project &other) {
@@ -59,8 +68,8 @@ namespace SysMLv2::Entities {
         return *this;
     }
 
-    constexpr bool Project::operator==(const Project &other) {
-        if(Record::operator==(other)){
+    bool Project::operator==(const Project &other) {
+        if((*dynamic_cast<Record*>(this))==(other)){
             if(CreationDate!=other.CreationDate)
                 return false;
 

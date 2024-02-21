@@ -108,7 +108,7 @@ namespace SysMLv2::Entities {
          * @param other
          * @return
          */
-        constexpr bool operator==(const Project& other);
+        bool operator==(const Project& other);
 
         std::string serializeToJson() override;
     private:

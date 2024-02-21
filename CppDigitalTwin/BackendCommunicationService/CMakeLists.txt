@@ -26,6 +26,12 @@ target_link_libraries(CppBackendCommunication
 target_include_directories(CppBackendCommunication PUBLIC
                                 ../CpsBaseLib/src)
 
+if(MSVC)
+    target_compile_options(CppBackendCommunication PRIVATE /W4 /WX)
+else()
+    target_compile_options(CppBackendCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
 install(TARGETS CppBackendCommunication DESTINATION "."
         RUNTIME DESTINATION bin
         ARCHIVE DESTINATION lib
