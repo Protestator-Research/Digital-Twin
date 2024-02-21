@@ -18,7 +18,7 @@ build_gcc13:
   before_script:
     - apt update && apt -y install make autoconf python3 python3-pip
     - pip install --upgrade conan --break-system-packages
-    - conan profile new default --detect
+    - conan profile detect
   script:
     - conan create .
   #artifacts:
