@@ -37,10 +37,9 @@ class CppDigitalTwinRecipe(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
-
+        tc.user_presets_path = 'ConanPresets.json'
         if(self.options.shared == True):
             tc["BUILD_SHARED_LIBS"]=1
-
         tc.generate()
 
     def build(self):
