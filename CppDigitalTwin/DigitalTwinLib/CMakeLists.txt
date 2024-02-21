@@ -4,7 +4,7 @@ project(CppDigitalTwinLib CXX)
 
 find_package(curl REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(libuuid REQUIRED CONFIG)
+find_package(Boost REQUIRED CONFIG)
 
 add_library(CppDigitalTwinLib
         src/BaseDTClasses/BaseDigitalTwinInstanceManager.cpp

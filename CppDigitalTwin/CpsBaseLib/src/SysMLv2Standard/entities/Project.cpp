@@ -78,4 +78,10 @@ namespace SysMLv2::Entities {
         return std::string();
     }
 
+    Project::~Project() {
+        BranchesList.clear();
+        CommitsList.clear();
+        HeadIdList.clear();
+    }
+
 }

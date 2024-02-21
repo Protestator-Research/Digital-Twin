@@ -56,7 +56,49 @@ namespace SysMLv2::Entities {
          */
         bool operator==(Record const &other);
 
+        /**
+         *
+         * @return
+         */
+        std::string getName() const;
 
+        /**
+         *
+         * @param name
+         */
+        void setName(std::string& name);
+
+        /**
+         *
+         * @return
+         */
+        std::list<std::string> getAlias() const;
+
+        /**
+         *
+         * @param alias
+         */
+        void appendAlias(std::string& alias);
+
+        /**
+         *
+         * @return
+         */
+        std::string getDescription() const;
+
+        /**
+         *
+         * @param description
+         */
+        void setDescription(std::string& description);
+
+        /**
+         *
+         * @return
+         */
+        boost::uuids::uuid getId() const;
+
+        std::string serializeToJson() override;
     protected:
         std::string Name;
         std::list<std::string> Alias;

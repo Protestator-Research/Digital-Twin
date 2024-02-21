@@ -4,7 +4,7 @@ project(CppBackendCommunication CXX)
 
 find_package(curl REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(libuuid REQUIRED CONFIG)
+find_package(Boost REQUIRED CONFIG)
 
 add_library(CppBackendCommunication
         src/BECommunicationService.h
@@ -20,7 +20,7 @@ add_library(CppBackendCommunication
 target_link_libraries(CppBackendCommunication
         CURL::libcurl
         nlohmann_json::nlohmann_json
-        libuuid::libuuid
+        boost::boost
         CPSBaseLib)
 
 target_include_directories(CppBackendCommunication PUBLIC

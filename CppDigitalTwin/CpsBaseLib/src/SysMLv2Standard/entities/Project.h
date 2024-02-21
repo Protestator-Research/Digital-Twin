@@ -102,8 +102,9 @@ namespace SysMLv2::Entities {
          * @return
          */
         Project& operator=(const Project& other);
+
         /**
-         *
+         * Allows the checking if two Projects are equal.
          * @param other
          * @return
          */

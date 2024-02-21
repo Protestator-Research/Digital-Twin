@@ -59,7 +59,7 @@ namespace SysMLv2::Entities {
     }
 
     Identity::Identity(Identity const &identity) {
-
+        Id = identity.Id;
     }
 
 

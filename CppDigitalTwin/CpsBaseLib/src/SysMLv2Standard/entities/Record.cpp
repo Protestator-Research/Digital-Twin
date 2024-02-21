@@ -44,5 +44,37 @@ namespace SysMLv2::Entities {
         return true;
     }
 
+    std::string Record::getName() const {
+        return Name;
+    }
+
+    void Record::setName(std::string& name) {
+        Name = name;
+    }
+
+    std::list<std::string> Record::getAlias() const {
+        return Alias;
+    }
+
+    void Record::appendAlias(std::string& alias) {
+        Alias.emplace_back(alias);
+    }
+
+    std::string Record::getDescription() const {
+        return Description;
+    }
+
+    void Record::setDescription(std::string& description) {
+        Description = description;
+    }
+
+    boost::uuids::uuid Record::getId() const {
+        return Id;
+    }
+
+    std::string Record::serializeToJson() {
+
+    }
+
 
 }
