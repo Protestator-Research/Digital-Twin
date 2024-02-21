@@ -135,9 +135,9 @@ build_gcc13:
     - conan remote remove conancenter
   script:
     - mkdir build && cd build
-    - conan install ..
+    - conan install .. --build missing
     - conan build ..
-    - vonan install .. -s build_type=Debug
+    - conan install .. -s build_type=Debug --build missing
     - conan build .. -s build_type=Debug
   artifacts:
     paths:
@@ -155,9 +155,9 @@ build_gcc12:
     - conan remote remove conancenter
   script:
     - mkdir build && cd build
-    - conan install ..
+    - conan install .. --build missing
     - conan build ..
-    - vonan install .. -s build_type=Debug
+    - vconan install .. -s build_type=Debug --build missing
     - conan build .. -s build_type=Debug
   artifacts:
     paths:
@@ -175,9 +175,9 @@ build_gcc10:
     - conan remote remove conancenter
   script:
     - mkdir build && cd build
-    - conan install ..
+    - conan install .. --build missing
     - conan build ..
-    - vonan install .. -s build_type=Debug
+    - conan install .. -s build_type=Debug --build missing
     - conan build .. -s build_type=Debug
   artifacts:
     paths:
@@ -195,9 +195,9 @@ build_gcc9:
     - conan remote remove conancenter
   script:
     - mkdir build && cd build
-    - conan install ..
+    - conan install .. --build missing
     - conan build ..
-    - vonan install .. -s build_type=Debug
+    - conan install .. -s build_type=Debug --build missing
     - conan build .. -s build_type=Debug
   artifacts:
     paths:
