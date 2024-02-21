@@ -22,7 +22,7 @@ build_gcc13:
     - conan remote add cps-artifactory $ARTIFACTORY_URL
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
   script:
-    - conan install .
+    - conan install . --build mssing
     - conan create . --build missing
   #artifacts:
     #paths:
