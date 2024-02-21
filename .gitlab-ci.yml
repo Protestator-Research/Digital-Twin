@@ -19,7 +19,7 @@ build_gcc13:
     - apt update && apt -y install make autoconf python3 python3-pip cmake
     - pip install --upgrade conan --break-system-packages
     - conan profile detect
-    - conan remote add cps-artifactory $ARTIFACTORY_URL
+    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
   script:
     - conan install . --build mssing
