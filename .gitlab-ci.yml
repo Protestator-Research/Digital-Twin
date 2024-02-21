@@ -118,7 +118,7 @@ build_deps_gcc9:
       refs:
         - updateDependecies
 
-build_gcc13_release:
+build_gcc13:
   stage: build
   image: gcc:13
   before_script:
@@ -128,15 +128,72 @@ build_gcc13_release:
     - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
   script:
-    - conan install . --build missing
-    - conan create . --build missing
-  #artifacts:
-    #paths:
+    - mkdir build && cd build
+    - conan install .. --build missing
+    - conan build ..
+    - vonan install .. -s build_type=Debug
+    - conan build .. -s build_type=Debug
+  artifacts:
+    paths:
+      - build
 
-      # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
-      # cache:
-      #   paths:
-      #     - "*.o"
+build_gcc12:
+  stage: build
+  image: gcc:12
+  before_script:
+    - apt update && apt -y install make autoconf python3 python3-pip cmake
+    - pip install --upgrade conan --break-system-packages
+    - conan profile detect
+    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
+    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  script:
+    - mkdir build && cd build
+    - conan install .. --build missing
+    - conan build ..
+    - vonan install .. -s build_type=Debug
+    - conan build .. -s build_type=Debug
+  artifacts:
+    paths:
+      - build
+
+build_gcc10:
+  stage: build
+  image: gcc:10
+  before_script:
+    - apt update && apt -y install make autoconf python3 python3-pip cmake
+    - pip install --upgrade conan --break-system-packages
+    - conan profile detect
+    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
+    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  script:
+    - mkdir build && cd build
+    - conan install .. --build missing
+    - conan build ..
+    - vonan install .. -s build_type=Debug
+    - conan build .. -s build_type=Debug
+  artifacts:
+    paths:
+      - build
+
+build_gcc9:
+  stage: build
+  image: gcc:9
+  before_script:
+    - apt update && apt -y install make autoconf python3 python3-pip cmake
+    - pip install --upgrade conan --break-system-packages
+    - conan profile detect
+    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
+    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  script:
+    - mkdir build && cd build
+    - conan install .. --build missing
+    - conan build ..
+    - vonan install .. -s build_type=Debug
+    - conan build .. -s build_type=Debug
+  artifacts:
+    paths:
+      - build
+
 
 
 # run tests using the binary built before
