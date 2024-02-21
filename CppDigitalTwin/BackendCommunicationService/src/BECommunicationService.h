@@ -14,11 +14,7 @@
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
-#include "Entities/Element.hpp"
-#include "Entities/Project.hpp"
-#include "Entities/DigitalTwin.hpp"
-#include "Entities/Branch.hpp"
-#include "Entities/Commit.hpp"
+
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -60,13 +56,13 @@ namespace BACKEND_COMMUNICATION {
          * @see std::vector
          * @see ENTITIES::Element
          */
-        std::vector<ENTITIES::Element> getAllElements(uuid_t commitId, uuid_t projectId);
+//        std::vector<ENTITIES::Element> getAllElements(uuid_t commitId, uuid_t projectId);
 
         /**
          * Creates a connection to the REST endpoint of the given AGILA Backend sever, to get all saved projects within the instance of the Backend
          * @return An std::vector of the Projects
          */
-        std::vector<ENTITIES::Project> getAllProjects();
+//        std::vector<ENTITIES::Project> getAllProjects();
 
         /**
          * Downloads the Digital Twin data with its ID and the project id.
@@ -74,14 +70,14 @@ namespace BACKEND_COMMUNICATION {
          * @param projectId UUID ("@id") of the project.
          * @return The digital twins metadata.
          */
-        ENTITIES::DigitalTwin getDigitalTwinWithID(uuid_t digitalTwinId, uuid_t projectId);
+//        ENTITIES::DigitalTwin getDigitalTwinWithID(uuid_t digitalTwinId, uuid_t projectId);
 
         /**
          * Download all branches for a project, with the projects id.
          * @param projectId UUID ("@id") of the project.
          * @return All Branches of the Project.
          */
-        std::vector<ENTITIES::Branch> getAllBranchesForProjectWithID(uuid_t projectId);
+//        std::vector<ENTITIES::Branch> getAllBranchesForProjectWithID(uuid_t projectId);
 
         /**
          * Download the commits with its commit id and project id identifying the specific commit.
@@ -90,7 +86,7 @@ namespace BACKEND_COMMUNICATION {
          * @return The complete Commit
          * @see ENTITIES::Commit
          */
-        ENTITIES::Commit getCommitWithId(uuid_t projectId, uuid_t commitId);
+//        ENTITIES::Commit getCommitWithId(uuid_t projectId, uuid_t commitId);
 
         /**
          * Sets and checks internally the user, that the server is connected to.
