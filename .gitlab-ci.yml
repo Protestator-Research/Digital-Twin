@@ -11,6 +11,112 @@
 # can use versions as well, like gcc:5.2
 # see https://hub.docker.com/_/gcc/
 
+stages:
+  - build_dependencies
+  - build
+  - test
+  - deploy
+
+build_deps_gcc13:
+  stage: build_dependencies
+  image: gcc:13
+  before_script:
+    - apt update && apt -y install make autoconf python3 python3-pip cmake
+    - pip install --upgrade conan --break-system-packages
+    - conan profile detect
+    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
+    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  script:
+    - conan install . --build missing
+    - conan install . --build missing --s build_type=Debug
+    - conan upload boost/* -r cps-artifactory --all
+    - conan upload gtest/* -r cps-artifactory --all
+    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory --all
+    - conan upload nlohmann_json/* -r cps-artifactory --all
+  only:
+      refs:
+        - updateDependecies
+
+build_deps_gcc12:
+  stage: build_dependencies
+  image: gcc:12
+  before_script:
+    - apt update && apt -y install make autoconf python3 python3-pip cmake
+    - pip install --upgrade conan --break-system-packages
+    - conan profile detect
+    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
+    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  script:
+    - conan install . --build missing
+    - conan install . --build missing --s build_type=Debug
+    - conan upload boost/* -r cps-artifactory --all
+    - conan upload gtest/* -r cps-artifactory --all
+    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory --all
+    - conan upload nlohmann_json/* -r cps-artifactory --all
+  only:
+      refs:
+        - updateDependecies
+
+build_deps_gcc11:
+  stage: build_dependencies
+  image: gcc:11
+  before_script:
+    - apt update && apt -y install make autoconf python3 python3-pip cmake
+    - pip install --upgrade conan --break-system-packages
+    - conan profile detect
+    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
+    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  script:
+    - conan install . --build missing
+    - conan install . --build missing --s build_type=Debug
+    - conan upload boost/* -r cps-artifactory --all
+    - conan upload gtest/* -r cps-artifactory --all
+    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory --all
+    - conan upload nlohmann_json/* -r cps-artifactory --all
+  only:
+      refs:
+        - updateDependecies
+
+build_deps_gcc10:
+  stage: build_dependencies
+  image: gcc:10
+  before_script:
+    - apt update && apt -y install make autoconf python3 python3-pip cmake
+    - pip install --upgrade conan --break-system-packages
+    - conan profile detect
+    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
+    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  script:
+    - conan install . --build missing
+    - conan install . --build missing --s build_type=Debug
+    - conan upload boost/* -r cps-artifactory --all
+    - conan upload gtest/* -r cps-artifactory --all
+    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory --all
+    - conan upload nlohmann_json/* -r cps-artifactory --all
+  only:
+      refs:
+        - updateDependecies
+
+
+build_deps_gcc9:
+  stage: build_dependencies
+  image: gcc:9
+  before_script:
+    - apt update && apt -y install make autoconf python3 python3-pip cmake
+    - pip install --upgrade conan --break-system-packages
+    - conan profile detect
+    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
+    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  script:
+    - conan install . --build missing
+    - conan install . --build missing --s build_type=Debug
+    - conan upload boost/* -r cps-artifactory --all
+    - conan upload gtest/* -r cps-artifactory --all
+    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory --all
+    - conan upload nlohmann_json/* -r cps-artifactory --all
+  only:
+      refs:
+        - updateDependecies
 
 build_gcc13_release:
   stage: build
@@ -42,4 +148,7 @@ test:
 deploy:
   stage: deploy
   script: echo "Define your deployment script!"
-  environment: production
+  only:
+    refs:
+      - main
+      - tags
