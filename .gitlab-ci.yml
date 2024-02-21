@@ -36,7 +36,7 @@ build_deps_gcc13:
     - conan upload nlohmann_json/* -r cps-artifactory --all
   only:
       refs:
-        - updateDependecies
+        - updateDependencies
 
 build_deps_gcc12:
   stage: build_dependencies
@@ -57,7 +57,7 @@ build_deps_gcc12:
     - conan upload nlohmann_json/* -r cps-artifactory --all
   only:
       refs:
-        - updateDependecies
+        - updateDependencies
 
 build_deps_gcc11:
   stage: build_dependencies
@@ -78,7 +78,7 @@ build_deps_gcc11:
     - conan upload nlohmann_json/* -r cps-artifactory --all
   only:
       refs:
-        - updateDependecies
+        - updateDependencies
 
 build_deps_gcc10:
   stage: build_dependencies
@@ -99,7 +99,7 @@ build_deps_gcc10:
     - conan upload nlohmann_json/* -r cps-artifactory --all
   only:
       refs:
-        - updateDependecies
+        - updateDependencies
 
 
 build_deps_gcc9:
@@ -121,7 +121,7 @@ build_deps_gcc9:
     - conan upload nlohmann_json/* -r cps-artifactory --all
   only:
       refs:
-        - updateDependecies
+        - updateDependencies
 
 build_gcc13:
   stage: build
