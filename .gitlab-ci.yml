@@ -29,11 +29,11 @@ build_deps_gcc13:
   script:
     - conan install . --build missing
     - conan install . --build missing -s build_type=Debug
-    - conan upload boost/* -r cps-artifactory
-    - conan upload gtest/* -r cps-artifactory
-    - conan upload libcurl/* -r cps-artifactory
-    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory
-    - conan upload nlohmann_json/* -r cps-artifactory
+    - conan upload boost/* -r cps-artifactory -c
+    - conan upload gtest/* -r cps-artifactory -c
+    - conan upload libcurl/* -r cps-artifactory -c
+    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory -c
+    - conan upload nlohmann_json/* -r cps-artifactory -c
   only:
       refs:
         - updateDependencies
@@ -50,11 +50,11 @@ build_deps_gcc12:
   script:
     - conan install . --build missing
     - conan install . --build missing -s build_type=Debug
-    - conan upload boost/* -r cps-artifactory
-    - conan upload gtest/* -r cps-artifactory
-    - conan upload libcurl/* -r cps-artifactory
-    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory
-    - conan upload nlohmann_json/* -r cps-artifactory
+    - conan upload boost/* -r cps-artifactory -c
+    - conan upload gtest/* -r cps-artifactory -c
+    - conan upload libcurl/* -r cps-artifactory -c
+    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory -c
+    - conan upload nlohmann_json/* -r cps-artifactory -c
   only:
       refs:
         - updateDependencies
@@ -71,11 +71,11 @@ build_deps_gcc11:
   script:
     - conan install . --build missing
     - conan install . --build missing -s build_type=Debug
-    - conan upload boost/* -r cps-artifactory
-    - conan upload gtest/* -r cps-artifactory
-    - conan upload libcurl/* -r cps-artifactory
-    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory
-    - conan upload nlohmann_json/* -r cps-artifactory
+    - conan upload boost/* -r cps-artifactory -c
+    - conan upload gtest/* -r cps-artifactory -c
+    - conan upload libcurl/* -r cps-artifactory -c
+    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory -c
+    - conan upload nlohmann_json/* -r cps-artifactory -c
   only:
       refs:
         - updateDependencies
@@ -92,11 +92,11 @@ build_deps_gcc10:
   script:
     - conan install . --build missing
     - conan install . --build missing -s build_type=Debug
-    - conan upload boost/* -r cps-artifactory
-    - conan upload gtest/* -r cps-artifactory
-    - conan upload libcurl/* -r cps-artifactory
-    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory
-    - conan upload nlohmann_json/* -r cps-artifactory
+    - conan upload boost/* -r cps-artifactory -c
+    - conan upload gtest/* -r cps-artifactory -c
+    - conan upload libcurl/* -r cps-artifactory -c
+    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory -c
+    - conan upload nlohmann_json/* -r cps-artifactory -c
   only:
       refs:
         - updateDependencies
@@ -114,11 +114,11 @@ build_deps_gcc9:
   script:
     - conan install . --build missing
     - conan install . --build missing -s build_type=Debug
-    - conan upload boost/* -r cps-artifactory
-    - conan upload gtest/* -r cps-artifactory
-    - conan upload libcurl/* -r cps-artifactory
-    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory
-    - conan upload nlohmann_json/* -r cps-artifactory
+    - conan upload boost/* -r cps-artifactory -c
+    - conan upload gtest/* -r cps-artifactory -c
+    - conan upload libcurl/* -r cps-artifactory -c
+    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory -c
+    - conan upload nlohmann_json/* -r cps-artifactory -c
   only:
       refs:
         - updateDependencies
