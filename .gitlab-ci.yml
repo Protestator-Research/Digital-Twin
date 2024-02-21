@@ -30,7 +30,8 @@ build_deps_gcc13:
     - conan install . --build missing
     - conan install . --build missing --s build_type=Debug
     - conan upload boost/* -r cps-artifactory --all
-    - conan upload gtest/* -r cps-artifactory --all
+    - conan upload gtest/* -r cps-artifactory --all#
+    - conan upload libcurl/* -r cps-artifactory --all
     - conan upload redboltz-mqtt_cpp/* -r cps-artifactory --all
     - conan upload nlohmann_json/* -r cps-artifactory --all
   only:
@@ -50,7 +51,8 @@ build_deps_gcc12:
     - conan install . --build missing
     - conan install . --build missing --s build_type=Debug
     - conan upload boost/* -r cps-artifactory --all
-    - conan upload gtest/* -r cps-artifactory --all
+    - conan upload gtest/* -r cps-artifactory --all#
+    - conan upload libcurl/* -r cps-artifactory --all
     - conan upload redboltz-mqtt_cpp/* -r cps-artifactory --all
     - conan upload nlohmann_json/* -r cps-artifactory --all
   only:
@@ -70,7 +72,8 @@ build_deps_gcc11:
     - conan install . --build missing
     - conan install . --build missing --s build_type=Debug
     - conan upload boost/* -r cps-artifactory --all
-    - conan upload gtest/* -r cps-artifactory --all
+    - conan upload gtest/* -r cps-artifactory --all#
+    - conan upload libcurl/* -r cps-artifactory --all
     - conan upload redboltz-mqtt_cpp/* -r cps-artifactory --all
     - conan upload nlohmann_json/* -r cps-artifactory --all
   only:
@@ -90,7 +93,8 @@ build_deps_gcc10:
     - conan install . --build missing
     - conan install . --build missing --s build_type=Debug
     - conan upload boost/* -r cps-artifactory --all
-    - conan upload gtest/* -r cps-artifactory --all
+    - conan upload gtest/* -r cps-artifactory --all#
+    - conan upload libcurl/* -r cps-artifactory --all
     - conan upload redboltz-mqtt_cpp/* -r cps-artifactory --all
     - conan upload nlohmann_json/* -r cps-artifactory --all
   only:
@@ -111,7 +115,8 @@ build_deps_gcc9:
     - conan install . --build missing
     - conan install . --build missing --s build_type=Debug
     - conan upload boost/* -r cps-artifactory --all
-    - conan upload gtest/* -r cps-artifactory --all
+    - conan upload gtest/* -r cps-artifactory --all#
+    - conan upload libcurl/* -r cps-artifactory --all
     - conan upload redboltz-mqtt_cpp/* -r cps-artifactory --all
     - conan upload nlohmann_json/* -r cps-artifactory --all
   only:
