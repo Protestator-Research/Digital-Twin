@@ -17,7 +17,7 @@ build_gcc13:
   image: gcc:13
   before_script:
     - apt update && apt -y install make autoconf python3 python3-pip
-    - pip install --upgrade conan
+    - pip install --upgrade conan --break-system-packages
     - conan user
   script:
     - conan create .
