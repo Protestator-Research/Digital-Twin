@@ -1,6 +1,6 @@
 
 find_package(GTest REQUIRED)
-find_package(boost REQUIRED)
+find_package(Boost REQUIRED)
 
 add_executable(CpsBaseLibTests
         main.cpp

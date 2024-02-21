@@ -2,9 +2,8 @@ cmake_minimum_required(VERSION 3.15)
 
 project(CppPhysicalTwinCommunication CXX)
 
-find_package(curl REQUIRED)
+find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(libuuid REQUIRED CONFIG)
 find_package(mqtt_cpp REQUIRED CONFIG)
 
 add_library(CppPhysicalTwinCommunication

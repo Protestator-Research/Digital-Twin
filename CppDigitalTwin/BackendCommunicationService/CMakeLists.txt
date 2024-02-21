@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(CppBackendCommunication CXX)
 
-find_package(curl REQUIRED)
+find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(Boost REQUIRED CONFIG)
 
