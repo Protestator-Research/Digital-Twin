@@ -20,7 +20,7 @@ build_gcc13:
     - pip install --upgrade conan --break-system-packages
     - conan profile detect
   script:
-    - conan create .
+    - conan create . --build missing
   #artifacts:
     #paths:
 
