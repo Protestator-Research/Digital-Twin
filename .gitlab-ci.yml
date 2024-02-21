@@ -64,7 +64,7 @@ build_deps_gcc11:
   image: gcc:11
   before_script:
     - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan --break-system-packages
+    - pip install --upgrade conan
     - conan profile detect
     - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
@@ -85,7 +85,7 @@ build_deps_gcc10:
   image: gcc:10
   before_script:
     - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan --break-system-packages
+    - pip install --upgrade conan
     - conan profile detect
     - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
@@ -107,7 +107,7 @@ build_deps_gcc9:
   image: gcc:9
   before_script:
     - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan --break-system-packages
+    - pip install --upgrade conan
     - conan profile detect
     - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
@@ -166,7 +166,7 @@ build_gcc10:
   image: gcc:10
   before_script:
     - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan --break-system-packages
+    - pip install --upgrade conan
     - conan profile detect
     - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
@@ -185,7 +185,7 @@ build_gcc9:
   image: gcc:9
   before_script:
     - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan --break-system-packages
+    - pip install --upgrade conan
     - conan profile detect
     - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
