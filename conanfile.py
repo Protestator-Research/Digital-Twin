@@ -4,7 +4,7 @@ from conan.tools.apple import XcodeDeps
 
 
 class CppDigitalTwinRecipe(ConanFile):
-    name = "CppDigitalTwin"
+    name = "digitaltwin"
     version = "2312"
     package_type = "application"
 

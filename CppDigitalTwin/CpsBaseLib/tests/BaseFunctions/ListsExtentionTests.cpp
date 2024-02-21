@@ -9,3 +9,9 @@ TEST(ListExtention,CheckIfListsAreEqualSuccess) {
     std::list<int> rhs = {1,2,3};
     EXPECT_EQ(true, CPSBASELIB::STD_EXTENTION::LIST::areListsEqual<int>(lhs,rhs));
 }
+
+TEST(ListExtention,CheckIfListsAreEqualFalse) {
+    std::list<int> lhs = {1,2,3, 4};
+    std::list<int> rhs = {1,2,3};
+    EXPECT_EQ(false, CPSBASELIB::STD_EXTENTION::LIST::areListsEqual<int>(lhs,rhs));
+}
