@@ -12,7 +12,7 @@
 # see https://hub.docker.com/_/gcc/
 
 
-build_gcc13:
+build_gcc13_release:
   stage: build
   image: gcc:13
   before_script:
@@ -22,7 +22,7 @@ build_gcc13:
     - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
   script:
-    - conan install . --build mssing
+    - conan install . --build missing
     - conan create . --build missing
   #artifacts:
     #paths:
