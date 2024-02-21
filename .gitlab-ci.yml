@@ -28,7 +28,7 @@ build_deps_gcc13:
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
   script:
     - conan install . --build missing
-    - conan install . --build missing --s build_type=Debug
+    - conan install . --build missing -s build_type=Debug
     - conan upload boost/* -r cps-artifactory --all
     - conan upload gtest/* -r cps-artifactory --all#
     - conan upload libcurl/* -r cps-artifactory --all
@@ -49,7 +49,7 @@ build_deps_gcc12:
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
   script:
     - conan install . --build missing
-    - conan install . --build missing --s build_type=Debug
+    - conan install . --build missing -s build_type=Debug
     - conan upload boost/* -r cps-artifactory --all
     - conan upload gtest/* -r cps-artifactory --all#
     - conan upload libcurl/* -r cps-artifactory --all
@@ -70,7 +70,7 @@ build_deps_gcc11:
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
   script:
     - conan install . --build missing
-    - conan install . --build missing --s build_type=Debug
+    - conan install . --build missing -s build_type=Debug
     - conan upload boost/* -r cps-artifactory --all
     - conan upload gtest/* -r cps-artifactory --all#
     - conan upload libcurl/* -r cps-artifactory --all
@@ -91,7 +91,7 @@ build_deps_gcc10:
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
   script:
     - conan install . --build missing
-    - conan install . --build missing --s build_type=Debug
+    - conan install . --build missing -s build_type=Debug
     - conan upload boost/* -r cps-artifactory --all
     - conan upload gtest/* -r cps-artifactory --all#
     - conan upload libcurl/* -r cps-artifactory --all
@@ -113,7 +113,7 @@ build_deps_gcc9:
     - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
   script:
     - conan install . --build missing
-    - conan install . --build missing --s build_type=Debug
+    - conan install . --build missing -s build_type=Debug
     - conan upload boost/* -r cps-artifactory --all
     - conan upload gtest/* -r cps-artifactory --all#
     - conan upload libcurl/* -r cps-artifactory --all
