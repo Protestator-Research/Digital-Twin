@@ -9,19 +9,20 @@
 // External Classes
 //---------------------------------------------------------
 #include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <nlohmann/json.hpp>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
-
+#include "JSONEntities.h"
 #include "Record.h"
+
+
 namespace SysMLv2::Entities {
     Record::Record() :
             IEntity() {
         Id = boost::uuids::nil_generator()();
-    }
-
-    Record::~Record() {
-
     }
 
     Record::Record(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description) {
@@ -29,6 +30,21 @@ namespace SysMLv2::Entities {
         Alias = alias;
         Name = name;
         Description = description;
+    }
+
+    Record::Record(std::string jsonString) {
+        nlohmann::json parsedJson = nlohmann::json::parse(jsonString);
+
+        Id = boost::uuids::string_generator()(parsedJson[JSON_ID_ENTITY].get<std::string>());
+        Type = parsedJson[JSON_TYPE_ENTITY];
+        Name = parsedJson[JSON_NAME_ENTITY];
+
+        if(parsedJson.contains(JSON_ALIAS_ENTITY))
+            Alias = parsedJson[JSON_ALIAS_ENTITY];
+
+        if(parsedJson.contains(JSON_DESCRIPTION_ENTITY))
+            Description = parsedJson[JSON_DESCRIPTION_ENTITY];
+
     }
 
     bool Record::operator==(const Record &other) {
@@ -73,7 +89,17 @@ namespace SysMLv2::Entities {
     }
 
     std::string Record::serializeToJson() {
-        return "";
+        nlohmann::json jsonGeneration;
+
+        jsonGeneration[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
+
+
+
+        return jsonGeneration.dump();
+    }
+
+    std::string Record::getType() const {
+        return Type;
     }
 
 

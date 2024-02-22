@@ -2,41 +2,43 @@
 // Created by Moritz Herzog on 20.02.24.
 //
 
+#include <nlohmann/json.hpp>
+#include <vector>
+#include <sstream>
 #include "Project.h"
+#include "JSONEntities.h"
+#include "../../BaseFuctions/StringExtention.hpp"
 
 namespace SysMLv2::Entities {
-    Project::Project() : Record() {
-
-    }
-
     Project::Project(Project &other) : Record(other) {
+        CreationDate = other.CreationDate;
 
+        DefaultBranch = other.DefaultBranch;
+        BranchesList = other.BranchesList;
+        CommitsList = other.CommitsList;
+        HeadIdList = other.HeadIdList;
     }
 
-    Project::Project(std::string JsonString) : Record() {
-        JsonString;
+    Project::Project(std::string JsonString) : Record(JsonString) {
+        nlohmann::json parsedJson = nlohmann::json::parse(JsonString);
+
+        auto splittedTime = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(parsedJson[JSON_CREATION].get<std::string>(),'.')[0];
+        std::istringstream stringStream(splittedTime);
+        stringStream.imbue(std::locale("de_DE.utf-8"));
+        stringStream >> std::get_time(CreationDate,"%Y-%m-%dT%H:%M:%S");
+
+        DefaultBranch = Identity(parsedJson[JSON_DEFAULT_BRANCH_ENTITY].dump());
     }
 
     Project::Project(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description,
-                     std::time_t creationDate, boost::uuids::uuid defaultBranchId,
-                     std::list<boost::uuids::uuid> branchesIdList, std::list<boost::uuids::uuid> commitIdList,
-                     std::list<boost::uuids::uuid> headIdList) : Record(id,alias,name,description) {
-        creationDate;
-        defaultBranchId;
-        branchesIdList;
-        commitIdList;
-        headIdList;
-    }
-
-    Project::Project(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description,
-                     std::time_t creationDate, boost::uuids::uuid defaultBranchId, std::list<Identity> branchesIdList,
+                     std::time_t creationDate, Identity defaultBranchId, std::list<Identity> branchesIdList,
                      std::list<Identity> commitIdList, std::list<Identity> headIdList) : Record(id,alias,name,description) {
-        creationDate;
-        description;
-        defaultBranchId;
-        branchesIdList;
-        commitIdList;
-        headIdList;
+        CreationDate = std::localtime(&creationDate);
+        Description = description;
+        DefaultBranch = defaultBranchId;
+        BranchesList = branchesIdList;
+        CommitsList = commitIdList;
+        HeadIdList = headIdList;
     }
 
     Project &Project::operator=(const Project &other) {
@@ -88,9 +90,26 @@ namespace SysMLv2::Entities {
     }
 
     Project::~Project() {
+        delete CreationDate;
+
         BranchesList.clear();
         CommitsList.clear();
         HeadIdList.clear();
     }
 
+    Identity Project::getDefaultBranch() const {
+        return DefaultBranch;
+    }
+
+    void Project::setDefaultBranch(Identity identity) {
+        DefaultBranch = identity;
+    }
+
+    void Project::setCreationDate(std::time_t creationDate) {
+        CreationDate = std::localtime(&creationDate);
+    }
+
+    std::time_t Project::getCreationDate() const{
+        return std::mktime(CreationDate);
+    }
 }

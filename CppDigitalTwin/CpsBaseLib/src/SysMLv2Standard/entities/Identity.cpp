@@ -16,6 +16,7 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "Identity.h"
+#include "JSONEntities.h"
 
 namespace SysMLv2::Entities {
     Identity::Identity(boost::uuids::uuid id)
@@ -27,7 +28,7 @@ namespace SysMLv2::Entities {
         nlohmann::json json;
 
         if(!Id.is_nil()){
-            json["@id"] = boost::uuids::to_string(Id);
+            json[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
         }
 
         return json.dump();
@@ -39,7 +40,7 @@ namespace SysMLv2::Entities {
 
     Identity::Identity(std::string jsonString) {
         nlohmann::json JsonString = nlohmann::json::parse(jsonString);
-        Id = boost::uuids::string_generator()(JsonString["@id"].get<std::string>());
+        Id = boost::uuids::string_generator()(JsonString[JSON_ID_ENTITY].get<std::string>());
     }
 
     boost::uuids::uuid Identity::getId() const {
@@ -62,5 +63,7 @@ namespace SysMLv2::Entities {
         Id = identity.Id;
     }
 
-
+    bool Identity::operator==(const Identity &other) {
+        return Id == other.Id;
+    }
 }

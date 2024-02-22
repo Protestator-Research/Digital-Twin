@@ -44,10 +44,17 @@ namespace SysMLv2::Entities {
          * @param description Description of the Object
          */
         Record(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description);
+
+        /**
+         * Converts a JSON String into a valid Record
+         * @param jsonString The JSON String that is converted to a Record.
+         */
+        Record(std::string jsonString);
+
         /**
          * Destructor
          */
-        virtual ~Record();
+        virtual ~Record() = default;
 
         /**
          * Checks the equality of the individual Records.
@@ -98,8 +105,15 @@ namespace SysMLv2::Entities {
          */
         boost::uuids::uuid getId() const;
 
+        /**
+         *
+         * @return
+         */
+        std::string getType() const;
+
         std::string serializeToJson() override;
     protected:
+        std::string Type;
         std::string Name;
         std::list<std::string> Alias;
         std::string Description;

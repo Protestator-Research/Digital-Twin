@@ -28,18 +28,18 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-    class Project  : public Record{
+    class Project  : public Record {
     public:
         /**
          * Constructor
          */
-        Project();
+        Project() = default;
 
         /**
          * Copy constructor
          * @param other
          */
-        Project(Project& other);
+        Project(Project &other);
 
         /**
          *
@@ -64,29 +64,7 @@ namespace SysMLv2::Entities {
                 std::string name,
                 std::string description,
                 std::time_t creationDate,
-                boost::uuids::uuid defaultBranchId,
-                std::list<boost::uuids::uuid> branchesIdList,
-                std::list<boost::uuids::uuid> commitIdList,
-                std::list<boost::uuids::uuid> headIdList);
-
-        /**
-         *
-         * @param id
-         * @param alias
-         * @param name
-         * @param description
-         * @param creationDate
-         * @param defaultBranchId
-         * @param branchesIdList
-         * @param commitIdList
-         * @param headIdList
-         */
-        Project(boost::uuids::uuid id,
-                std::list<std::string> alias,
-                std::string name,
-                std::string description,
-                std::time_t creationDate,
-                boost::uuids::uuid defaultBranchId,
+                Identity defaultBranchId,
                 std::list<Identity> branchesIdList,
                 std::list<Identity> commitIdList,
                 std::list<Identity> headIdList);
@@ -101,18 +79,36 @@ namespace SysMLv2::Entities {
          * @param other
          * @return
          */
-        Project& operator=(const Project& other);
+        Project &operator=(const Project &other);
 
         /**
          * Allows the checking if two Projects are equal.
          * @param other
          * @return
          */
-        bool operator==(const Project& other);
+        bool operator==(const Project &other);
 
         std::string serializeToJson() override;
+
+        /**
+         *
+         * @param creationDate
+         */
+        void setCreationDate(std::time_t creationDate);
+
+        /**
+         *
+         * @return
+         */
+        std::time_t getCreationDate() const;
+
+        void setDefaultBranch(Identity identity);
+
+        Identity getDefaultBranch() const;
+
+
     private:
-        std::time_t CreationDate;
+        std::tm* CreationDate = new std::tm();
 
         Identity DefaultBranch;
         std::list<Identity> BranchesList;

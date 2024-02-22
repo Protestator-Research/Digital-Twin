@@ -57,8 +57,8 @@ namespace SysMLv2::Entities {
         explicit Identity(std::string jsonString);
 
         /**
-         *
-         * @param identity
+         * Copy constructor if the identity Object.
+         * @param identity The identity to copy.
          */
         Identity(Identity const &identity);
 
@@ -81,6 +81,12 @@ namespace SysMLv2::Entities {
          */
         Identity &operator=(Identity const &other);
 
+        /**
+         * Compares the two Identities with each other. The Identities are equal iff the two uuids are equal.
+         * @param other Right hand side of the check.
+         * @return True iff the identities are equal, else false.
+         */
+        bool operator==(Identity const &other);
 
         std::string serializeToJson() override;
     private:

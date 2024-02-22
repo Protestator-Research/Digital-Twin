@@ -18,6 +18,7 @@ add_library(CPSBaseLib
         src/SysMLv2Standard/entities/Project.h
         src/BaseFuctions/ListExtentions.cc
         src/BaseFuctions/ListExtentions.h
+        src/SysMLv2Standard/entities/JSONEntities.h
 )
 
 set_target_properties(CPSBaseLib PROPERTIES LINKER_LANGUAGE CXX)
@@ -34,7 +35,7 @@ install(TARGETS CPSBaseLib DESTINATION "src"
 if(MSVC)
     target_compile_options(CPSBaseLib PRIVATE /W4 /WX)
 else()
-    target_compile_options(CPSBaseLib PRIVATE -Wall -Wextra -Wpedantic)# -Werror)
+    target_compile_options(CPSBaseLib PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
 option(RUN_TESTS "Build the tests" ON)
