@@ -157,7 +157,7 @@ build_gcc12:
     - mkdir build && cd build
     - conan install .. --build missing
     - conan build ..
-    - vconan install .. -s build_type=Debug --build missing
+    - conan install .. -s build_type=Debug --build missing
     - conan build .. -s build_type=Debug
   artifacts:
     paths:
