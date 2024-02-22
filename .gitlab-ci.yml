@@ -140,6 +140,8 @@ build_gcc13:
     - conan install .. -s build_type=Debug --build missing
     - conan build .. -s build_type=Debug
   artifacts:
+    untracked: true
+    expire_in: 1 week
     paths:
       - build
 
@@ -160,6 +162,8 @@ build_gcc12:
     - conan install .. -s build_type=Debug --build missing
     - conan build .. -s build_type=Debug
   artifacts:
+    untracked: true
+    expire_in: 1 week
     paths:
       - build
 
@@ -180,6 +184,8 @@ build_gcc10:
     - conan install .. -s build_type=Debug --build missing
     - conan build .. -s build_type=Debug
   artifacts:
+    untracked: true
+    expire_in: 1 week
     paths:
       - build
 
@@ -200,16 +206,21 @@ build_gcc9:
     - conan install .. -s build_type=Debug --build missing
     - conan build .. -s build_type=Debug
   artifacts:
+    untracked: true
+    expire_in: 1 week
     paths:
       - build
 
 
 
 # run tests using the binary built before
-test:
+test_CPS_BaseLib:
+  image: gcc:13
+  dependencies:
+    - build_gcc13
   stage: test
   script:
-    - ./runmytests.sh
+    - ./build/Release/CppDigitalTwin/CpsBaseLib/tests/CpsBaseLibTests
 
 deploy:
   stage: deploy
