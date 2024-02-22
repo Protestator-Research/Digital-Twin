@@ -24,7 +24,7 @@ namespace SysMLv2::Entities {
 
         auto splittedTime = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(parsedJson[JSON_CREATION].get<std::string>(),'.')[0];
         std::istringstream stringStream(splittedTime);
-        stringStream.imbue(std::locale("de_DE.utf-8"));
+        //stringStream.imbue(std::locale("de_DE.utf-8"));
         stringStream >> std::get_time(CreationDate,"%Y-%m-%dT%H:%M:%S");
 
         DefaultBranch = Identity(parsedJson[JSON_DEFAULT_BRANCH_ENTITY].dump());
@@ -106,7 +106,7 @@ namespace SysMLv2::Entities {
     }
 
     void Project::setCreationDate(std::time_t creationDate) {
-        CreationDate = std::localtime(&creationDate);
+        CreationDate = std::gmtime(&creationDate);
     }
 
     std::time_t Project::getCreationDate() const{
