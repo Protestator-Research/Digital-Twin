@@ -4,6 +4,7 @@ project(CPSBaseLib CXX C)
 
 find_package(nlohmann_json REQUIRED)
 find_package(Boost REQUIRED)
+find_package(date REQUIRED)
 
 
 add_library(CPSBaseLib
@@ -25,7 +26,8 @@ set_target_properties(CPSBaseLib PROPERTIES LINKER_LANGUAGE CXX)
 
 target_link_libraries(CPSBaseLib
                         boost::boost
-                        nlohmann_json::nlohmann_json)
+                        nlohmann_json::nlohmann_json
+                        date::date)
 
 install(TARGETS CPSBaseLib DESTINATION "src"
         RUNTIME DESTINATION bin

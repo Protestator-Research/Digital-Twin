@@ -5,6 +5,8 @@
 #include <nlohmann/json.hpp>
 #include <vector>
 #include <sstream>
+#include <date/date.h>
+
 #include "Project.h"
 #include "JSONEntities.h"
 #include "../../BaseFuctions/StringExtention.hpp"
@@ -23,8 +25,7 @@ namespace SysMLv2::Entities {
         nlohmann::json parsedJson = nlohmann::json::parse(JsonString);
 
         std::istringstream stringStream(parsedJson[JSON_CREATION_ENTITY].get<std::string>());
-        stringStream.imbue(std::locale("de_DE.utf-8"));
-        stringStream >> std::get_time(CreationDate,"%Y-%m-%dT%TZ");
+        stringStream >> date::parse("%Y-%m-%dT%TZ",CreationDate);
 
         DefaultBranch = Identity(parsedJson[JSON_DEFAULT_BRANCH_ENTITY].dump());
     }
@@ -32,7 +33,7 @@ namespace SysMLv2::Entities {
     Project::Project(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description,
                      std::time_t creationDate, Identity defaultBranchId, std::list<Identity> branchesIdList,
                      std::list<Identity> commitIdList, std::list<Identity> headIdList) : Record(id,alias,name,description) {
-        CreationDate = std::localtime(&creationDate);
+        CreationDate = std::chrono::system_clock::from_time_t(creationDate);
         Description = description;
         DefaultBranch = defaultBranchId;
         BranchesList = branchesIdList;
@@ -87,9 +88,10 @@ namespace SysMLv2::Entities {
     std::string Project::serializeToJson() {
         nlohmann::json json = nlohmann::json::parse(Record::serializeToJson());
 
-        json[JSON_DEFAULT_BRANCH_ENTITY] = DefaultBranch.serializeToJson();
+        json[JSON_DEFAULT_BRANCH_ENTITY] = nlohmann::json::parse(DefaultBranch.serializeToJson());
         std::ostringstream oss;
-        oss << std::put_time(CreationDate,"%Y-%m-%dT%TZ");
+        using namespace date;
+        date::to_stream(oss, "%Y-%m-%dT%TZ", CreationDate);
         json[JSON_CREATION_ENTITY] = oss.str();
 
         if(!BranchesList.empty()) {
@@ -123,8 +125,6 @@ namespace SysMLv2::Entities {
     }
 
     Project::~Project() {
-        delete CreationDate;
-
         BranchesList.clear();
         CommitsList.clear();
         HeadIdList.clear();
@@ -139,10 +139,10 @@ namespace SysMLv2::Entities {
     }
 
     void Project::setCreationDate(std::time_t creationDate) {
-        CreationDate = std::gmtime(&creationDate);
+        CreationDate = std::chrono::system_clock::from_time_t(creationDate);
     }
 
     std::time_t Project::getCreationDate() const{
-        return std::mktime(CreationDate);
+        return std::chrono::system_clock::to_time_t(CreationDate);
     }
 }

@@ -4,4 +4,6 @@
 **/CMakeUserPresets.json
 **/3rd_party_conanpackages/**
 .idea/
-**/cmake-build-debug/**
+**/cmake-**/**
+CMakeUserPresets.json
+ConanPresets.json

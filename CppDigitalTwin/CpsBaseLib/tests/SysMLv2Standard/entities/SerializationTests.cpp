@@ -31,7 +31,7 @@ TEST(TestSerilization,TestSerilizationItentityNonEmptyId) {
  */
 TEST(TestDeserialization, TestDeserializationIdentity){
     std::string jsonString = "{\n"
-                             "  \\\"@id\\\": \\\"781f769c-b7f8-4b38-a732-592fda775626\\\"\n"
+                             "  \"@id\": \"781f769c-b7f8-4b38-a732-592fda775626\"\n"
                              "}";
     SysMLv2::Entities::Identity identity = SysMLv2::Entities::Identity("{\"@id\":\"781f769c-b7f8-4b38-a732-592fda775626\"}");
     EXPECT_EQ(jsonString,identity.serializeToJson());
@@ -62,12 +62,12 @@ TEST(TestSerilization, TestSerilizationAndDeserialization) {
     std::string jsonString = "{\n"
                              "  \"@id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n"
                              "  \"@type\": \"string\",\n"
-                             "  \"name\": \"string\",\n"
-                             "  \"description\": \"string\",\n"
+                             "  \"created\": \"2024-02-22T08:58:57.343000Z\",\n"
                              "  \"defaultBranch\": {\n"
                              "    \"@id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n"
                              "  },\n"
-                             "  \"created\": \"2024-02-22T08:58:57.343Z\"\n"
+                             "  \"description\": \"string\",\n"
+                             "  \"name\": \"string\"\n"
                              "}";
 
     SysMLv2::Entities::Project project = SysMLv2::Entities::Project(jsonString);
