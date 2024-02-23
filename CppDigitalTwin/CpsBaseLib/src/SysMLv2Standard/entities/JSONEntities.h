@@ -28,7 +28,10 @@ namespace SysMLv2::Entities {
     const std::string JSON_DESCRIPTION_ENTITY = "description";
     //Used for Project
     const std::string JSON_DEFAULT_BRANCH_ENTITY = "defaultBranch";
-    const std::string JSON_CREATION = "created";
+    const std::string JSON_CREATION_ENTITY = "created";
+    const std::string JSON_BRANCHES_LIST = "branches_list";
+    const std::string JSON_COMMIT_LIST = "commits";
+    const std::string JSON_HEAD_ID_LIST = "heads";
 
 }
 

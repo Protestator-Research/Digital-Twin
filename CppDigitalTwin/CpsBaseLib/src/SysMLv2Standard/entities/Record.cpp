@@ -92,10 +92,15 @@ namespace SysMLv2::Entities {
         nlohmann::json jsonGeneration;
 
         jsonGeneration[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
+        jsonGeneration[JSON_TYPE_ENTITY] = Type;
+        jsonGeneration[JSON_NAME_ENTITY] = Name;
 
+        if(!Alias.empty())
+            jsonGeneration[JSON_ALIAS_ENTITY] = Alias;
 
+        jsonGeneration[JSON_DESCRIPTION_ENTITY] = Description;
 
-        return jsonGeneration.dump();
+        return jsonGeneration.dump(JSON_INTENT);
     }
 
     std::string Record::getType() const {

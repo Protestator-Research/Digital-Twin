@@ -31,7 +31,7 @@ namespace SysMLv2::Entities {
             json[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
         }
 
-        return json.dump();
+        return json.dump(JSON_INTENT);
     }
 
     Identity::Identity() {

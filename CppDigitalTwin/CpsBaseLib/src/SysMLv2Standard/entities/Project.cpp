@@ -22,10 +22,9 @@ namespace SysMLv2::Entities {
     Project::Project(std::string JsonString) : Record(JsonString) {
         nlohmann::json parsedJson = nlohmann::json::parse(JsonString);
 
-        auto splittedTime = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(parsedJson[JSON_CREATION].get<std::string>(),'.')[0];
-        std::istringstream stringStream(splittedTime);
-        //stringStream.imbue(std::locale("de_DE.utf-8"));
-        stringStream >> std::get_time(CreationDate,"%Y-%m-%dT%H:%M:%S");
+        std::istringstream stringStream(parsedJson[JSON_CREATION_ENTITY].get<std::string>());
+        stringStream.imbue(std::locale("de_DE.utf-8"));
+        stringStream >> std::get_time(CreationDate,"%Y-%m-%dT%TZ");
 
         DefaultBranch = Identity(parsedJson[JSON_DEFAULT_BRANCH_ENTITY].dump());
     }
@@ -86,7 +85,41 @@ namespace SysMLv2::Entities {
     }
 
     std::string Project::serializeToJson() {
-        return std::string();
+        nlohmann::json json = nlohmann::json::parse(Record::serializeToJson());
+
+        json[JSON_DEFAULT_BRANCH_ENTITY] = DefaultBranch.serializeToJson();
+        std::ostringstream oss;
+        oss << std::put_time(CreationDate,"%Y-%m-%dT%TZ");
+        json[JSON_CREATION_ENTITY] = oss.str();
+
+        if(!BranchesList.empty()) {
+            auto branchesListArray = nlohmann::json::array();
+
+            for(auto element : BranchesList)
+                branchesListArray.push_back(element.serializeToJson());
+
+            json[JSON_BRANCHES_LIST] = branchesListArray;
+        }
+
+        if(!CommitsList.empty()) {
+            auto commitsListArray = nlohmann::json::array();
+
+            for(auto element : CommitsList)
+                commitsListArray.push_back(element.serializeToJson());
+
+            json[JSON_COMMIT_LIST] = commitsListArray;
+        }
+
+        if(!HeadIdList.empty()) {
+            auto headsListArray = nlohmann::json::array();
+
+            for(auto element : HeadIdList)
+                headsListArray.push_back(element.serializeToJson());
+
+            json[JSON_HEAD_ID_LIST] = headsListArray;
+        }
+
+        return json.dump(JSON_INTENT);
     }
 
     Project::~Project() {

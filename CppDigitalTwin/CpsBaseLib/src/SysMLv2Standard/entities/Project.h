@@ -108,7 +108,7 @@ namespace SysMLv2::Entities {
 
 
     private:
-        std::tm* CreationDate = new std::tm();
+        std::chrono::system_clock::time_point CreationDate;
 
         Identity DefaultBranch;
         std::list<Identity> BranchesList;
