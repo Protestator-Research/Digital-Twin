@@ -4,8 +4,8 @@
 //---------------------------------------------------------
 // Constants, Definitions, Pragmas
 //---------------------------------------------------------
-#ifndef DIGITALTWIN_IDENTITY_H
-#define DIGITALTWIN_IDENTITY_H
+#ifndef DIGITALTWIN_DATAIDENTITY_H
+#define DIGITALTWIN_DATAIDENTITY_H
 //---------------------------------------------------------
 // External Classes
 //---------------------------------------------------------
@@ -24,48 +24,48 @@ namespace SysMLv2::Entities {
     /**
      * This class represents the Identity of every Object.
      * This object is used, iff the protocol passes only a Identification of another object.
-     * @class Identity
+     * @class DataIdentity
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
-     * @see
+     * @see boost::uuids::uuid
      */
-    class Identity : IEntity {
+    class DataIdentity : IEntity {
     public:
         /**
          * Constructor if nothing is known.
          */
-        Identity();
+        DataIdentity();
 
         /**
          * Copy Constructor
          * @param other Other identity Element
          */
-        Identity(Identity &other);
+        DataIdentity(DataIdentity &other);
 
         /**
          * Constructor for the use with a valid ID.
          * @see boost::uuids::uuid
          * @param id The uuid of the object.
          */
-        explicit Identity(boost::uuids::uuid id);
+        explicit DataIdentity(boost::uuids::uuid id);
 
         /**
          * Generates Identity object from a JSON string.
          * @param jsonString The json string that allows the generation of the Object.
          * @see nlohmann::json
          */
-        explicit Identity(std::string jsonString);
+        explicit DataIdentity(std::string jsonString);
 
         /**
          * Copy constructor if the identity Object.
          * @param identity The identity to copy.
          */
-        Identity(Identity const &identity);
+        DataIdentity(DataIdentity const &identity);
 
         /**
          * Destructor
          */
-        virtual ~Identity() = default;
+        virtual ~DataIdentity() = default;
 
         /**
          * Returns the interal stored id.
@@ -79,14 +79,14 @@ namespace SysMLv2::Entities {
          * @param other Other Parameter
          * @return the newly Assigned object
          */
-        Identity &operator=(Identity const &other);
+        DataIdentity &operator=(DataIdentity const &other);
 
         /**
          * Compares the two Identities with each other. The Identities are equal iff the two uuids are equal.
          * @param other Right hand side of the check.
          * @return True iff the identities are equal, else false.
          */
-        bool operator==(Identity const &other);
+        bool operator==(DataIdentity const &other);
 
         std::string serializeToJson() override;
     private:
@@ -94,4 +94,4 @@ namespace SysMLv2::Entities {
     };
 }
 
-#endif //DIGITALTWIN_IDENTITY_H
+#endif //DIGITALTWIN_DATAIDENTITY_H

@@ -49,7 +49,7 @@ namespace SysMLv2::Entities {
          * Converts a JSON String into a valid Record
          * @param jsonString The JSON String that is converted to a Record.
          */
-        Record(std::string jsonString);
+        explicit Record(std::string jsonString);
 
         /**
          * Destructor
@@ -67,7 +67,7 @@ namespace SysMLv2::Entities {
          *
          * @return
          */
-        std::string getName() const;
+        [[nodiscard]] std::string getName() const;
 
         /**
          *
@@ -79,7 +79,7 @@ namespace SysMLv2::Entities {
          *
          * @return
          */
-        std::list<std::string> getAlias() const;
+        [[nodiscard]] std::list<std::string> getAlias() const;
 
         /**
          *
@@ -91,7 +91,7 @@ namespace SysMLv2::Entities {
          *
          * @return
          */
-        std::string getDescription() const;
+        [[nodiscard]] std::string getDescription() const;
 
         /**
          *
@@ -103,13 +103,13 @@ namespace SysMLv2::Entities {
          *
          * @return
          */
-        boost::uuids::uuid getId() const;
+        [[nodiscard]] boost::uuids::uuid getId() const;
 
         /**
          *
          * @return
          */
-        std::string getType() const;
+        [[nodiscard]] std::string getType() const;
 
         std::string serializeToJson() override;
     protected:

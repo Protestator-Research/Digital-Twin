@@ -98,7 +98,8 @@ namespace SysMLv2::Entities {
         if(!Alias.empty())
             jsonGeneration[JSON_ALIAS_ENTITY] = Alias;
 
-        jsonGeneration[JSON_DESCRIPTION_ENTITY] = Description;
+        if(!Description.empty())
+            jsonGeneration[JSON_DESCRIPTION_ENTITY] = Description;
 
         return jsonGeneration.dump(JSON_INTENT);
     }

@@ -16,14 +16,14 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "Record.h"
-#include "Identity.h"
+#include "DataIdentity.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
 
 namespace SysMLv2::Entities {
     /**
-     * Represents the object of the
+     * Represents the object of the Project entity.
      * @class Project
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
@@ -45,7 +45,7 @@ namespace SysMLv2::Entities {
          *
          * @param JsonString
          */
-        Project(std::string JsonString);
+        explicit Project(std::string JsonString);
 
         /**
          *
@@ -64,15 +64,15 @@ namespace SysMLv2::Entities {
                 std::string name,
                 std::string description,
                 std::time_t creationDate,
-                Identity defaultBranchId,
-                std::list<Identity> branchesIdList,
-                std::list<Identity> commitIdList,
-                std::list<Identity> headIdList);
+                DataIdentity defaultBranchId,
+                std::list<DataIdentity> branchesIdList,
+                std::list<DataIdentity> commitIdList,
+                std::list<DataIdentity> headIdList);
 
         /**
          * Destructor
          */
-        virtual ~Project();
+        ~Project() override;
 
         /**
          *
@@ -100,20 +100,62 @@ namespace SysMLv2::Entities {
          *
          * @return
          */
-        std::time_t getCreationDate() const;
+        [[nodiscard]] std::time_t getCreationDate() const;
 
-        void setDefaultBranch(Identity identity);
+        /**
+         *
+         * @param identity
+         */
+        void setDefaultBranch(DataIdentity identity);
 
-        Identity getDefaultBranch() const;
+        /**
+         *
+         * @return
+         */
+        [[nodiscard]] DataIdentity getDefaultBranch() const;
 
+        /**
+         *
+         * @return
+         */
+        std::list<DataIdentity> getBranches() const;
 
+        /**
+         *
+         * @param branchId
+         */
+        void appendBranch(DataIdentity branchId);
+
+        /**
+         *
+         * @return
+         */
+        std::list<DataIdentity> getCommitsList() const;
+
+        /**
+         *
+         * @param commitId
+         */
+        void appendCommit(DataIdentity commitId);
+
+        /**
+         *
+         * @return
+         */
+        std::list<DataIdentity> getHeadsIdList() const;
+
+        /**
+         *
+         * @param headId
+         */
+        void appendHead(DataIdentity headId);
     private:
         std::chrono::system_clock::time_point CreationDate;
 
-        Identity DefaultBranch;
-        std::list<Identity> BranchesList;
-        std::list<Identity> CommitsList;
-        std::list<Identity> HeadIdList;
+        DataIdentity DefaultBranch;
+        std::list<DataIdentity> BranchesList;
+        std::list<DataIdentity> CommitsList;
+        std::list<DataIdentity> HeadIdList;
 
     };
 }

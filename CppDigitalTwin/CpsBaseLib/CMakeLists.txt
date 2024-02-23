@@ -10,8 +10,8 @@ find_package(date REQUIRED)
 add_library(CPSBaseLib
         src/BaseFuctions/StringExtention.hpp
         src/BaseFuctions/StringExtention.cpp
-        src/SysMLv2Standard/entities/Identity.cpp
-        src/SysMLv2Standard/entities/Identity.h
+        src/SysMLv2Standard/entities/DataIdentity.cpp
+        src/SysMLv2Standard/entities/DataIdentity.h
         src/SysMLv2Standard/entities/Record.cpp
         src/SysMLv2Standard/entities/Record.h
         src/SysMLv2Standard/entities/IEntity.h
@@ -20,6 +20,20 @@ add_library(CPSBaseLib
         src/BaseFuctions/ListExtentions.cc
         src/BaseFuctions/ListExtentions.h
         src/SysMLv2Standard/entities/JSONEntities.h
+        src/SysMLv2Standard/entities/DigitalTwin.cpp
+        src/SysMLv2Standard/entities/DigitalTwin.h
+        src/SysMLv2Standard/entities/Commit.cpp
+        src/SysMLv2Standard/entities/Commit.h
+        src/SysMLv2Standard/entities/CommitReference.cpp
+        src/SysMLv2Standard/entities/CommitReference.h
+        src/SysMLv2Standard/entities/DataVersion.cpp
+        src/SysMLv2Standard/entities/DataVersion.h
+        src/SysMLv2Standard/entities/Query.cpp
+        src/SysMLv2Standard/entities/Query.h
+        src/SysMLv2Standard/entities/Tag.cpp
+        src/SysMLv2Standard/entities/Tag.h
+        src/SysMLv2Standard/entities/Branch.cpp
+        src/SysMLv2Standard/entities/Branch.h
 )
 
 set_target_properties(CPSBaseLib PROPERTIES LINKER_LANGUAGE CXX)

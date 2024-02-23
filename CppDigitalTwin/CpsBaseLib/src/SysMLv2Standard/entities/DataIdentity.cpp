@@ -15,16 +15,16 @@
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
-#include "Identity.h"
+#include "DataIdentity.h"
 #include "JSONEntities.h"
 
 namespace SysMLv2::Entities {
-    Identity::Identity(boost::uuids::uuid id)
+    DataIdentity::DataIdentity(boost::uuids::uuid id)
     {
         Id = id;
     }
 
-    std::string Identity::serializeToJson() {
+    std::string DataIdentity::serializeToJson() {
         nlohmann::json json;
 
         if(!Id.is_nil()){
@@ -34,24 +34,24 @@ namespace SysMLv2::Entities {
         return json.dump(JSON_INTENT);
     }
 
-    Identity::Identity() {
+    DataIdentity::DataIdentity() {
         Id = boost::uuids::nil_generator()();
     }
 
-    Identity::Identity(std::string jsonString) {
+    DataIdentity::DataIdentity(std::string jsonString) {
         nlohmann::json JsonString = nlohmann::json::parse(jsonString);
         Id = boost::uuids::string_generator()(JsonString[JSON_ID_ENTITY].get<std::string>());
     }
 
-    boost::uuids::uuid Identity::getId() const {
+    boost::uuids::uuid DataIdentity::getId() const {
         return Id;
     }
 
-    Identity::Identity(Identity &other) {
+    DataIdentity::DataIdentity(DataIdentity &other) {
         Id = other.Id;
     }
 
-    Identity &Identity::operator=(const Identity &other) {
+    DataIdentity &DataIdentity::operator=(const DataIdentity &other) {
         if(this == &other)
             return *this;
 
@@ -59,11 +59,11 @@ namespace SysMLv2::Entities {
         return *this;
     }
 
-    Identity::Identity(Identity const &identity) {
+    DataIdentity::DataIdentity(DataIdentity const &identity) {
         Id = identity.Id;
     }
 
-    bool Identity::operator==(const Identity &other) {
+    bool DataIdentity::operator==(const DataIdentity &other) {
         return Id == other.Id;
     }
 }

@@ -27,12 +27,12 @@ namespace SysMLv2::Entities {
         std::istringstream stringStream(parsedJson[JSON_CREATION_ENTITY].get<std::string>());
         stringStream >> date::parse("%Y-%m-%dT%TZ",CreationDate);
 
-        DefaultBranch = Identity(parsedJson[JSON_DEFAULT_BRANCH_ENTITY].dump());
+        DefaultBranch = DataIdentity(parsedJson[JSON_DEFAULT_BRANCH_ENTITY].dump());
     }
 
     Project::Project(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description,
-                     std::time_t creationDate, Identity defaultBranchId, std::list<Identity> branchesIdList,
-                     std::list<Identity> commitIdList, std::list<Identity> headIdList) : Record(id,alias,name,description) {
+                     std::time_t creationDate, DataIdentity defaultBranchId, std::list<DataIdentity> branchesIdList,
+                     std::list<DataIdentity> commitIdList, std::list<DataIdentity> headIdList) : Record(id,alias,name,description) {
         CreationDate = std::chrono::system_clock::from_time_t(creationDate);
         Description = description;
         DefaultBranch = defaultBranchId;
@@ -53,17 +53,17 @@ namespace SysMLv2::Entities {
         CreationDate = other.CreationDate;
 
         BranchesList.clear();
-        for(Identity element : other.BranchesList) {
+        for(DataIdentity element : other.BranchesList) {
             BranchesList.emplace_back(element);
         }
 
         CommitsList.clear();
-        for(Identity element : other.CommitsList) {
+        for(DataIdentity element : other.CommitsList) {
             CommitsList.emplace_back(element);
         }
 
         HeadIdList.clear();
-        for(Identity element : other.HeadIdList) {
+        for(DataIdentity element : other.HeadIdList) {
             HeadIdList.emplace_back(element);
         }
 
@@ -130,11 +130,11 @@ namespace SysMLv2::Entities {
         HeadIdList.clear();
     }
 
-    Identity Project::getDefaultBranch() const {
+    DataIdentity Project::getDefaultBranch() const {
         return DefaultBranch;
     }
 
-    void Project::setDefaultBranch(Identity identity) {
+    void Project::setDefaultBranch(DataIdentity identity) {
         DefaultBranch = identity;
     }
 
@@ -144,5 +144,29 @@ namespace SysMLv2::Entities {
 
     std::time_t Project::getCreationDate() const{
         return std::chrono::system_clock::to_time_t(CreationDate);
+    }
+
+    std::list<DataIdentity> Project::getBranches() const {
+        return BranchesList;
+    }
+
+    void Project::appendBranch(DataIdentity branchId) {
+        BranchesList.push_back(branchId);
+    }
+
+    std::list<DataIdentity> Project::getCommitsList() const {
+        return CommitsList;
+    }
+
+    void Project::appendCommit(DataIdentity commitId) {
+        CommitsList.push_back(commitId);
+    }
+
+    std::list<DataIdentity> Project::getHeadsIdList() const {
+        return HeadIdList;
+    }
+
+    void Project::appendHead(DataIdentity headId) {
+        HeadIdList.push_back(headId);
     }
 }
