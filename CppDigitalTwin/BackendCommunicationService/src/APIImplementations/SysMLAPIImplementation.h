@@ -10,7 +10,6 @@
 //---------------------------------------------------------
 #include <vector>
 #include <string>
-#include <uuid/uuid.h>
 #include <curl/curl.h>
 //---------------------------------------------------------
 // Internal Classes
