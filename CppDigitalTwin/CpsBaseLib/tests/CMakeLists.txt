@@ -6,7 +6,8 @@ add_executable(CpsBaseLibTests
         main.cpp
         BaseFunctions/StringExtentionTest.cpp
         SysMLv2Standard/entities/SerializationTests.cpp
-        BaseFunctions/ListsExtentionTests.cpp)
+        BaseFunctions/ListsExtentionTests.cpp
+        SysMLv2Standard/entities/GenerationTest.cpp)
 
 target_include_directories(CpsBaseLibTests PRIVATE
                                     ../src/)

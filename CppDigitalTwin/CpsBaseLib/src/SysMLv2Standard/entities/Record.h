@@ -32,9 +32,10 @@ namespace SysMLv2::Entities {
     class Record : public IEntity {
     public:
         /**
-         * Generalized Constructor
+         * Generalized Constructor is deleted According to the SysMLv2 Standard.
+         * This requires a human Identifier, that is read only. This can not be realized by a general constructor.
          */
-        Record();
+        Record() = delete;
 
         /**
          * Init the Record Object with all the nesecary objects.
@@ -47,9 +48,9 @@ namespace SysMLv2::Entities {
 
         /**
          * Converts a JSON String into a valid Record
-         * @param jsonString The JSON String that is converted to a Record.
+         * @param jsonString The JSON String that is converted to a Record or a valid name of the Record.
          */
-        explicit Record(std::string jsonString);
+        explicit Record(std::string jsonStringOrName);
 
         /**
          * Destructor
@@ -68,12 +69,6 @@ namespace SysMLv2::Entities {
          * @return
          */
         [[nodiscard]] std::string getName() const;
-
-        /**
-         *
-         * @param name
-         */
-        void setName(std::string& name);
 
         /**
          *

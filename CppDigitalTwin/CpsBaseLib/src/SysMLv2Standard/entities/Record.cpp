@@ -20,10 +20,6 @@
 
 
 namespace SysMLv2::Entities {
-    Record::Record() :
-            IEntity() {
-        Id = boost::uuids::nil_generator()();
-    }
 
     Record::Record(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description) {
         Id=id;
@@ -33,17 +29,22 @@ namespace SysMLv2::Entities {
     }
 
     Record::Record(std::string jsonString) {
-        nlohmann::json parsedJson = nlohmann::json::parse(jsonString);
+        try {
+            nlohmann::json parsedJson = nlohmann::json::parse(jsonString);
 
-        Id = boost::uuids::string_generator()(parsedJson[JSON_ID_ENTITY].get<std::string>());
-        Type = parsedJson[JSON_TYPE_ENTITY];
-        Name = parsedJson[JSON_NAME_ENTITY];
+            Id = boost::uuids::string_generator()(parsedJson[JSON_ID_ENTITY].get<std::string>());
+            Type = parsedJson[JSON_TYPE_ENTITY];
+            Name = parsedJson[JSON_NAME_ENTITY];
 
-        if(parsedJson.contains(JSON_ALIAS_ENTITY))
-            Alias = parsedJson[JSON_ALIAS_ENTITY];
+            if (parsedJson.contains(JSON_ALIAS_ENTITY))
+                Alias = parsedJson[JSON_ALIAS_ENTITY];
 
-        if(parsedJson.contains(JSON_DESCRIPTION_ENTITY))
-            Description = parsedJson[JSON_DESCRIPTION_ENTITY];
+            if (parsedJson.contains(JSON_DESCRIPTION_ENTITY))
+                Description = parsedJson[JSON_DESCRIPTION_ENTITY];
+        }
+        catch (...) {
+            Name = jsonString;
+        }
 
     }
 
@@ -62,10 +63,6 @@ namespace SysMLv2::Entities {
 
     std::string Record::getName() const {
         return Name;
-    }
-
-    void Record::setName(std::string& name) {
-        Name = name;
     }
 
     std::list<std::string> Record::getAlias() const {

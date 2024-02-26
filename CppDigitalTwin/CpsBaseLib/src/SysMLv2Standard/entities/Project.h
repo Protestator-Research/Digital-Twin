@@ -33,7 +33,7 @@ namespace SysMLv2::Entities {
         /**
          * Constructor
          */
-        Project() = default;
+        Project() = delete;
 
         /**
          * Copy constructor
