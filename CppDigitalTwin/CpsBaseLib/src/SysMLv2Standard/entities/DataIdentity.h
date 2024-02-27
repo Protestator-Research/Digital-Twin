@@ -14,7 +14,7 @@
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
-#include "IEntity.h"
+#include "Record.h"
 
 //---------------------------------------------------------
 // Forwarding
@@ -29,7 +29,7 @@ namespace SysMLv2::Entities {
      * @version 1.0
      * @see boost::uuids::uuid
      */
-    class DataIdentity : IEntity {
+    class DataIdentity : public Record {
     public:
         /**
          * Constructor if nothing is known.

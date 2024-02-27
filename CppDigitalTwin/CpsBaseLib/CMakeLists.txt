@@ -34,6 +34,18 @@ add_library(CPSBaseLib
         src/SysMLv2Standard/entities/Tag.h
         src/SysMLv2Standard/entities/Branch.cpp
         src/SysMLv2Standard/entities/Branch.h
+        src/SysMLv2Standard/entities/Data.cpp
+        src/SysMLv2Standard/entities/Data.h
+        src/SysMLv2Standard/entities/ProjectUsage.cpp
+        src/SysMLv2Standard/entities/ProjectUsage.h
+        src/SysMLv2Standard/entities/Element.cpp
+        src/SysMLv2Standard/entities/Element.h
+        src/SysMLv2Standard/entities/Relationship.cpp
+        src/SysMLv2Standard/entities/Relationship.h
+        src/SysMLv2Standard/entities/ExternalData.cpp
+        src/SysMLv2Standard/entities/ExternalData.h
+        src/SysMLv2Standard/entities/ExternalRelationship.cpp
+        src/SysMLv2Standard/entities/ExternalRelationship.h
 )
 
 set_target_properties(CPSBaseLib PROPERTIES LINKER_LANGUAGE CXX)

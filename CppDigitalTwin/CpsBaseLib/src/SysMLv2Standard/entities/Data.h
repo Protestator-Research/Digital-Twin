@@ -1,11 +1,11 @@
 //
-// Created by Moritz Herzog on 23.02.24.
+// Created by Moritz Herzog on 27.02.24.
 //
 //---------------------------------------------------------
 // Constants, Definitions, Pragmas
 //---------------------------------------------------------
-#ifndef DIGITALTWIN_COMMIT_H
-#define DIGITALTWIN_COMMIT_H
+#ifndef DIGITALTWIN_DATA_H
+#define DIGITALTWIN_DATA_H
 //---------------------------------------------------------
 // External Classes
 //---------------------------------------------------------
@@ -13,7 +13,7 @@
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
-#include "Record.h"
+#include "IEntity.h"
 
 //---------------------------------------------------------
 // Forwarding
@@ -27,9 +27,9 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-    class Commit : public Record {
+    class Data {
 
     };
 }
 
-#endif //DIGITALTWIN_COMMIT_H
+#endif //DIGITALTWIN_DATA_H

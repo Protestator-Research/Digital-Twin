@@ -1,14 +1,37 @@
 //
 // Created by Moritz Herzog on 23.02.24.
 //
-
+//---------------------------------------------------------
+// Constants, Definitions, Pragmas
+//---------------------------------------------------------
 #ifndef DIGITALTWIN_QUERY_H
 #define DIGITALTWIN_QUERY_H
+//---------------------------------------------------------
+// External Classes
+//---------------------------------------------------------
+
+//---------------------------------------------------------
+// Internal Classes
+//---------------------------------------------------------
+#include "Record.h"
+
+//---------------------------------------------------------
+// Forwarding
+//---------------------------------------------------------
+
+namespace SysMLv2::Entities {
+    /**
+     * Represents an abstract baseclass that is used for the SysMLv2 API
+     * @class Record
+     * @author Moritz Herzog <herzogm@rptu.de>
+     * @version 1.0
+     */
 
 
-class Query {
 
-};
+    class Query {
 
+    };
+}
 
 #endif //DIGITALTWIN_QUERY_H
