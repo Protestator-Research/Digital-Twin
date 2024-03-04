@@ -10,6 +10,7 @@
 // External Classes
 //---------------------------------------------------------
 #include <boost/uuid/uuid.hpp>
+#include <vector>
 
 //---------------------------------------------------------
 // Internal Classes
@@ -19,78 +20,69 @@
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
+namespace SysMLv2::Entities {
+    class DataVersion;
+    class Project;
+}
+
 
 namespace SysMLv2::Entities {
     /**
-     * This class represents the Identity of every Object.
-     * This object is used, iff the protocol passes only a Identification of another object.
+     * The class Data Identity is a subclass of Record that represents a unique, version-independent representation of
+     * Data through its lifecycle.A Data Identity is associated with 1 or more Data Version records that represent
+     * different versions of the same Data.
      * @class DataIdentity
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      * @see boost::uuids::uuid
+     * @see SysMLv2::Entities::Record
      */
     class DataIdentity : public Record {
     public:
         /**
-         * Constructor if nothing is known.
+         * Default constructor is delted.
          */
-        DataIdentity();
+        DataIdentity() = delete;
 
-        /**
-         * Copy Constructor
-         * @param other Other identity Element
-         */
-        DataIdentity(DataIdentity &other);
-
-        /**
-         * Constructor for the use with a valid ID.
-         * @see boost::uuids::uuid
-         * @param id The uuid of the object.
-         */
         explicit DataIdentity(boost::uuids::uuid id);
 
-        /**
-         * Generates Identity object from a JSON string.
-         * @param jsonString The json string that allows the generation of the Object.
-         * @see nlohmann::json
-         */
-        explicit DataIdentity(std::string jsonString);
+        DataIdentity(std::string jsonStringOrName);
 
-        /**
-         * Copy constructor if the identity Object.
-         * @param identity The identity to copy.
-         */
-        DataIdentity(DataIdentity const &identity);
 
         /**
          * Destructor
          */
-        virtual ~DataIdentity() = default;
+        virtual ~DataIdentity();
+
+        std::vector<DataVersion*> getDataVersions() const;
+        Project* getProject() const;
 
         /**
-         * Returns the interal stored id.
-         * @return UUID
-         * @see boost::uuids
+         * Returns the creation date of the data. This translations to the point in time, where the first commit is
+         * created, representing then the creation of the specified Dataset.
+         * @return Data creation date.
          */
-        boost::uuids::uuid getId() const;
+        std::chrono::system_clock::time_point createdAt();
 
         /**
-         * Asignment Operator
-         * @param other Other Parameter
-         * @return the newly Assigned object
+         * Returns the date, where the data is deleted. Thus this represents the commit, that deletes the data set.
+         * @return The time, where the data is delted.
          */
-        DataIdentity &operator=(DataIdentity const &other);
-
-        /**
-         * Compares the two Identities with each other. The Identities are equal iff the two uuids are equal.
-         * @param other Right hand side of the check.
-         * @return True iff the identities are equal, else false.
-         */
-        bool operator==(DataIdentity const &other);
+        std::chrono::system_clock::time_point deletedAt();
 
         std::string serializeToJson() override;
+
+        bool operator==(DataIdentity const &other);
+
     private:
-        boost::uuids::uuid Id;
+        /**
+         *
+         */
+        std::vector<DataVersion*> Version;
+        /**
+         *
+         */
+        //Project* Project;
     };
 }
 

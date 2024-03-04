@@ -1,15 +1,25 @@
 //
 // Created by Moritz Herzog on 20.02.24.
 //
+//---------------------------------------------------------
+// Constants, Definitions, Pragmas
+//---------------------------------------------------------
 
+//---------------------------------------------------------
+// External Classes
+//---------------------------------------------------------
 #include <nlohmann/json.hpp>
 #include <vector>
 #include <sstream>
 #include <date/date.h>
-
+//---------------------------------------------------------
+// Internal Classes
+//---------------------------------------------------------
 #include "Project.h"
+#include "DataIdentity.h"
 #include "JSONEntities.h"
 #include "../../BaseFuctions/StringExtention.hpp"
+
 
 namespace SysMLv2::Entities {
     Project::Project(Project &other) : Record(other) {
@@ -27,12 +37,12 @@ namespace SysMLv2::Entities {
         std::istringstream stringStream(parsedJson[JSON_CREATION_ENTITY].get<std::string>());
         stringStream >> date::parse("%Y-%m-%dT%TZ",CreationDate);
 
-        DefaultBranch = DataIdentity(parsedJson[JSON_DEFAULT_BRANCH_ENTITY].dump());
+        DefaultBranch = new DataIdentity(parsedJson[JSON_DEFAULT_BRANCH_ENTITY].dump());
     }
 
     Project::Project(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description,
-                     std::time_t creationDate, DataIdentity defaultBranchId, std::list<DataIdentity> branchesIdList,
-                     std::list<DataIdentity> commitIdList, std::list<DataIdentity> headIdList) : Record(id,alias,name,description) {
+                     std::time_t creationDate, DataIdentity* defaultBranchId, std::list<DataIdentity*> branchesIdList,
+                     std::list<DataIdentity*> commitIdList, std::list<DataIdentity*> headIdList) : Record(id,alias,name,description) {
         CreationDate = std::chrono::system_clock::from_time_t(creationDate);
         Description = description;
         DefaultBranch = defaultBranchId;
@@ -53,17 +63,17 @@ namespace SysMLv2::Entities {
         CreationDate = other.CreationDate;
 
         BranchesList.clear();
-        for(DataIdentity element : other.BranchesList) {
+        for(auto element : other.BranchesList) {
             BranchesList.emplace_back(element);
         }
 
         CommitsList.clear();
-        for(DataIdentity element : other.CommitsList) {
+        for(auto element : other.CommitsList) {
             CommitsList.emplace_back(element);
         }
 
         HeadIdList.clear();
-        for(DataIdentity element : other.HeadIdList) {
+        for(auto element : other.HeadIdList) {
             HeadIdList.emplace_back(element);
         }
 
@@ -75,7 +85,7 @@ namespace SysMLv2::Entities {
             if(CreationDate!=other.CreationDate)
                 return false;
 
-            if(DefaultBranch.getId() != other.DefaultBranch.getId())
+            if(DefaultBranch->getId() != other.DefaultBranch->getId())
                 return false;
 
             return false;
@@ -88,7 +98,7 @@ namespace SysMLv2::Entities {
     std::string Project::serializeToJson() {
         nlohmann::json json = nlohmann::json::parse(Record::serializeToJson());
 
-        json[JSON_DEFAULT_BRANCH_ENTITY] = nlohmann::json::parse(DefaultBranch.serializeToJson());
+        json[JSON_DEFAULT_BRANCH_ENTITY] = nlohmann::json::parse(DefaultBranch->serializeToJson());
         std::ostringstream oss;
         using namespace date;
         date::to_stream(oss, "%Y-%m-%dT%TZ", CreationDate);
@@ -98,7 +108,7 @@ namespace SysMLv2::Entities {
             auto branchesListArray = nlohmann::json::array();
 
             for(auto element : BranchesList)
-                branchesListArray.push_back(element.serializeToJson());
+                branchesListArray.push_back(element->serializeToJson());
 
             json[JSON_BRANCHES_LIST] = branchesListArray;
         }
@@ -107,7 +117,7 @@ namespace SysMLv2::Entities {
             auto commitsListArray = nlohmann::json::array();
 
             for(auto element : CommitsList)
-                commitsListArray.push_back(element.serializeToJson());
+                commitsListArray.push_back(element->serializeToJson());
 
             json[JSON_COMMIT_LIST] = commitsListArray;
         }
@@ -116,7 +126,7 @@ namespace SysMLv2::Entities {
             auto headsListArray = nlohmann::json::array();
 
             for(auto element : HeadIdList)
-                headsListArray.push_back(element.serializeToJson());
+                headsListArray.push_back(element->serializeToJson());
 
             json[JSON_HEAD_ID_LIST] = headsListArray;
         }
@@ -125,16 +135,26 @@ namespace SysMLv2::Entities {
     }
 
     Project::~Project() {
+        delete DefaultBranch;
+        
+        for(auto elem : BranchesList)
+            delete elem;
         BranchesList.clear();
+        
+        for(auto elem : CommitsList)
+            delete elem;
         CommitsList.clear();
+        
+        for(auto elem : HeadIdList)
+            delete elem;
         HeadIdList.clear();
     }
 
-    DataIdentity Project::getDefaultBranch() const {
+    DataIdentity* Project::getDefaultBranch() const {
         return DefaultBranch;
     }
 
-    void Project::setDefaultBranch(DataIdentity identity) {
+    void Project::setDefaultBranch(DataIdentity* identity) {
         DefaultBranch = identity;
     }
 
@@ -146,27 +166,27 @@ namespace SysMLv2::Entities {
         return std::chrono::system_clock::to_time_t(CreationDate);
     }
 
-    std::list<DataIdentity> Project::getBranches() const {
+    std::list<DataIdentity*> Project::getBranches() const {
         return BranchesList;
     }
 
-    void Project::appendBranch(DataIdentity branchId) {
+    void Project::appendBranch(DataIdentity* branchId) {
         BranchesList.push_back(branchId);
     }
 
-    std::list<DataIdentity> Project::getCommitsList() const {
+    std::list<DataIdentity*> Project::getCommitsList() const {
         return CommitsList;
     }
 
-    void Project::appendCommit(DataIdentity commitId) {
+    void Project::appendCommit(DataIdentity* commitId) {
         CommitsList.push_back(commitId);
     }
 
-    std::list<DataIdentity> Project::getHeadsIdList() const {
+    std::list<DataIdentity*> Project::getHeadsIdList() const {
         return HeadIdList;
     }
 
-    void Project::appendHead(DataIdentity headId) {
+    void Project::appendHead(DataIdentity* headId) {
         HeadIdList.push_back(headId);
     }
 }

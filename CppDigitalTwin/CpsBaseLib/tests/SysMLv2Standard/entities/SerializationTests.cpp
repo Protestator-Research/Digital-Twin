@@ -8,14 +8,6 @@
 #include <SysMLv2Standard/entities/Project.h>
 
 /**
- * Tests the Serilization of the object that has no elements within it self.
- */
-TEST(TestSerilization,TestSerilizationItentityEmptyId) {
-    SysMLv2::Entities::DataIdentity identity;
-    EXPECT_EQ("null",identity.serializeToJson());
-}
-
-/**
  * Tests the serilization of the object containing a valid uuid.
  */
 TEST(TestSerilization,TestSerilizationItentityNonEmptyId) {
@@ -55,7 +47,7 @@ TEST(TestSerilization, TestSerilizationProjectWithStringOfBackend) {
     EXPECT_EQ("string", project.getName());
     EXPECT_EQ("string", project.getDescription());
 
-    EXPECT_TRUE(SysMLv2::Entities::DataIdentity("{ \"@id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\" }") == project.getDefaultBranch());
+    EXPECT_TRUE(SysMLv2::Entities::DataIdentity("{ \"@id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\" }") == *project.getDefaultBranch());
 }
 
 TEST(TestSerilization, TestSerilizationAndDeserialization) {

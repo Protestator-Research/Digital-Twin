@@ -12,14 +12,19 @@
 #include <boost/uuid/uuid.hpp>
 #include <ctime>
 #include <string>
+#include <memory>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
 #include "Record.h"
-#include "DataIdentity.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
+namespace SysMLv2::Entities {
+    class DataVersion;
+    class DataIdentity;
+}
+
 
 namespace SysMLv2::Entities {
     /**
@@ -64,10 +69,10 @@ namespace SysMLv2::Entities {
                 std::string name,
                 std::string description,
                 std::time_t creationDate,
-                DataIdentity defaultBranchId,
-                std::list<DataIdentity> branchesIdList,
-                std::list<DataIdentity> commitIdList,
-                std::list<DataIdentity> headIdList);
+                DataIdentity* defaultBranchId,
+                std::list<DataIdentity*> branchesIdList,
+                std::list<DataIdentity*> commitIdList,
+                std::list<DataIdentity*> headIdList);
 
         /**
          * Destructor
@@ -106,56 +111,56 @@ namespace SysMLv2::Entities {
          *
          * @param identity
          */
-        void setDefaultBranch(DataIdentity identity);
+        void setDefaultBranch(DataIdentity* identity);
 
         /**
          *
          * @return
          */
-        [[nodiscard]] DataIdentity getDefaultBranch() const;
+        DataIdentity* getDefaultBranch() const;
 
         /**
          *
          * @return
          */
-        std::list<DataIdentity> getBranches() const;
+        std::list<DataIdentity*> getBranches() const;
 
         /**
          *
          * @param branchId
          */
-        void appendBranch(DataIdentity branchId);
+        void appendBranch(DataIdentity* branchId);
 
         /**
          *
          * @return
          */
-        std::list<DataIdentity> getCommitsList() const;
+        std::list<DataIdentity*> getCommitsList() const;
 
         /**
          *
          * @param commitId
          */
-        void appendCommit(DataIdentity commitId);
+        void appendCommit(DataIdentity* commitId);
 
         /**
          *
          * @return
          */
-        std::list<DataIdentity> getHeadsIdList() const;
+        std::list<DataIdentity*> getHeadsIdList() const;
 
         /**
          *
          * @param headId
          */
-        void appendHead(DataIdentity headId);
+        void appendHead(DataIdentity* headId);
     private:
         std::chrono::system_clock::time_point CreationDate;
 
-        DataIdentity DefaultBranch;
-        std::list<DataIdentity> BranchesList;
-        std::list<DataIdentity> CommitsList;
-        std::list<DataIdentity> HeadIdList;
+        DataIdentity* DefaultBranch;
+        std::list<DataIdentity*> BranchesList;
+        std::list<DataIdentity*> CommitsList;
+        std::list<DataIdentity*> HeadIdList;
 
     };
 }

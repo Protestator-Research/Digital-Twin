@@ -18,16 +18,23 @@
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
+namespace SysMLv2::Entities {
+    class DataIdentity;
+}
+
 
 namespace SysMLv2::Entities {
     /**
-     * Represents an abstract baseclass that is used for the SysMLv2 API
-     * @class Record
+     * The class DataVersion represets a specific version of the Data in its lifecycle
+     * @class DataVersion
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
     class DataVersion : public Record {
+    public:
 
+    private:
+        std::unique_ptr<DataIdentity> Identity;
     };
 }
 

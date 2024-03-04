@@ -28,6 +28,7 @@ namespace SysMLv2::Entities {
      * @class Record
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
+     * @see boost::uuids::uuid
      */
     class Record : public IEntity {
     public:
@@ -44,7 +45,7 @@ namespace SysMLv2::Entities {
          * @param name Name of the Object
          * @param description Description of the Object
          */
-        Record(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description);
+        Record(boost::uuids::uuid id, std::list<std::string> alias = std::list<std::string>(), std::string name="", std::string description="");
 
         /**
          * Converts a JSON String into a valid Record
@@ -114,6 +115,7 @@ namespace SysMLv2::Entities {
         [[nodiscard]] std::string getType() const;
 
         std::string serializeToJson() override;
+
     protected:
         /**
          * Type of the generated class. This also enables the parsing of the element.

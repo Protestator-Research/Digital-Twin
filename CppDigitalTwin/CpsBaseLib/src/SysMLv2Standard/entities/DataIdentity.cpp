@@ -16,54 +16,60 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "DataIdentity.h"
+#include "DataVersion.h"
+#include "Project.h"
 #include "JSONEntities.h"
 
 namespace SysMLv2::Entities {
-    DataIdentity::DataIdentity(boost::uuids::uuid id)
-    {
-        Id = id;
+
+    DataIdentity::DataIdentity(boost::uuids::uuid id) :
+            Record(id){
+        Record::Type = "DataIdentity";
+    }
+
+    DataIdentity::DataIdentity(std::string jsonStringOrName) : Record(jsonStringOrName) {
+
+    }
+
+    DataIdentity::~DataIdentity() {
+
+    }
+
+    std::vector<DataVersion *> DataIdentity::getDataVersions() const {
+        return std::vector<DataVersion *>();
+    }
+
+    Project *DataIdentity::getProject() const {
+        return nullptr;
+    }
+
+    std::chrono::system_clock::time_point DataIdentity::createdAt() {
+        return std::chrono::system_clock::time_point();
+    }
+
+    std::chrono::system_clock::time_point DataIdentity::deletedAt() {
+        return std::chrono::system_clock::time_point();
     }
 
     std::string DataIdentity::serializeToJson() {
-        nlohmann::json json;
+        nlohmann::json jsonGeneration;
 
-        if(!Id.is_nil()){
-            json[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
-        }
+        jsonGeneration[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
 
-        return json.dump(JSON_INTENT);
-    }
-
-    DataIdentity::DataIdentity() {
-        Id = boost::uuids::nil_generator()();
-    }
-
-    DataIdentity::DataIdentity(std::string jsonString) {
-        nlohmann::json JsonString = nlohmann::json::parse(jsonString);
-        Id = boost::uuids::string_generator()(JsonString[JSON_ID_ENTITY].get<std::string>());
-    }
-
-    boost::uuids::uuid DataIdentity::getId() const {
-        return Id;
-    }
-
-    DataIdentity::DataIdentity(DataIdentity &other) {
-        Id = other.Id;
-    }
-
-    DataIdentity &DataIdentity::operator=(const DataIdentity &other) {
-        if(this == &other)
-            return *this;
-
-        Id=other.Id;
-        return *this;
-    }
-
-    DataIdentity::DataIdentity(DataIdentity const &identity) {
-        Id = identity.Id;
+        return jsonGeneration.dump(JSON_INTENT);
     }
 
     bool DataIdentity::operator==(const DataIdentity &other) {
-        return Id == other.Id;
+        if(other.Id != Id)
+            return false;
+
+        if(other.Version.size() != Version.size())
+            return false;
+
+        for(size_t i = 0; i<Version.size(); i++)
+            if(Version[i]!=other.Version[i])
+                return false;
+
+        return true;
     }
 }

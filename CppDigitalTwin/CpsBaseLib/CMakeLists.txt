@@ -46,6 +46,8 @@ add_library(CPSBaseLib
         src/SysMLv2Standard/entities/ExternalData.h
         src/SysMLv2Standard/entities/ExternalRelationship.cpp
         src/SysMLv2Standard/entities/ExternalRelationship.h
+        src/SysMLv2Standard/SysMLv2Deserializer.cpp
+        src/SysMLv2Standard/SysMLv2Deserializer.h
 )
 
 set_target_properties(CPSBaseLib PROPERTIES LINKER_LANGUAGE CXX)

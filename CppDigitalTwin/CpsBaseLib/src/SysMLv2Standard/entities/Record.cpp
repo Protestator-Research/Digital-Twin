@@ -9,7 +9,6 @@
 // External Classes
 //---------------------------------------------------------
 #include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <nlohmann/json.hpp>
 //---------------------------------------------------------
@@ -90,7 +89,9 @@ namespace SysMLv2::Entities {
 
         jsonGeneration[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
         jsonGeneration[JSON_TYPE_ENTITY] = Type;
-        jsonGeneration[JSON_NAME_ENTITY] = Name;
+
+        if(!Name.empty())
+            jsonGeneration[JSON_NAME_ENTITY] = Name;
 
         if(!Alias.empty())
             jsonGeneration[JSON_ALIAS_ENTITY] = Alias;
@@ -104,6 +105,5 @@ namespace SysMLv2::Entities {
     std::string Record::getType() const {
         return Type;
     }
-
 
 }
