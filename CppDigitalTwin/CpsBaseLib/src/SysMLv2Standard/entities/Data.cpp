@@ -3,3 +3,7 @@
 //
 
 #include "Data.h"
+
+boost::uuids::uuid SysMLv2::Entities::Data::getId() {
+    return boost::uuids::uuid();
+}

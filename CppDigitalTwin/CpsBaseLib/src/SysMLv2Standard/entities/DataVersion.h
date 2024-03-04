@@ -9,7 +9,7 @@
 //---------------------------------------------------------
 // External Classes
 //---------------------------------------------------------
-
+#include <boost/uuid/uuid.hpp>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
@@ -20,21 +20,32 @@
 //---------------------------------------------------------
 namespace SysMLv2::Entities {
     class DataIdentity;
+    class Data;
 }
 
 
 namespace SysMLv2::Entities {
     /**
-     * The class DataVersion represets a specific version of the Data in its lifecycle
+     * The class DataVersion represents a specific version of the Data in its lifecycle
      * @class DataVersion
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
     class DataVersion : public Record {
     public:
+        DataVersion() = delete;
+
+        explicit DataVersion(DataIdentity* identity);
+        virtual ~DataVersion();
+
+        DataIdentity* getIdentity();
+        Data* getPayload();
+        boost::uuids::uuid getId();
 
     private:
-        [[maybe_unused]] DataIdentity* Identity;
+        DataIdentity* Identity;
+
+        Data* Payload;
     };
 }
 

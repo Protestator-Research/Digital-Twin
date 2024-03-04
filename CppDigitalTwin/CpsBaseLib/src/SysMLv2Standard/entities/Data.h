@@ -9,6 +9,7 @@
 //---------------------------------------------------------
 // External Classes
 //---------------------------------------------------------
+#include <boost/uuid/uuid.hpp>
 
 //---------------------------------------------------------
 // Internal Classes
@@ -28,6 +29,11 @@ namespace SysMLv2::Entities {
      * @version 1.0
      */
     class Data {
+    public:
+        Data();
+        virtual ~Data();
+
+        boost::uuids::uuid getId();
 
     };
 }
