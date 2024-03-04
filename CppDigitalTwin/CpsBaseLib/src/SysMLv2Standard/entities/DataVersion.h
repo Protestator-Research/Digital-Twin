@@ -34,7 +34,7 @@ namespace SysMLv2::Entities {
     public:
 
     private:
-        std::unique_ptr<DataIdentity> Identity;
+        [[maybe_unused]] DataIdentity* Identity;
     };
 }
 
