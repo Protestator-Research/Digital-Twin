@@ -11,6 +11,7 @@
 //---------------------------------------------------------
 #include <boost/uuid/uuid.hpp>
 #include <vector>
+#include <chrono>
 
 //---------------------------------------------------------
 // Internal Classes
