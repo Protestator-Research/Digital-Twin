@@ -10,7 +10,7 @@
 // External Classes
 //---------------------------------------------------------
 #include <boost/uuid/uuid.hpp>
-#include <ctime>
+#include <chrono>
 #include <string>
 #include <memory>
 //---------------------------------------------------------
@@ -23,6 +23,12 @@
 namespace SysMLv2::Entities {
     class DataVersion;
     class DataIdentity;
+    class Commit;
+    class CommitReference;
+    class Branch;
+    class ProjectUsage;
+    class Tag;
+    class Query;
 }
 
 
@@ -47,121 +53,28 @@ namespace SysMLv2::Entities {
         Project(Project &other);
 
         /**
-         *
+         * Generates a Project object from a JSON string. This will be used for the JSON interface of the Parser.
          * @param JsonString
          */
         explicit Project(std::string JsonString);
 
-        /**
-         *
-         * @param id
-         * @param alias
-         * @param name
-         * @param description
-         * @param creationDate
-         * @param defaultBranchId
-         * @param branchesIdList
-         * @param commitIdList
-         * @param headIdList
-         */
-        Project(boost::uuids::uuid id,
-                std::list<std::string> alias,
-                std::string name,
-                std::string description,
-                std::time_t creationDate,
-                DataIdentity* defaultBranchId,
-                std::list<DataIdentity*> branchesIdList,
-                std::list<DataIdentity*> commitIdList,
-                std::list<DataIdentity*> headIdList);
+        virtual ~Project();
 
-        /**
-         * Destructor
-         */
-        ~Project() override;
+        Branch* getDefaultBranch();
 
-        /**
-         *
-         * @param other
-         * @return
-         */
-        Project &operator=(const Project &other);
-
-        /**
-         * Allows the checking if two Projects are equal.
-         * @param other
-         * @return
-         */
-        bool operator==(const Project &other);
-
-        std::string serializeToJson() override;
-
-        /**
-         *
-         * @param creationDate
-         */
-        void setCreationDate(std::time_t creationDate);
-
-        /**
-         *
-         * @return
-         */
-        [[nodiscard]] std::time_t getCreationDate() const;
-
-        /**
-         *
-         * @param identity
-         */
-        void setDefaultBranch(DataIdentity* identity);
-
-        /**
-         *
-         * @return
-         */
-        DataIdentity* getDefaultBranch() const;
-
-        /**
-         *
-         * @return
-         */
-        std::list<DataIdentity*> getBranches() const;
-
-        /**
-         *
-         * @param branchId
-         */
-        void appendBranch(DataIdentity* branchId);
-
-        /**
-         *
-         * @return
-         */
-        std::list<DataIdentity*> getCommitsList() const;
-
-        /**
-         *
-         * @param commitId
-         */
-        void appendCommit(DataIdentity* commitId);
-
-        /**
-         *
-         * @return
-         */
-        std::list<DataIdentity*> getHeadsIdList() const;
-
-        /**
-         *
-         * @param headId
-         */
-        void appendHead(DataIdentity* headId);
     private:
-        std::chrono::system_clock::time_point CreationDate;
+        DataVersion* DataVersion;
 
-        DataIdentity* DefaultBranch;
-        std::list<DataIdentity*> BranchesList;
-        std::list<DataIdentity*> CommitsList;
-        std::list<DataIdentity*> HeadIdList;
 
+        std::chrono::system_clock::time_point Created;
+
+        std::vector<Commit*> Commits;
+        std::vector<CommitReference*> CommitReferences;
+        std::vector<Branch*> Branches;
+        Branch* DefaultBranch;
+        std::vector<Tag*> Tags;
+        std::vector<ProjectUsage*> ProjectUsages;
+        std::vector<Query*> Querries;
     };
 }
 

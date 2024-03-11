@@ -51,7 +51,7 @@ namespace SysMLv2::Entities {
          * Converts a JSON String into a valid Record
          * @param jsonString The JSON String that is converted to a Record or a valid name of the Record.
          */
-        explicit Record(std::string jsonStringOrName);
+        Record(std::string jsonStringOrName);
 
         /**
          * Destructor
@@ -115,6 +115,8 @@ namespace SysMLv2::Entities {
         [[nodiscard]] std::string getType() const;
 
         std::string serializeToJson() override;
+
+
 
     protected:
         /**

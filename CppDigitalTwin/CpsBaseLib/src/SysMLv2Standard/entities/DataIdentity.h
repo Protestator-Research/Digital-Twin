@@ -38,6 +38,7 @@ namespace SysMLv2::Entities {
      * @see boost::uuids::uuid
      * @see SysMLv2::Entities::Record
      */
+     //TODO: Adding Dataversions needs to be added
     class DataIdentity : public Record {
     public:
         /**
@@ -45,6 +46,10 @@ namespace SysMLv2::Entities {
          */
         DataIdentity() = delete;
 
+        /**
+         * Constructor. Generates a
+         * @param id
+         */
         explicit DataIdentity(boost::uuids::uuid id);
 
         DataIdentity(std::string jsonStringOrName);

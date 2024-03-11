@@ -21,8 +21,8 @@
 namespace SysMLv2::Entities {
     //Generally used
     const std::string JSON_ID_ENTITY = "@id";
-    //Used for Record and the Superclasses
     const std::string JSON_TYPE_ENTITY = "@type";
+    //Used for Record and the Superclasses
     const std::string JSON_NAME_ENTITY = "name";
     const std::string JSON_ALIAS_ENTITY = "alias";
     const std::string JSON_DESCRIPTION_ENTITY = "description";
@@ -33,6 +33,11 @@ namespace SysMLv2::Entities {
     const std::string JSON_COMMIT_LIST = "commits";
     const std::string JSON_HEAD_ID_LIST = "heads";
 
+
+
+
+    //Type Strings
+    const std::string PROJECT_TYPE="project";
 }
 
 

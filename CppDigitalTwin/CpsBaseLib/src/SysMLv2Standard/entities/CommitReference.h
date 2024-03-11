@@ -18,6 +18,10 @@
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
+namespace SysMLv2::Entities{
+    class Commit;
+}
+
 
 namespace SysMLv2::Entities {
     /**
@@ -27,7 +31,24 @@ namespace SysMLv2::Entities {
      * @version 1.0
      */
     class CommitReference : public Record {
-        
+    public:
+        /**
+         *
+         * @param jsonStringOrName
+         */
+        CommitReference(std::string jsonStringOrName);
+
+        /**
+         *
+         * @param other
+         * @return
+         */
+        bool operator==(CommitReference& other);
+
+        std::string serializeToJson() override;
+    protected:
+        std::chrono::system_clock::time_point Created;
+        Commit* ReferencedCommit;
     };
 }
 

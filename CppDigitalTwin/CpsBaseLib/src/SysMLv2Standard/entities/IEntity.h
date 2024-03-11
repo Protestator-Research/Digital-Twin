@@ -34,7 +34,6 @@ namespace SysMLv2::Entities {
          * @return JSON String of the Object
          */
         virtual std::string serializeToJson() = 0;
-
     protected:
         /**
          * Describes the intent of nlohmanns json library.

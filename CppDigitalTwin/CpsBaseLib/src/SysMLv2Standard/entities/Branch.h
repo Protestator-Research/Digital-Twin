@@ -28,7 +28,21 @@ namespace SysMLv2::Entities {
      * @version 1.0
      */
     class Branch : public CommitReference{
+    public:
+        /**
+         *
+         * @param jsonStringOrName
+         */
+        Branch(std::string jsonStringOrName);
 
+        /**
+         *
+         * @param other
+         * @return
+         */
+        bool operator==(Branch& other);
+
+        std::string serializeToJson() override;
     };
 }
 

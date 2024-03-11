@@ -8,9 +8,9 @@
 
 
 namespace SysMLv2::Entities {
-    DataVersion::DataVersion(DataIdentity *identity) : Record(identity->getId()) {
+    DataVersion::DataVersion(DataIdentity *identity, Data* payload) : Record(identity->getId()) {
         Identity = identity;
-        Payload = new Data();
+        Payload = payload;
     }
 
     DataVersion::~DataVersion() {

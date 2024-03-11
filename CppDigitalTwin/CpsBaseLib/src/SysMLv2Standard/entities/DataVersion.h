@@ -35,7 +35,7 @@ namespace SysMLv2::Entities {
     public:
         DataVersion() = delete;
 
-        explicit DataVersion(DataIdentity* identity);
+        DataVersion(DataIdentity* identity, Data* payload = nullptr);
         virtual ~DataVersion();
 
         DataIdentity* getIdentity();

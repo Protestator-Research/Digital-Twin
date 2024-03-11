@@ -28,12 +28,14 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-    class Data {
+    class Data  : public IEntity{
     public:
         Data();
         virtual ~Data();
 
         boost::uuids::uuid getId();
+
+    private:
 
     };
 }
