@@ -18,6 +18,10 @@
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
+namespace SysMLv2::Entities{
+    class Project;
+}
+
 
 namespace SysMLv2::Entities {
 
@@ -28,7 +32,9 @@ namespace SysMLv2::Entities {
      * @version 1.0
      */
     class Commit : public Record {
+    public:
 
+        Project* getOwningProject() const;
     };
 }
 

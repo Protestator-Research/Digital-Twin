@@ -36,7 +36,7 @@ namespace SysMLv2::Entities {
         boost::uuids::uuid getId();
 
     private:
-
+        
     };
 }
 
