@@ -39,6 +39,7 @@ namespace SysMLv2::Entities {
         virtual ~DataVersion();
 
         DataIdentity* getIdentity();
+        void setPayload(Data* payload);
         Data* getPayload();
         boost::uuids::uuid getId();
 

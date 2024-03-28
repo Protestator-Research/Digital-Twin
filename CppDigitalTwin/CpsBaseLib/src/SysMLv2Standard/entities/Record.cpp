@@ -20,10 +20,11 @@
 
 namespace SysMLv2::Entities {
 
-    Record::Record(boost::uuids::uuid id, std::list<std::string> alias, std::string name, std::string description) {
+    Record::Record(boost::uuids::uuid id, std::string name, std::string description) {
         Id=id;
-        Alias = alias;
+        Alias = std::list<std::string>();
         Name = name;
+        Alias.emplace_back(name);
         Description = description;
     }
 

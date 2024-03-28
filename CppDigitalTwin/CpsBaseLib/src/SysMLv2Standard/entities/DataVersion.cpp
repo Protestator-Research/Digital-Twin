@@ -22,6 +22,10 @@ namespace SysMLv2::Entities {
         return Identity;
     }
 
+    void DataVersion::setPayload(Data *payload) {
+        Payload = payload;
+    }
+
     Data *DataVersion::getPayload() {
         return Payload;
     }

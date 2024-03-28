@@ -41,11 +41,10 @@ namespace SysMLv2::Entities {
         /**
          * Init the Record Object with all the nesecary objects.
          * @param id Id of the Object
-         * @param alias Alias of the Object
          * @param name Name of the Object
          * @param description Description of the Object
          */
-        Record(boost::uuids::uuid id, std::list<std::string> alias = std::list<std::string>(), std::string name="", std::string description="");
+        Record(boost::uuids::uuid id, std::string name="", std::string description="");
 
         /**
          * Converts a JSON String into a valid Record

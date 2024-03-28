@@ -72,4 +72,8 @@ namespace SysMLv2::Entities {
 
         return true;
     }
+
+    void DataIdentity::setDataVersions(std::vector<DataVersion *> versions) {
+        Version=versions;
+    }
 }
