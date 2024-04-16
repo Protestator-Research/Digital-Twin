@@ -39,10 +39,6 @@ namespace SysMLv2::Entities {
         return std::vector<DataVersion *>();
     }
 
-    Project *DataIdentity::getProject() const {
-        return nullptr;
-    }
-
     std::chrono::system_clock::time_point DataIdentity::createdAt() {
         return std::chrono::system_clock::time_point();
     }

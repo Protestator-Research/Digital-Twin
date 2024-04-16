@@ -113,7 +113,7 @@ namespace SysMLv2::Entities {
          */
         [[nodiscard]] std::string getType() const;
 
-        std::string serializeToJson() override;
+        std::string serializeToJson() = 0;
 
 
 

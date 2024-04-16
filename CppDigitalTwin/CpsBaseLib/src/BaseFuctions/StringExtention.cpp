@@ -9,6 +9,8 @@
 // External Classes
 //---------------------------------------------------------
 #include <sstream>
+#include <cctype>
+#include <algorithm>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
@@ -25,5 +27,11 @@ namespace CPSBASELIB::STD_EXTENTION {
         }
 
         return returnValue;
+    }
+
+    std::string StringExtention::toLower(std::string string) {
+        std::transform(string.begin(), string.end(), string.begin(),
+                       [](unsigned char c){ return std::tolower(c); });
+        return string;
     }
 }

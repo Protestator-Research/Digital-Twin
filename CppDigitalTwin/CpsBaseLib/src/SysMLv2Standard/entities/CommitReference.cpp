@@ -11,7 +11,7 @@ namespace SysMLv2::Entities {
     }
 
     bool CommitReference::operator==(CommitReference &other) {
-        if((Record)(*this)==other)
+        if(Record::operator==(other))
         {
             if((*(this->ReferencedCommit))==(*(other.ReferencedCommit))){
                 return this->Created==other.Created;
@@ -21,6 +21,7 @@ namespace SysMLv2::Entities {
     }
 
     std::string CommitReference::serializeToJson() {
-        return Record::serializeToJson();
+//        return Record::serializeToJson()
+        return std::string();
     }
 }

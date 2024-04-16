@@ -62,6 +62,8 @@ namespace SysMLv2::Entities {
 
         Branch* getDefaultBranch();
 
+        std::string serializeToJson() override;
+
     private:
         DataVersion* DataVersion;
 

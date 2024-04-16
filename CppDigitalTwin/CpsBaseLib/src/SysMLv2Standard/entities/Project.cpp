@@ -84,4 +84,9 @@ namespace SysMLv2::Entities {
     Branch *Project::getDefaultBranch() {
         return nullptr;
     }
+
+    std::string Project::serializeToJson() {
+//        return Record::serializeToJson();
+        return std::string();
+    }
 }

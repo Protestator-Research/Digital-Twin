@@ -85,23 +85,23 @@ namespace SysMLv2::Entities {
         return Id;
     }
 
-    std::string Record::serializeToJson() {
-        nlohmann::json jsonGeneration;
-
-        jsonGeneration[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
-        jsonGeneration[JSON_TYPE_ENTITY] = Type;
-
-        if(!Name.empty())
-            jsonGeneration[JSON_NAME_ENTITY] = Name;
-
-        if(!Alias.empty())
-            jsonGeneration[JSON_ALIAS_ENTITY] = Alias;
-
-        if(!Description.empty())
-            jsonGeneration[JSON_DESCRIPTION_ENTITY] = Description;
-
-        return jsonGeneration.dump(JSON_INTENT);
-    }
+//    std::string Record::serializeToJson() {
+//        nlohmann::json jsonGeneration;
+//
+//        jsonGeneration[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
+//        jsonGeneration[JSON_TYPE_ENTITY] = Type;
+//
+//        if(!Name.empty())
+//            jsonGeneration[JSON_NAME_ENTITY] = Name;
+//
+//        if(!Alias.empty())
+//            jsonGeneration[JSON_ALIAS_ENTITY] = Alias;
+//
+//        if(!Description.empty())
+//            jsonGeneration[JSON_DESCRIPTION_ENTITY] = Description;
+//
+//        return jsonGeneration.dump(JSON_INTENT);
+//    }
 
     std::string Record::getType() const {
         return Type;

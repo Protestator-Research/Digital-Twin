@@ -38,6 +38,11 @@ namespace SysMLv2::Entities {
 
     //Type Strings
     const std::string PROJECT_TYPE="project";
+    const std::string DATA_IDENTITY_TYPE="dataidentity";
+    const std::string BRANCH_TYPE="branch";
+    const std::string TAG_TYPE = "tag";
+    const std::string QUERY_TYPE = "query";
+//    const std::string
 }
 
 
