@@ -96,8 +96,8 @@ namespace BACKEND_COMMUNICATION {
         bool setUserForLoginInBackend(std::string username, std::string password);
 
     private:
-        const std::string REST_PROTOCOL = "http://";
-        const std::string ENTRY_URI = "/agila-server";
+        const std::string REST_PROTOCOL = "https://";
+        const std::string ENTRY_URI = "/agila-server/";
         std::string ServerAddress = "localhost";
         unsigned int Port = 8080;
 

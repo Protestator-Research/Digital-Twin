@@ -29,6 +29,13 @@ namespace SysMLv2::Entities {
 
     class Tag : public CommitReference {
 
+    public:
+        /**
+         *
+         * @param jsonStringOrName
+         */
+        Tag(std::string jsonStringOrName);
+
     };
 }
 

@@ -25,7 +25,7 @@
 namespace BACKEND_COMMUNICATION {
 
     CURL* SysMLAPIImplementation::ServerConnection = nullptr;
-    std::string SysMLAPIImplementation::ServerAddress = "http://cps-agila.cs.uni-kl.de:8080/agila-server";
+    std::string SysMLAPIImplementation::ServerAddress = "http://localhost:8080/agila-server";
 
     std::string SysMLAPIImplementation::loginUserWithPassword(std::string const& username, std::string const& passwod) {
         std::string barrierString;
@@ -36,7 +36,7 @@ namespace BACKEND_COMMUNICATION {
         jsonData["password"] = passwod;
 
         std::string loginData = jsonData.dump();
-        std::cout << "Login Data:\r\n" << loginData <<std::endl;
+//        std::cout << "Login Data:\r\n" << loginData <<std::endl;
 
         if(ServerConnection) {
             std::string loginReadBuffer;
@@ -50,8 +50,8 @@ namespace BACKEND_COMMUNICATION {
 
             ServerResult = curl_easy_perform(ServerConnection);
             if(ServerResult == CURLE_OK) {
-                std::cout<<"Successfull Answer:"<<std::endl<<loginReadBuffer<<std::endl;
-                std::cout<<"Headers:"<<std::endl<<headers<<std::endl;
+//                std::cout<<"Successfull Answer:"<<std::endl<<loginReadBuffer<<std::endl;
+//                std::cout<<"Headers:"<<std::endl<<headers<<std::endl;
 
                 auto splittedAnswer = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(loginReadBuffer,' ');
                 barrierString = splittedAnswer[2];

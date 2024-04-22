@@ -42,7 +42,26 @@ namespace SysMLv2::Entities {
     const std::string BRANCH_TYPE="branch";
     const std::string TAG_TYPE = "tag";
     const std::string QUERY_TYPE = "query";
-//    const std::string
+
+    const std::string COMMIT_TYPE = "commit";
+    const std::string FEATURE_TYPE = "feature";
+    const std::string FEATURE_TYPE_TYPE = "featuretyping";
+    const std::string ASSOCIATION_TYPE = "association";
+    const std::string ELEMENT_TYPE = "element";
+    const std::string SPECIALIZATION_TYPE = "specialization";
+    const std::string PACKAGE_TYPE = "package";
+    const std::string EXPRESSION_TYPE = "expression";
+    const std::string MULTIPLICITY_TYPE = "multiplicity";
+    const std::string DATA_TYPE_TYPE = "datatype";
+    const std::string RELATIONSHIP_TYPE="relationship";
+    const std::string COMMENT_TYPE="comment";
+    const std::string DOCUMENTATION_TYPE="documentation";
+    const std::string CLASS_TYPE = "class";
+    const std::string ANNOTATING_ELEMENT_TYPE = "annotatingelement";
+    const std::string TEXTUAL_REPRESENTATION_TYPE = "textualrepresentation";
+    const std::string CLASSIFIER_TYPE = "classifier";
+    const std::string NAMESPACE_TYPE = "namespace";
+    const std::string TYPE_TYPE = "type";
 }
 
 

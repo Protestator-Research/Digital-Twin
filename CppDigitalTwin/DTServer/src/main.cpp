@@ -3,13 +3,15 @@
 //---------------------------------------------------------
 
 #include "DigitalTwinServerInstanceManager.h"
+#include <iostream>
 
 /**
  * Main method for the digital twin server.
  * @return Success code for the running instance of the digital tiwn server.
  */
-int main() {
-    auto instanceManager  = new DIGITAL_TWIN_SERVER::DigitalTwinServerInstanceManager();
+int main(int argc, char *argv[]) {
+
+    auto instanceManager  = new DIGITAL_TWIN_SERVER::DigitalTwinServerInstanceManager(argc, argv);
 
     try {
         instanceManager->createInstance();

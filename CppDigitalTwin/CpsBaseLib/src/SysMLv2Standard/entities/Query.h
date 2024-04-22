@@ -26,11 +26,11 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
+    class Query : public Record {
+    public:
+        explicit Query(std::string jsonString);
 
-
-
-    class Query {
-
+        std::string serializeToJson() override;
     };
 }
 

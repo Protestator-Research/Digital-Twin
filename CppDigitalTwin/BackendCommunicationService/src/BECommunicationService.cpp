@@ -20,10 +20,11 @@
 #include "APIImplementations/SysMLAPIImplementation.h"
 
 namespace BACKEND_COMMUNICATION {
-    CommunicationService::CommunicationService(std::string serverAddress, unsigned int port) {
-        std::cout<<"Create Communication Service"<<std::endl;
-        ServerAddress = serverAddress;
-        Port = port;
+    CommunicationService::CommunicationService(std::string serverAddress, unsigned int port) :
+        ServerAddress(serverAddress),
+        Port(port)
+    {
+        std::cout<<"Connecting to Server: "<<ServerAddress<<":"<<Port<<std::endl;
         if(!SysMLAPIImplementation::connectToServer(REST_PROTOCOL + ServerAddress + ":" + std::to_string(Port) + ENTRY_URI))
             throw EXCEPTIONS::ConnectionError(EXCEPTIONS::CONNECTION_ERROR_TYPE::COULD_NOT_CONNECT);
     }

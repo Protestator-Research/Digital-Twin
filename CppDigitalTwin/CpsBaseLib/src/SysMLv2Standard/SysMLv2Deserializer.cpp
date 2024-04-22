@@ -28,11 +28,11 @@ namespace SysMLv2 {
         if(type==Entities::BRANCH_TYPE)
             return new Entities::Branch(inputValue);
 
-//        if(type==Entities::TAG_TYPE)
-//            return new Entities::Tag(inputValue);
-//
-//        if(type==Entities::QUERY_TYPE)
-//            return new Entities::Query(inputValue);
+        if(type==Entities::TAG_TYPE)
+            return new Entities::Tag(inputValue);
+
+        if(type==Entities::QUERY_TYPE)
+            return new Entities::Query(inputValue);
 
 
 
