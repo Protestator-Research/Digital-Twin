@@ -20,6 +20,7 @@ namespace SysMLv2 {
     class SysMLv2Deserializer {
     public:
         static SysMLv2::Entities::IEntity* deserializeJsonString(std::string inputValue);
+        static std::vector<SysMLv2::Entities::IEntity*> deserializeJsonArray(std::string inputValue);
     };
 
 } // SysMLv2

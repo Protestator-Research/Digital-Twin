@@ -31,6 +31,7 @@ namespace DIGITAL_TWIN_SERVER {
 
     void DigitalTwinServerInstanceManager::runInstance() {
         BackendCommunicationService->setUserForLoginInBackend(ArgumentsMap[AGILA_USERNAME], ArgumentsMap[AGILA_PASSWORD]);
+        BackendCommunicationService->getAllProjects();
     }
 
     int DigitalTwinServerInstanceManager::getRunTimeCode() {

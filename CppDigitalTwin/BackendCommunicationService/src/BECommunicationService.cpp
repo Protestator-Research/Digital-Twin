@@ -10,6 +10,7 @@
 //---------------------------------------------------------
 #include <utility>
 #include <iostream>
+#include <SysMLv2Standard/entities/Project.h>
 
 //---------------------------------------------------------
 // Internal Classes
@@ -25,6 +26,10 @@ namespace BACKEND_COMMUNICATION {
         Port(port)
     {
         std::cout<<"Connecting to Server: "<<ServerAddress<<":"<<Port<<std::endl;
+
+        if(Port==443)
+            REST_PROTOCOL="https://";
+
         if(!SysMLAPIImplementation::connectToServer(REST_PROTOCOL + ServerAddress + ":" + std::to_string(Port) + ENTRY_URI))
             throw EXCEPTIONS::ConnectionError(EXCEPTIONS::CONNECTION_ERROR_TYPE::COULD_NOT_CONNECT);
     }
@@ -37,10 +42,10 @@ namespace BACKEND_COMMUNICATION {
 //
 //        return std::vector<ENTITIES::Element>();
 //    }
-//
-//    std::vector<ENTITIES::Project> CommunicationService::getAllProjects() {
-//        return std::vector<ENTITIES::Project>();
-//    }
+
+    std::vector<SysMLv2::Entities::IEntity*> CommunicationService::getAllProjects() {
+        return SysMLAPIImplementation::getAllProjects(BarrierString);
+    }
 //
 //    ENTITIES::DigitalTwin CommunicationService::getDigitalTwinWithID(unsigned char *digitalTwinId, unsigned char *projectId) {
 //        return ENTITIES::DigitalTwin();

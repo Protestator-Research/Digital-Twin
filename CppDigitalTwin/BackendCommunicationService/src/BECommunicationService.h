@@ -17,7 +17,9 @@
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
-
+namespace SysMLv2::Entities {
+    class IEntity;
+}
 
 namespace BACKEND_COMMUNICATION {
     /**
@@ -61,7 +63,7 @@ namespace BACKEND_COMMUNICATION {
          * Creates a connection to the REST endpoint of the given AGILA Backend sever, to get all saved projects within the instance of the Backend
          * @return An std::vector of the Projects
          */
-//        std::vector<ENTITIES::Project> getAllProjects();
+        std::vector<SysMLv2::Entities::IEntity*> getAllProjects();
 
         /**
          * Downloads the Digital Twin data with its ID and the project id.
@@ -96,7 +98,7 @@ namespace BACKEND_COMMUNICATION {
         bool setUserForLoginInBackend(std::string username, std::string password);
 
     private:
-        const std::string REST_PROTOCOL = "https://";
+        std::string REST_PROTOCOL = "http://";
         const std::string ENTRY_URI = "/agila-server/";
         std::string ServerAddress = "localhost";
         unsigned int Port = 8080;

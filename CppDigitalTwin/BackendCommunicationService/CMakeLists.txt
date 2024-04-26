@@ -15,7 +15,11 @@ add_library(CppBackendCommunication
         src/Exeptions/ConnectionError.h
         src/Exeptions/NotEnoughMemoryError.cpp
         src/Exeptions/NotEnoughMemoryError.h
-        ../CpsBaseLib/src/BaseFuctions/StringExtention.hpp)
+        ../CpsBaseLib/src/BaseFuctions/StringExtention.hpp
+        src/APIImplementations/Standards/HttpReturnCodes.h
+        src/APIImplementations/StatusCode.h
+        src/Exeptions/HttpException.cpp
+        src/Exeptions/HttpException.h)
 
 target_link_libraries(CppBackendCommunication
         CURL::libcurl

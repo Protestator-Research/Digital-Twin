@@ -11,6 +11,7 @@
 #include "entities/Query.h"
 #include "../BaseFuctions/StringExtention.hpp"
 #include <nlohmann/json.hpp>
+#include <vector>
 
 namespace SysMLv2 {
     SysMLv2::Entities::IEntity *SysMLv2Deserializer::deserializeJsonString(std::string inputValue) {
@@ -35,7 +36,16 @@ namespace SysMLv2 {
             return new Entities::Query(inputValue);
 
 
-
         return nullptr;
+    }
+
+    std::vector<SysMLv2::Entities::IEntity*> SysMLv2Deserializer::deserializeJsonArray(std::string inputValue) {
+        nlohmann::json json = nlohmann::json::parse(inputValue);
+        std::vector<std::string> arrayValues = json.get<std::vector<std::string>>();
+        std::vector<SysMLv2::Entities::IEntity*> returnValues;
+        for(std::string elem : arrayValues) {
+            returnValues.emplace_back(SysMLv2Deserializer::deserializeJsonString(elem));
+        }
+        return returnValues;
     }
 } // SysMLv2

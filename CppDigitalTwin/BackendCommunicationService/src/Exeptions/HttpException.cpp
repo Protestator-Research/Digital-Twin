@@ -1,0 +1,11 @@
+//
+// Created by Moritz Herzog on 24.04.24.
+//
+
+#include "HttpException.h"
+
+BACKEND_COMMUNICATION::EXCEPTIONS::HTTPException::HTTPException(long httpErrorCode) :
+        HttpErrorCode(httpErrorCode)
+{
+
+}
