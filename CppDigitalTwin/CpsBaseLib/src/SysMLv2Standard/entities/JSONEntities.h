@@ -32,6 +32,11 @@ namespace SysMLv2::Entities {
     const std::string JSON_BRANCHES_LIST = "branches_list";
     const std::string JSON_COMMIT_LIST = "commits";
     const std::string JSON_HEAD_ID_LIST = "heads";
+    //Used for Digital Twin
+    const std::string JSON_CONNECTED_MODELS = "connectedModels";
+    const std::string JSON_PARENT_PROJECT = "parentProject";
+    const std::string JSON_BRANCH_ID = "branchId";
+    const std::string JSON_COMMIT_ID = "commitId";
 
 
 
@@ -62,6 +67,7 @@ namespace SysMLv2::Entities {
     const std::string CLASSIFIER_TYPE = "classifier";
     const std::string NAMESPACE_TYPE = "namespace";
     const std::string TYPE_TYPE = "type";
+    const std::string DIGITAL_TWIN_TYPE = "digitaltwin";
 }
 
 

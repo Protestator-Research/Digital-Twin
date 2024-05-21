@@ -18,11 +18,14 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "Record.h"
-#include "DataIdentity.h"
 
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
+namespace SysMLv2::Entities {
+    class DataIdentity;
+}
+
 
 namespace SysMLv2::Entities {
     /**
@@ -30,32 +33,43 @@ namespace SysMLv2::Entities {
      * @class DigitalTwin
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
+     * @see Record
      */
     class DigitalTwin : public Record {
     public:
         /**
-         *
+         * Default Constructor
+         * Is deleted, because Record has a deleted default constructor.
          */
-        DigitalTwin();
+        DigitalTwin() = delete;
 
         /**
-         *
-         * @param jsonString
+         * Constructor that is used to parse the digital twin data or to set only the name of the DT.
+         * @param jsonString The given string.
          */
         DigitalTwin(std::string jsonString);
 
         /**
-         *
-         * @param other
-         * @return
+         * Destructor.
+         */
+        ~DigitalTwin();
+
+        /**
+         * Checks the Equality of the digital twin.
+         * @param other The other digital twn to check.
+         * @return True if the digital twins are equal.
          */
         bool operator==(DigitalTwin const &other);
 
 
         std::string serializeToJson() override;
+
+
     private:
-        DataIdentity ParentProjectId;
-        std::vector<DataIdentity> CommitId;
+        DataIdentity* ParentProjectId;
+        DataIdentity* BranchId = nullptr;
+        DataIdentity* CommitId;
+        std::vector<DataIdentity*> ConnectedModels;
 
     };
 }

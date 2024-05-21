@@ -6,12 +6,25 @@
 #define DIGITALTWIN_DIGITALTWINMAINWINDOW_H
 
 #include <QMainWindow>
+#include <QToolBar>
+#include <QAbstractItemModel>
 
 //---------------------------------------------------
 //Forwarding
 //---------------------------------------------------
 QT_BEGIN_NAMESPACE
-namespace DigitalTwin::Client::Ui { class DigitalTwinMainWindow; }
+namespace DigitalTwin::Client {
+
+    class MainWindowModel;
+
+    namespace Ui {
+        class DigitalTwinMainWindow;
+    }
+}
+
+namespace BACKEND_COMMUNICATION {
+    class CommunicationService;
+}
 QT_END_NAMESPACE
 
 namespace DigitalTwin::Client {
@@ -20,13 +33,19 @@ namespace DigitalTwin::Client {
 
     public:
         explicit DigitalTwinMainWindow(QWidget *parent = nullptr);
-
         ~DigitalTwinMainWindow() override;
+
+        void setProjectTreeViewModel(QAbstractItemModel* model);
 
     private:
         Ui::DigitalTwinMainWindow *ui;
+        QToolBar *toolBar;
+        MainWindowModel* Model;
 
-        void makeConnecitons();
+
+        void makeConnections();
+
+        void decorateView();
 
     private slots:
          void toggleButtonCheckBoxProjects(bool visibility);
@@ -34,7 +53,7 @@ namespace DigitalTwin::Client {
          void showVariablesDockWidget(bool visibility);
          void showProjectDockWidget(bool visibility);
          void showSettingsDialog();
-
+         void connectToServer();
     };
 } // DigitalTwin::Client
 

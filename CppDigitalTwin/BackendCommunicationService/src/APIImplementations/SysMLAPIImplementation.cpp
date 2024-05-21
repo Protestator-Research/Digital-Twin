@@ -107,6 +107,7 @@ namespace BACKEND_COMMUNICATION {
     CURL *SysMLAPIImplementation::setUpServerConnection(const char* urlAppendix, const char* barrierString, const char* postPayload) {
         ReturnedHeaderData = "";
         Data = "";
+        HeaderList = NULL;
 
         CURL* serverConnection = curl_easy_init();
 
@@ -142,6 +143,36 @@ namespace BACKEND_COMMUNICATION {
         }
 
         return serverConnection;
+    }
+
+    std::vector<SysMLv2::Entities::IEntity*> SysMLAPIImplementation::getAllDigitalTwinsForProject(std::string projectId, std::string barrierString) {
+        connectToServer(ServerAddress);
+        std::vector<SysMLv2::Entities::IEntity*> returnValue;
+        CURLcode ServerResult;
+
+        std::string urlAppendix = "projects/" + projectId + "/digital-twin/";
+
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str());
+
+        ServerResult = curl_easy_perform(serverConnection);
+
+        if (ServerResult == CURLE_OK) {
+            long httpResult;
+            curl_easy_getinfo(serverConnection, CURLINFO_RESPONSE_CODE, &httpResult);
+
+            if(tryToResolveHTTPError(httpResult, serverConnection)==INTERNAL_STATUS_CODE::SUCCESS){
+                std::cout<<"Digital Twins for Project "<<projectId<<":"<<std::endl<<Data<<std::endl;
+                returnValue = SysMLv2::SysMLv2Deserializer::deserializeJsonArray(Data);
+            }
+
+        } else {
+            throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
+                    static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
+        }
+        curl_slist_free_all(HeaderList);
+        curl_easy_cleanup(serverConnection);
+
+        return returnValue;
     }
 
     INTERNAL_STATUS_CODE SysMLAPIImplementation::tryToResolveHTTPError(long httpErrorCode, void* instance) {

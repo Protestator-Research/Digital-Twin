@@ -30,8 +30,8 @@ namespace SysMLv2::Entities {
      */
     class Data  : public IEntity{
     public:
-        Data();
-        virtual ~Data();
+        Data() = default;
+        virtual ~Data() = default;
 
         boost::uuids::uuid getId();
 

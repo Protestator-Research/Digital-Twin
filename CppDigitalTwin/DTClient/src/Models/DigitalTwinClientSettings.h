@@ -16,6 +16,10 @@ namespace DigitalTwin::Client {
      */
     class DigitalTwinClientSettings {
     public:
+        /**
+         * Constructor
+         * @param parent
+         */
         DigitalTwinClientSettings(QObject *parent = nullptr);
 
         ~DigitalTwinClientSettings();
@@ -46,9 +50,17 @@ namespace DigitalTwin::Client {
 
         void setMQTTPort(QString port);
 
-        bool getRESTandMQTTServerAreEqual();
+        void setRESTUser(QString user);
 
-        void setRESTandMQTTSererAreEqual(bool equality);
+        QString getRESTUser();
+
+        std::string getRESTUserAsString();
+
+        void setRESTPassword(QString password);
+
+        QString getRESTPassword();
+
+        std::string getRESTPasswordAsString();
 
     private:
         QSettings *Settings;
@@ -59,12 +71,14 @@ namespace DigitalTwin::Client {
         const QString DefaultRESTServer = "localhost";
         const char *RESTPortIdentifier = "RESTPort";
         const QString DefaultRESTPort = "8080";
+        const char *RESTLoginIdentifier = "RESTLogin";
+        const QString DefaultRESTLogin = "admin@cps.de";
+        const char *RESTPasswordIdentifier = "RESTPassword";
+        const QString DefaultRESTPassword = "admin";
         const char *MQTTServerIdentifier = "MQTTServer";
         const QString DefaultMQTTServer = "localhost";
         const char *MQTTPortIdentifier = "MQTTPort";
         const QString DefaultMQTTPort = "1883";
-        const char *ServerEqualityIdentifier = "RESTAndMQTTAreEqual";
-        const bool DefaultRESTAndMQTTServerAreEqual = true;
 
         void initAfterSoftwareStart();
     };

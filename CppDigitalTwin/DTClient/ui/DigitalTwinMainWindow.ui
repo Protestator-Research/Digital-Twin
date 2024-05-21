@@ -11,7 +11,13 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>DigitalTwinMainWindow</string>
+   <string>Digital Twin</string>
+  </property>
+  <property name="locale">
+   <locale language="English" country="UnitedStates"/>
+  </property>
+  <property name="unifiedTitleAndToolBarOnMac">
+   <bool>true</bool>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -47,7 +53,7 @@
      <x>0</x>
      <y>0</y>
      <width>1196</width>
-     <height>24</height>
+     <height>43</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -61,6 +67,9 @@
      <string>Remotes</string>
     </property>
     <addaction name="actionConnect_to_Remotes"/>
+    <addaction name="separator"/>
+    <addaction name="actionConnect"/>
+    <addaction name="actionDisconnect"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -97,7 +106,7 @@
    <widget class="QWidget" name="dockWidgetContents_2">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="QTreeView" name="treeView"/>
+      <widget class="QTreeView" name="ProjectTreeView"/>
      </item>
     </layout>
    </widget>
@@ -129,8 +138,14 @@
    </property>
   </action>
   <action name="actionConnect_to_Remotes">
+   <property name="icon">
+    <iconset theme="preferences-desktop"/>
+   </property>
    <property name="text">
-    <string>Connect to Remotes</string>
+    <string>Remotes Settings</string>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>true</bool>
    </property>
   </action>
   <action name="actionAbout">
@@ -158,6 +173,16 @@
    </property>
    <property name="text">
     <string>Show Variables Dockwidget</string>
+   </property>
+  </action>
+  <action name="actionConnect">
+   <property name="text">
+    <string>Connect</string>
+   </property>
+  </action>
+  <action name="actionDisconnect">
+   <property name="text">
+    <string>Disconnect</string>
    </property>
   </action>
  </widget>

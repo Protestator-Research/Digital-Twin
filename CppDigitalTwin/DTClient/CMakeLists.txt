@@ -6,16 +6,27 @@ find_package(mqtt_cpp REQUIRED CONFIG)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui)
 qt_standard_project_setup()
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
 add_executable(CppDigitalTwinClient
         src/Widgets/DigitalTwinMainWindow.cpp
         src/Widgets/DigitalTwinMainWindow.h
         ui/DigitalTwinMainWindow.ui
         src/main.cpp
-        src/Dialogs/SettingsDialog.cpp
-        src/Dialogs/SettingsDialog.h
+        src/Widgets/Dialogs/SettingsDialog.cpp
+        src/Widgets/Dialogs/SettingsDialog.h
         ui/SettingsDialog.ui
         src/Models/DigitalTwinClientSettings.cpp
         src/Models/DigitalTwinClientSettings.h
+        ui/Resources.qrc
+        src/Models/MainWindowStatus.h
+        src/Models/MainWindowModel.cpp
+        src/Models/MainWindowModel.h
+        src/Widgets/TreeViewModels/ProjectTreeViewModel.cpp
+        src/Widgets/TreeViewModels/ProjectTreeViewModel.h
+        src/Widgets/TreeViewModels/ProjectTreeViewItem.cpp
+        src/Widgets/TreeViewModels/ProjectTreeViewItem.h
 )
 
 target_include_directories(CppDigitalTwinClient PUBLIC
@@ -28,9 +39,7 @@ target_link_libraries(CppDigitalTwinClient PUBLIC
         CppDigitalTwinLib
         CppPhysicalTwinCommunication
         CPSBaseLib
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
+        qt::qt
         mqtt_cpp::mqtt_cpp)
 
 set_target_properties(CppDigitalTwinClient PROPERTIES

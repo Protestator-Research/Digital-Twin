@@ -10,6 +10,7 @@
 //---------------------------------------------------------
 #include <vector>
 #include <string>
+#include <boost/uuid/uuid.hpp>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
@@ -19,6 +20,10 @@
 //---------------------------------------------------------
 namespace SysMLv2::Entities {
     class IEntity;
+    class Commit;
+    class Branch;
+    class Project;
+    class DigitalTwin;
 }
 
 namespace BACKEND_COMMUNICATION {
@@ -57,13 +62,13 @@ namespace BACKEND_COMMUNICATION {
          * @see std::vector
          * @see ENTITIES::Element
          */
-//        std::vector<ENTITIES::Element> getAllElements(uuid_t commitId, uuid_t projectId);
+        std::vector<SysMLv2::Entities::IEntity*> getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId);
 
         /**
          * Creates a connection to the REST endpoint of the given AGILA Backend sever, to get all saved projects within the instance of the Backend
          * @return An std::vector of the Projects
          */
-        std::vector<SysMLv2::Entities::IEntity*> getAllProjects();
+        std::vector<SysMLv2::Entities::Project*> getAllProjects();
 
         /**
          * Downloads the Digital Twin data with its ID and the project id.
@@ -71,14 +76,21 @@ namespace BACKEND_COMMUNICATION {
          * @param projectId UUID ("@id") of the project.
          * @return The digital twins metadata.
          */
-//        ENTITIES::DigitalTwin getDigitalTwinWithID(uuid_t digitalTwinId, uuid_t projectId);
+        SysMLv2::Entities::DigitalTwin* getDigitalTwinWithID(boost::uuids::uuid digitalTwinId, boost::uuids::uuid projectId);
+
+        /**
+         * Downloads all Digital Twins for a specific project.
+         * @param projectId the ID of the given project.
+         * @return A vector of all digital twins.
+         */
+        std::vector<SysMLv2::Entities::DigitalTwin*> getAllDigitalTwinsForProjectWithId(boost::uuids::uuid projectId);
 
         /**
          * Download all branches for a project, with the projects id.
          * @param projectId UUID ("@id") of the project.
          * @return All Branches of the Project.
          */
-//        std::vector<ENTITIES::Branch> getAllBranchesForProjectWithID(uuid_t projectId);
+        std::vector<SysMLv2::Entities::Branch*> getAllBranchesForProjectWithID(boost::uuids::uuid projectId);
 
         /**
          * Download the commits with its commit id and project id identifying the specific commit.
@@ -87,7 +99,7 @@ namespace BACKEND_COMMUNICATION {
          * @return The complete Commit
          * @see ENTITIES::Commit
          */
-//        ENTITIES::Commit getCommitWithId(uuid_t projectId, uuid_t commitId);
+        SysMLv2::Entities::Commit* getCommitWithId(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
         /**
          * Sets and checks internally the user, that the server is connected to.

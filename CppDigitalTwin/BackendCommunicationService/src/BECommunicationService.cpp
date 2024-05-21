@@ -10,7 +10,13 @@
 //---------------------------------------------------------
 #include <utility>
 #include <iostream>
+#include <SysMLv2Standard/entities/IEntity.h>
 #include <SysMLv2Standard/entities/Project.h>
+#include <SysMLv2Standard/entities/Commit.h>
+#include <SysMLv2Standard/entities/Branch.h>
+#include <SysMLv2Standard/entities/DigitalTwin.h>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
 
 //---------------------------------------------------------
 // Internal Classes
@@ -38,30 +44,47 @@ namespace BACKEND_COMMUNICATION {
         ServerAddress = std::move(serverAddress);
     }
 
-//    std::vector<ENTITIES::Element> CommunicationService::getAllElements(uuid_t commitId, uuid_t projectId) {
-//
-//        return std::vector<ENTITIES::Element>();
-//    }
+    std::vector<SysMLv2::Entities::IEntity*> CommunicationService::getAllElements(boost::uuids::uuid , boost::uuids::uuid ) {
 
-    std::vector<SysMLv2::Entities::IEntity*> CommunicationService::getAllProjects() {
-        return SysMLAPIImplementation::getAllProjects(BarrierString);
+        return std::vector<SysMLv2::Entities::IEntity*>();
     }
-//
-//    ENTITIES::DigitalTwin CommunicationService::getDigitalTwinWithID(unsigned char *digitalTwinId, unsigned char *projectId) {
-//        return ENTITIES::DigitalTwin();
-//    }
-//
-//    std::vector<ENTITIES::Branch> CommunicationService::getAllBranchesForProjectWithID(unsigned char *projectId) {
-//        return std::vector<ENTITIES::Branch>();
-//    }
-//
-//    ENTITIES::Commit CommunicationService::getCommitWithId(unsigned char *projectId, unsigned char *commitId) {
-//        return ENTITIES::Commit();
-//    }
+
+    std::vector<SysMLv2::Entities::Project*> CommunicationService::getAllProjects() {
+        auto projects = SysMLAPIImplementation::getAllProjects(BarrierString);
+        std::vector<SysMLv2::Entities::Project*> returnValue;
+
+        for(auto oldProject : projects)
+            returnValue.push_back(dynamic_cast<SysMLv2::Entities::Project*>(oldProject));
+
+        return returnValue;
+    }
+
+    SysMLv2::Entities::DigitalTwin* CommunicationService::getDigitalTwinWithID(boost::uuids::uuid , boost::uuids::uuid ) {
+        return new SysMLv2::Entities::DigitalTwin("null");
+    }
+
+    std::vector<SysMLv2::Entities::DigitalTwin*> CommunicationService::getAllDigitalTwinsForProjectWithId(boost::uuids::uuid projectId) {
+        auto twins = SysMLAPIImplementation::getAllDigitalTwinsForProject(boost::lexical_cast<std::string>(projectId),BarrierString);
+        std::vector<SysMLv2::Entities::DigitalTwin*> returnValue;
+
+        for(auto oldTwin : twins)
+            returnValue.push_back(dynamic_cast<SysMLv2::Entities::DigitalTwin*>(oldTwin));
+
+        return returnValue;
+    }
+
+
+    SysMLv2::Entities::Commit* CommunicationService::getCommitWithId(boost::uuids::uuid , boost::uuids::uuid ) {
+        return nullptr;
+    }
 
     bool CommunicationService::setUserForLoginInBackend(std::string username, std::string password) {
         BarrierString = SysMLAPIImplementation::loginUserWithPassword(username,password);
         std::cout<<"Barrier Received: "<< BarrierString<<std::endl;
         return !BarrierString.empty();
+    }
+
+    std::vector<SysMLv2::Entities::Branch*> CommunicationService::getAllBranchesForProjectWithID(boost::uuids::uuid ) {
+        return std::vector<SysMLv2::Entities::Branch *>();
     }
 }
