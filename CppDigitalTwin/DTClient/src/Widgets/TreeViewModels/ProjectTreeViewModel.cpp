@@ -105,4 +105,11 @@ namespace DigitalTwin::Client::ViewModels {
 
         emit dataChanged(index(0,0), index(Projects.size()-1,1), {Qt::DisplayRole});
     }
+
+    ProjectTreeViewItem *ProjectTreeViewModel::getProjectTreeViewItemFromIndex(const QModelIndex &index) const {
+        if((index.isValid())&&(index.internalPointer()!=RootItem)) {
+            return (ProjectTreeViewItem*)(index.internalPointer());
+        }
+        return nullptr;
+    }
 }

@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <SysMLv2Standard/entities/Project.h>
+#include <SysMLv2Standard/entities/DigitalTwin.h>
 
 #include "MainWindowModel.h"
 #include "DigitalTwinClientSettings.h"
@@ -56,5 +57,14 @@ namespace DigitalTwin::Client {
     void MainWindowModel::decorateTreeView() {
         ProjectViewModel = new ViewModels::ProjectTreeViewModel(MainWindow);
         MainWindow->setProjectTreeViewModel(ProjectViewModel);
+    }
+
+    void MainWindowModel::onTreeViewClicked(const QModelIndex &index) {
+        auto item = ProjectViewModel->getProjectTreeViewItemFromIndex(index);
+        auto possibleDigitalTwin = item->getDigitalTwin();
+        if(possibleDigitalTwin!= nullptr){
+            qDebug()<<possibleDigitalTwin->getName();
+        }
+        qDebug()<<index;
     }
 }

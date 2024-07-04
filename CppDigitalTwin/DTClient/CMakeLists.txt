@@ -27,12 +27,16 @@ add_executable(CppDigitalTwinClient
         src/Widgets/TreeViewModels/ProjectTreeViewModel.h
         src/Widgets/TreeViewModels/ProjectTreeViewItem.cpp
         src/Widgets/TreeViewModels/ProjectTreeViewItem.h
+        src/Widgets/DigitalTwinTabWidget.cpp
+        src/Widgets/DigitalTwinTabWidget.h
+        ui/DigitalTwinTabWidget.ui
 )
 
 target_include_directories(CppDigitalTwinClient PUBLIC
         ../BackendCommunicationService/src/
         ../DigitalTwinLib/src/
-        ../PhysicalTwinCommunicationService/src/)
+        ../PhysicalTwinCommunicationService/src/
+        ../CpsBaseLib/src)
 
 target_link_libraries(CppDigitalTwinClient PUBLIC
         CppBackendCommunication

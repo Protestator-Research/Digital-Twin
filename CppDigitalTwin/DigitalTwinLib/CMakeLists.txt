@@ -7,16 +7,20 @@ find_package(nlohmann_json REQUIRED)
 find_package(Boost REQUIRED CONFIG)
 
 add_library(CppDigitalTwinLib
-        src/BaseDTClasses/BaseDigitalTwinInstanceManager.cpp
-        src/BaseDTClasses/BaseDigitalTwinInstanceManager.h
         src/DigitalTwinManager.cpp
-        src/DigitalTwinManager.h)
+        src/DigitalTwinManager.h
+        src/Model/DigitalTwinModel.cpp
+        src/Model/DigitalTwinModel.h)
 
 target_include_directories(CppDigitalTwinLib PUBLIC
-        ../PhysicalTwinCommunicationService/src/)
+        ../PhysicalTwinCommunicationService/src/
+        ../BackendCommunicationService/src/
+        ../CpsBaseLib/src)
 
 target_link_libraries(CppDigitalTwinLib
-        CppPhysicalTwinCommunication)
+        CppPhysicalTwinCommunication
+        CppBackendCommunication
+        CPSBaseLib)
 
 if(MSVC)
     target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX)

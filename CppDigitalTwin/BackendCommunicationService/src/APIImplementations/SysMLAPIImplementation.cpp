@@ -90,7 +90,6 @@ namespace BACKEND_COMMUNICATION {
             curl_easy_getinfo(serverConnection, CURLINFO_RESPONSE_CODE, &httpResult);
 
             if(tryToResolveHTTPError(httpResult, serverConnection)==INTERNAL_STATUS_CODE::SUCCESS){
-                std::cout<<"Projects:"<<std::endl<<Data<<std::endl;
                 returnValue = SysMLv2::SysMLv2Deserializer::deserializeJsonArray(Data);
             }
 
@@ -161,7 +160,6 @@ namespace BACKEND_COMMUNICATION {
             curl_easy_getinfo(serverConnection, CURLINFO_RESPONSE_CODE, &httpResult);
 
             if(tryToResolveHTTPError(httpResult, serverConnection)==INTERNAL_STATUS_CODE::SUCCESS){
-                std::cout<<"Digital Twins for Project "<<projectId<<":"<<std::endl<<Data<<std::endl;
                 returnValue = SysMLv2::SysMLv2Deserializer::deserializeJsonArray(Data);
             }
 

@@ -9,6 +9,7 @@
 #include <map>
 #include <vector>
 #include <boost/uuid/uuid.hpp>
+#include <QObject>
 
 namespace DigitalTwin::Client{
     class DigitalTwinMainWindow;
@@ -28,15 +29,22 @@ namespace SysMLv2::Entities{
     class Project;
 }
 
+/**
+ *
+ */
 namespace DigitalTwin::Client {
-    class MainWindowModel {
+    class MainWindowModel : public QObject{
+        Q_OBJECT
     public:
         MainWindowModel() = delete;
         explicit MainWindowModel(DigitalTwinMainWindow* mainWindow);
-        virtual ~MainWindowModel();
+        ~MainWindowModel() override;
 
         void connectToBackend();
         [[nodiscard]] DigitalTwinClientSettings* clientSettings() const;
+
+    public slots:
+        void onTreeViewClicked(const QModelIndex& index);
 
     private:
         void decorateTreeView();

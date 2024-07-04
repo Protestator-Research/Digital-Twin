@@ -50,7 +50,6 @@ namespace DigitalTwin::Client {
     private slots:
          void toggleButtonCheckBoxProjects(bool visibility);
          void toggleButtonCheckBoxVariables(bool visibility);
-         void showVariablesDockWidget(bool visibility);
          void showProjectDockWidget(bool visibility);
          void showSettingsDialog();
          void connectToServer();

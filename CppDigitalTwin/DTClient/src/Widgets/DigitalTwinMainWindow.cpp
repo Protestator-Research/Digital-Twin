@@ -28,11 +28,10 @@ namespace DigitalTwin::Client {
 
     void DigitalTwinMainWindow::makeConnections() {
         connect(ui->ProjectsDockWidget, SIGNAL(visibilityChanged(bool)), this, SLOT(toggleButtonCheckBoxProjects(bool)));
-        connect(ui->VariablesDockWidget, SIGNAL(visibilityChanged(bool)), this, SLOT(toggleButtonCheckBoxVariables(bool)));
-        connect(ui->actionShow_Variables_Dockwidget, SIGNAL(toggled(bool)), this, SLOT(showVariablesDockWidget(bool)));
         connect(ui->actionShow_Projects_Dockwidget, SIGNAL(toggled(bool)), this, SLOT(showProjectDockWidget(bool)));
         connect(ui->actionConnect, SIGNAL(triggered(bool)), this, SLOT(connectToServer()));
         connect(ui->actionConnect_to_Remotes,&QAction::triggered, this, &DigitalTwinMainWindow::showSettingsDialog);
+        connect(ui->ProjectTreeView, SIGNAL(clicked(const QModelIndex &)), Model, SLOT(onTreeViewClicked(const QModelIndex &)));
     }
 
     void DigitalTwinMainWindow::toggleButtonCheckBoxProjects(bool visibility) {
@@ -41,11 +40,6 @@ namespace DigitalTwin::Client {
 
     void DigitalTwinMainWindow::toggleButtonCheckBoxVariables(bool visibility) {
         ui->actionShow_Variables_Dockwidget->setChecked(visibility);
-    }
-
-    void DigitalTwinMainWindow::showVariablesDockWidget(bool visibility) {
-        ui->VariablesDockWidget->setVisible(visibility);
-
     }
 
     void DigitalTwinMainWindow::showProjectDockWidget(bool visibility) {

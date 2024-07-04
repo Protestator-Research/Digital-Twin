@@ -9,7 +9,6 @@
 // External Classes
 //---------------------------------------------------------
 #include <utility>
-#include <iostream>
 #include <SysMLv2Standard/entities/IEntity.h>
 #include <SysMLv2Standard/entities/Project.h>
 #include <SysMLv2Standard/entities/Commit.h>
@@ -31,8 +30,6 @@ namespace BACKEND_COMMUNICATION {
         ServerAddress(serverAddress),
         Port(port)
     {
-        std::cout<<"Connecting to Server: "<<ServerAddress<<":"<<Port<<std::endl;
-
         if(Port==443)
             REST_PROTOCOL="https://";
 
@@ -80,7 +77,6 @@ namespace BACKEND_COMMUNICATION {
 
     bool CommunicationService::setUserForLoginInBackend(std::string username, std::string password) {
         BarrierString = SysMLAPIImplementation::loginUserWithPassword(username,password);
-        std::cout<<"Barrier Received: "<< BarrierString<<std::endl;
         return !BarrierString.empty();
     }
 
