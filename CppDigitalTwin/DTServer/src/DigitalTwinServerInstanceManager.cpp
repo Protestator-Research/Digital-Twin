@@ -3,6 +3,7 @@
 //
 
 #include "DigitalTwinServerInstanceManager.h"
+#include <Model/DigitalTwinModel.h>
 #include <BaseFuctions/StringExtention.hpp>
 #include <iostream>
 #include <utility>
@@ -25,8 +26,8 @@ namespace DIGITAL_TWIN_SERVER {
         BackendCommunicationService = new BACKEND_COMMUNICATION::CommunicationService(
                 ArgumentsMap[AGILA_URL],
                 std::stoi(ArgumentsMap[AGILA_PORT]));
-        DigitalTwinManager = new DIGITAL_TWIN_LIB::DigitalTwinManager();
-        PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService();
+        DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService);
+        PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService(ArgumentsMap[INSTANCE_MQTT_PORT]);
     }
 
     void DigitalTwinServerInstanceManager::runInstance() {

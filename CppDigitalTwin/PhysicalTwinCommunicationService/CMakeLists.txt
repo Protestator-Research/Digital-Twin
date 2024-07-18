@@ -8,7 +8,9 @@ find_package(mqtt_cpp REQUIRED CONFIG)
 
 add_library(CppPhysicalTwinCommunication
         src/PTCommunicationService.cpp
-        src/PTCommunicationService.h)
+        src/PTCommunicationService.h
+        src/Services/AuthenticationService.cpp
+        src/Services/AuthenticationService.h)
 
 target_link_libraries(CppPhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp)

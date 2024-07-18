@@ -76,7 +76,7 @@ namespace DIGITAL_TWIN_SERVER {
         void mapInstanceSettingsByArguments(int argc, char *argv[]);
 
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService = nullptr;
-        DIGITAL_TWIN_LIB::DigitalTwinManager* DigitalTwinManager = nullptr;
+        DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
         PHYSICAL_TWIN_COMMUNICATION::CommunicationService* PhysicalTwinCommunicationService = nullptr;
 
 
