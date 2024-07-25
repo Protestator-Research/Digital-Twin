@@ -12,206 +12,30 @@
 # see https://hub.docker.com/_/gcc/
 
 stages:
-  - build_dependencies
   - build
   - test
   - deploy
 
-build_deps_gcc13:
-  stage: build_dependencies
-  image: gcc:13
-  before_script:
-    - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan --break-system-packages
-    - conan profile detect
-    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
-    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
-  script:
-    - conan install . --build missing
-    - conan install . --build missing -s build_type=Debug
-    - conan upload boost/* -r cps-artifactory -c
-    - conan upload gtest/* -r cps-artifactory -c
-    - conan upload libcurl/* -r cps-artifactory -c
-    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory -c
-    - conan upload nlohmann_json/* -r cps-artifactory -c
-  only:
-      refs:
-        - updateDependencies
-
-build_deps_gcc12:
-  stage: build_dependencies
-  image: gcc:12
-  before_script:
-    - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan --break-system-packages
-    - conan profile detect
-    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
-    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
-  script:
-    - conan install . --build missing
-    - conan install . --build missing -s build_type=Debug
-    - conan upload boost/* -r cps-artifactory -c
-    - conan upload gtest/* -r cps-artifactory -c
-    - conan upload libcurl/* -r cps-artifactory -c
-    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory -c
-    - conan upload nlohmann_json/* -r cps-artifactory -c
-  only:
-      refs:
-        - updateDependencies
-
-build_deps_gcc11:
-  stage: build_dependencies
-  image: gcc:11
-  before_script:
-    - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan
-    - conan profile detect
-    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
-    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
-  script:
-    - conan install . --build missing
-    - conan install . --build missing -s build_type=Debug
-    - conan upload boost/* -r cps-artifactory -c
-    - conan upload gtest/* -r cps-artifactory -c
-    - conan upload libcurl/* -r cps-artifactory -c
-    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory -c
-    - conan upload nlohmann_json/* -r cps-artifactory -c
-  only:
-      refs:
-        - updateDependencies
-
-build_deps_gcc10:
-  stage: build_dependencies
-  image: gcc:10
-  before_script:
-    - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan
-    - conan profile detect
-    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
-    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
-  script:
-    - conan install . --build missing
-    - conan install . --build missing -s build_type=Debug
-    - conan upload boost/* -r cps-artifactory -c
-    - conan upload gtest/* -r cps-artifactory -c
-    - conan upload libcurl/* -r cps-artifactory -c
-    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory -c
-    - conan upload nlohmann_json/* -r cps-artifactory -c
-  only:
-      refs:
-        - updateDependencies
-
-
-build_deps_gcc9:
-  stage: build_dependencies
-  image: gcc:9
-  before_script:
-    - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan
-    - conan profile detect
-    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
-    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
-  script:
-    - conan install . --build missing
-    - conan install . --build missing -s build_type=Debug
-    - conan upload boost/* -r cps-artifactory -c
-    - conan upload gtest/* -r cps-artifactory -c
-    - conan upload libcurl/* -r cps-artifactory -c
-    - conan upload redboltz-mqtt_cpp/* -r cps-artifactory -c
-    - conan upload nlohmann_json/* -r cps-artifactory -c
-  only:
-      refs:
-        - updateDependencies
+before_script:
+  - apt update && apt -y install make autoconf python3 python3-pip cmake libgl-dev libgl1-mesa-dev xkb-data libx11-xcb-dev libfontenc-dev libxaw7-dev libxcomposite-dev libxcursor-dev libxdamage-dev libxfixes-dev libxi-dev libxinerama-dev libxkbfile-dev libxmu-dev libxmuu-dev libxpm-dev libxrandr-dev libxres-dev libxss-dev libxtst-dev libxv-dev libxxf86vm-dev libxcb-glx0-dev libxcb-render-util0-dev libxcb-xkb-dev libxcb-icccm4-dev libxcb-image0-dev libxcb-keysyms1-dev libxcb-randr0-dev libxcb-shape0-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-xinerama0-dev libxcb-dri3-dev libxcb-cursor-dev libxcb-dri2-0-dev libxcb-dri3-dev libxcb-present-dev libxcb-composite0-dev libxcb-ewmh-dev libxcb-res0-dev libxcb-util-dev
+  - pip install --upgrade conan --break-system-packages
+  - conan profile detect
+  - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
+  - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  - conan remote remove conancenter
 
 build_gcc13:
   stage: build
   image: gcc:13
-  before_script:
-    - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan --break-system-packages
-    - conan profile detect
-    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
-    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
-    - conan remote remove conancenter
   script:
     - mkdir build && cd build
-    - conan install .. --build missing
+    - conan install ..
     - conan build ..
-    - conan install .. -s build_type=Debug --build missing
-    - conan build .. -s build_type=Debug
   artifacts:
     untracked: true
     expire_in: 1 week
     paths:
       - build
-
-build_gcc12:
-  stage: build
-  image: gcc:12
-  before_script:
-    - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan --break-system-packages
-    - conan profile detect
-    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
-    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
-    - conan remote remove conancenter
-  script:
-    - mkdir build && cd build
-    - conan install .. --build missing
-    - conan build ..
-    - conan install .. -s build_type=Debug --build missing
-    - conan build .. -s build_type=Debug
-  artifacts:
-    untracked: true
-    expire_in: 1 week
-    paths:
-      - build
-
-build_gcc10:
-  stage: build
-  image: gcc:10
-  before_script:
-    - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan
-    - conan profile detect
-    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
-    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
-    - conan remote remove conancenter
-  script:
-    - mkdir build && cd build
-    - conan install .. --build missing
-    - conan build ..
-    - conan install .. -s build_type=Debug --build missing
-    - conan build .. -s build_type=Debug
-  artifacts:
-    untracked: true
-    expire_in: 1 week
-    paths:
-      - build
-
-build_gcc9:
-  stage: build
-  image: gcc:9
-  before_script:
-    - apt update && apt -y install make autoconf python3 python3-pip cmake
-    - pip install --upgrade conan
-    - conan profile detect
-    - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
-    - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
-    - conan remote remove conancenter
-  script:
-    - mkdir build && cd build
-    - conan install .. --build missing
-    - conan build ..
-    - conan install .. -s build_type=Debug --build missing
-    - conan build .. -s build_type=Debug
-  artifacts:
-    untracked: true
-    expire_in: 1 week
-    paths:
-      - build
-
-
 
 # run tests using the binary built before
 test_CPS_BaseLib:
