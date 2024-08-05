@@ -65,8 +65,8 @@ namespace SysMLv2::Entities {
             delete elem;
         Branches.clear();
 
-        if(DefaultBranch != nullptr)
-            delete DefaultBranch;
+//        if(DefaultBranch != nullptr)
+//            delete DefaultBranch;
 
         for(auto elem : Tags)
             delete elem;

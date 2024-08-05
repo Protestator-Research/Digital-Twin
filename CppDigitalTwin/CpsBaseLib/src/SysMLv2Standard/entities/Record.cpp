@@ -33,8 +33,12 @@ namespace SysMLv2::Entities {
             nlohmann::json parsedJson = nlohmann::json::parse(jsonString);
 
             Id = boost::uuids::string_generator()(parsedJson[JSON_ID_ENTITY].get<std::string>());
-            Type = parsedJson[JSON_TYPE_ENTITY];
-            Name = parsedJson[JSON_NAME_ENTITY];
+
+            if (parsedJson.contains(JSON_TYPE_ENTITY))
+                Type = parsedJson[JSON_TYPE_ENTITY];
+
+            if (parsedJson.contains(JSON_NAME_ENTITY))
+                Name = parsedJson[JSON_NAME_ENTITY];
 
             if (parsedJson.contains(JSON_ALIAS_ENTITY))
                 Alias = parsedJson[JSON_ALIAS_ENTITY];
