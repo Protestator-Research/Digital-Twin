@@ -46,10 +46,12 @@ target_link_libraries(CppDigitalTwinClient PUBLIC
         qt::qt
         mqtt_cpp::mqtt_cpp)
 
+if (!UNIX)
 set_target_properties(CppDigitalTwinClient PROPERTIES
         WIN32_EXECUTABLE ON
         MACOSX_BUNDLE ON
 )
+endif()
 
 if(MSVC)
     target_compile_options(CppDigitalTwinServer PRIVATE /W4 /WX)

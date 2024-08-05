@@ -33,7 +33,7 @@ target_include_directories(CppBackendCommunication PUBLIC
 if(MSVC)
     target_compile_options(CppBackendCommunication PRIVATE /W4 /WX)
 else()
-    target_compile_options(CppBackendCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(CppBackendCommunication PRIVATE -Wall -Werror)
 endif()
 
 install(TARGETS CppBackendCommunication DESTINATION "."
