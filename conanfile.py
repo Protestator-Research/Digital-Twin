@@ -2,6 +2,7 @@ from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 from conan.tools.env import Environment
 from conan.tools.apple import XcodeDeps
+import os
 
 
 class CppDigitalTwinRecipe(ConanFile):
@@ -26,7 +27,6 @@ class CppDigitalTwinRecipe(ConanFile):
 
     def requirements(self):
         self.requires("boost/1.83.0")
-        self.requires("gtest/1.14.0")
         self.requires("redboltz-mqtt_cpp/13.2.1")
         self.requires("libcurl/8.4.0")
         self.requires("nlohmann_json/3.11.3")
@@ -78,6 +78,11 @@ class CppDigitalTwinRecipe(ConanFile):
         self.tool_requires("cmake/3.30.0")
         self.tool_requires("icu/74.2")
         self.tool_requires("qt/6.7.0")
+        self.test_requires("gtest/1.14.0")
+
+    def test(self):
+        cmd = os.path.join(self.cpp.build.bindir, "CppDigitalTwin/CpsBaseLib/tests/CpsBaseLibTests")
+        self.run(cmd, env="conanrun")
 
     def package(self):
         cmake = CMake(self)

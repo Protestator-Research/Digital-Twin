@@ -41,11 +41,12 @@ build_gcc13:
 # run tests using the binary built before
 test_CPS_BaseLib:
   image: gcc:13
-  dependencies:
-    - build_gcc13
   stage: test
   script:
-    - ./build/Release/CppDigitalTwin/CpsBaseLib/tests/CpsBaseLibTests
+    - mkdir build && cd build
+    - conan install .. --build missing
+    - conan build ..
+    - conan test .. ./Release/CppDigitalTwin/CpsBaseLib/tests/CpsBaseLibTests
 
 deploy:
   stage: deploy
