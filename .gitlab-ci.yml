@@ -1,0 +1,59 @@
+# This file is a template, and might need editing before it works on your project.
+# You can copy and paste this template into a new `.gitlab-ci.yml` file.
+# You should not add this template to an existing `.gitlab-ci.yml` file by using the `include:` keyword.
+#
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/C++.gitlab-ci.yml
+
+# use the official gcc image, based on debian
+# can use versions as well, like gcc:5.2
+# see https://hub.docker.com/_/gcc/
+
+stages:
+  - build
+  - test
+  - deploy
+
+before_script:
+  - apt update && apt -y install make autoconf python3 python3-pip cmake libgl-dev libgl1-mesa-dev xkb-data libx11-xcb-dev libfontenc-dev libxaw7-dev libxcomposite-dev libxcursor-dev libxdamage-dev libxfixes-dev libxi-dev libxinerama-dev libxkbfile-dev libxmu-dev libxmuu-dev libxpm-dev libxrandr-dev libxres-dev libxss-dev libxtst-dev libxv-dev libxxf86vm-dev libxcb-glx0-dev libxcb-render-util0-dev libxcb-xkb-dev libxcb-icccm4-dev libxcb-image0-dev libxcb-keysyms1-dev libxcb-randr0-dev libxcb-shape0-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-xinerama0-dev libxcb-dri3-dev libxcb-cursor-dev libxcb-dri2-0-dev libxcb-dri3-dev libxcb-present-dev libxcb-composite0-dev libxcb-ewmh-dev libxcb-res0-dev libxcb-util-dev libicu-dev
+  - apt install -y qt6-base-dev
+  - pip install --upgrade conan --break-system-packages
+  - conan profile detect
+  - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
+  - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  - conan remote remove conancenter
+
+build_gcc13:
+  stage: build
+  image: gcc:13
+  script:
+    - mkdir build && cd build
+    - conan install .. --build missing
+    - conan build ..
+  artifacts:
+    untracked: true
+    expire_in: 1 week
+    paths:
+      - .
+
+# run tests using the binary built before
+test_CPS_BaseLib:
+  image: gcc:13
+  stage: test
+  script:
+    - cd build
+    - conan install .. --build missing
+    - conan build ..
+    - conan test .. ./Release/CppDigitalTwin/CpsBaseLib/tests/CpsBaseLibTests
+  dependencies:
+    - build_gcc13
+#
+#deploy:
+#  stage: deploy
+#  script: echo "Define your deployment script!"
+#  only:
+#    refs:
+#      - main
+#      - tags

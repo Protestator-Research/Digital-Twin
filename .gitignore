@@ -1,8 +1,9 @@
-################################################################################
-# Diese .gitignore-Datei wurde von Microsoft(R) Visual Studio automatisch erstellt.
-################################################################################
-
 **/.vscode**
 **/build**
+**/build/**
 **/CMakeUserPresets.json
+**/3rd_party_conanpackages/**
 .idea/
+**/cmake-**/**
+CMakeUserPresets.json
+ConanPresets.json
