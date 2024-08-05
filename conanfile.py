@@ -24,6 +24,7 @@ class CppDigitalTwinRecipe(ConanFile):
     exports_sources = "CMakeLists.txt", "CppDigitalTwin/*"
 
     def requirements(self):
+        self.requires("libselinux/3.5")
         self.requires("boost/1.83.0")
         self.requires("gtest/1.14.0")
         self.requires("redboltz-mqtt_cpp/13.2.1")
