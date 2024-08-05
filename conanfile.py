@@ -80,7 +80,6 @@ class CppDigitalTwinRecipe(ConanFile):
         self.tool_requires("cmake/3.30.0")
         self.tool_requires("icu/74.2")
         self.tool_requires("qt/6.7.0")
-        self.test_requires("gtest/1.14.0")
 
     def package(self):
         cmake = CMake(self)
