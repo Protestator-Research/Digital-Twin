@@ -44,7 +44,7 @@ namespace SysMLv2::Entities {
         ProjectUsages = other.ProjectUsages;
 
         Querries = other.Querries;
-        DataVersion = other.DataVersion;
+        _DataVersion = other._DataVersion;
     }
 
     Project::Project(std::string JsonString) : Record(JsonString) {
