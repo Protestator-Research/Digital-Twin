@@ -1,5 +1,6 @@
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+from conan.tools.env import Environment
 from conan.tools.apple import XcodeDeps
 
 
@@ -69,9 +70,17 @@ class CppDigitalTwinRecipe(ConanFile):
         tc.generate()
 
     def build(self):
+        env = Environment()
         cmake = CMake(self)
         cmake.configure()
+        env.append(name = "PATH",value = "", seperator=';')
         cmake.build()
+
+    def build_requirements(self):
+        self.tool_requires("cmake/3.30.0")
+        self.tool_requires("icu/74.2")
+        self.tool_requires("qt/6.7.0")
+        self.test_requires("gtest/1.14.0")
 
     def package(self):
         cmake = CMake(self)
