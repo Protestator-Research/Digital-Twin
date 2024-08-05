@@ -36,7 +36,7 @@ build_gcc13:
     untracked: true
     expire_in: 1 week
     paths:
-      - *
+      - .
 
 # run tests using the binary built before
 test_CPS_BaseLib:
