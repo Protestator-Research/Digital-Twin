@@ -36,7 +36,7 @@ build_gcc13:
     untracked: true
     expire_in: 1 week
     paths:
-      - build
+      - *
 
 # run tests using the binary built before
 test_CPS_BaseLib:
@@ -47,6 +47,8 @@ test_CPS_BaseLib:
     - conan install .. --build missing
     - conan build ..
     - conan test .. ./Release/CppDigitalTwin/CpsBaseLib/tests/CpsBaseLibTests
+  dependencies:
+    - build_gcc13
 
 deploy:
   stage: deploy
