@@ -70,10 +70,8 @@ class CppDigitalTwinRecipe(ConanFile):
         tc.generate()
 
     def build(self):
-        env = Environment()
         cmake = CMake(self)
         cmake.configure()
-        env.append(name = "PATH",value = "", seperator=';')
         cmake.build()
 
     def build_requirements(self):
