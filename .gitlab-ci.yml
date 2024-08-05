@@ -29,7 +29,7 @@ build_gcc13:
   image: gcc:13
   script:
     - mkdir build && cd build
-    - conan install ..
+    - conan install .. --build missing
     - conan build ..
   artifacts:
     untracked: true
