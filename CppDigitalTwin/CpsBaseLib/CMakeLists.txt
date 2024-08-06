@@ -70,8 +70,6 @@ else()
     target_compile_options(CPSBaseLib PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
-option(RUN_TESTS "Build the tests" ON)
-
 if(RUN_TESTS)
     enable_testing()
     add_subdirectory(tests)

@@ -40,3 +40,8 @@ install(TARGETS CppBackendCommunication DESTINATION "."
         RUNTIME DESTINATION bin
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib)
+
+if(RUN_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

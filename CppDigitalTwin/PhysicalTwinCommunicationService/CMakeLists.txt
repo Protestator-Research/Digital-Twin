@@ -25,3 +25,8 @@ if(MSVC)
 else()
     target_compile_options(CppPhysicalTwinCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+if(RUN_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
