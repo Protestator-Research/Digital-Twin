@@ -10,7 +10,12 @@ add_library(CppPhysicalTwinCommunication
         src/PTCommunicationService.cpp
         src/PTCommunicationService.h
         src/Services/AuthenticationService.cpp
-        src/Services/AuthenticationService.h)
+        src/Services/AuthenticationService.h
+        src/Services/MqttBrokerService.cpp
+        src/Services/MqttBrokerService.h
+        src/Services/MqttClientService.cpp
+        src/Services/MqttClientService.h
+)
 
 target_link_libraries(CppPhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp)

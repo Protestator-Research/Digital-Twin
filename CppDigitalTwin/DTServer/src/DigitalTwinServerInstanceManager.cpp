@@ -27,12 +27,13 @@ namespace DIGITAL_TWIN_SERVER {
                 ArgumentsMap[AGILA_URL],
                 std::stoi(ArgumentsMap[AGILA_PORT]));
         DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService);
-        PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService(ArgumentsMap[INSTANCE_MQTT_PORT]);
+
     }
 
     void DigitalTwinServerInstanceManager::runInstance() {
         BackendCommunicationService->setUserForLoginInBackend(ArgumentsMap[AGILA_USERNAME], ArgumentsMap[AGILA_PASSWORD]);
         BackendCommunicationService->getAllProjects();
+        PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService(ArgumentsMap[INSTANCE_MQTT_PORT]);
     }
 
     int DigitalTwinServerInstanceManager::getRunTimeCode() {
