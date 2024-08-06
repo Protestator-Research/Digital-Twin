@@ -4,50 +4,58 @@
 
 #pragma once
 
-#include <string>
 #include <iostream>
+#include <iomanip>
+#include <set>
+
 #include <mqtt_server_cpp.hpp>
+
+#include <boost/lexical_cast.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/composite_key.hpp>
 
+namespace mi = boost::multi_index;
+
+using con_t = MQTT_NS::server<>::endpoint_t;
+using con_sp_t = std::shared_ptr<con_t>;
+
+struct sub_con {
+    sub_con(MQTT_NS::buffer topic, con_sp_t con, MQTT_NS::qos qos_value)
+            :topic(std::move(topic)), con(std::move(con)), qos_value(qos_value) {}
+    MQTT_NS::buffer topic;
+    con_sp_t con;
+    MQTT_NS::qos qos_value;
+};
+
+struct tag_topic {};
+struct tag_con {};
+struct tag_con_topic {};
+
+using mi_sub_con = mi::multi_index_container<
+        sub_con,
+        mi::indexed_by<
+                mi::ordered_unique<
+                        mi::tag<tag_con_topic>,
+                        mi::composite_key<
+                                sub_con,
+                                BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con),
+                                BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
+                        >
+                >,
+                mi::ordered_non_unique<
+                        mi::tag<tag_topic>,
+                        BOOST_MULTI_INDEX_MEMBER(sub_con, MQTT_NS::buffer, topic)
+                >,
+                mi::ordered_non_unique<
+                        mi::tag<tag_con>,
+                        BOOST_MULTI_INDEX_MEMBER(sub_con, con_sp_t, con)
+                >
+        >
+>;
+
 namespace PHYSICAL_TWIN_COMMUNICATION {
-
-    struct subscription_connection {
-        subscription_connection(MQTT_NS::buffer topic, std::shared_ptr<MQTT_NS::server<>::endpoint_t> con, MQTT_NS::qos qos_value)
-                :topic(std::move(topic)), con(std::move(con)), qos_value(qos_value) {}
-        MQTT_NS::buffer topic;
-        std::shared_ptr<MQTT_NS::server<>::endpoint_t> con;
-        MQTT_NS::qos qos_value;
-    };
-
-    struct tag_topic {};
-    struct tag_connection {};
-    struct tag_connection_topic {};
-
-    using mi_subscription_connnection = boost::multi_index::multi_index_container<
-            subscription_connection,
-            boost::multi_index::indexed_by<
-                    boost::multi_index::ordered_unique<
-                            boost::multi_index::tag<tag_connection_topic>,
-                            boost::multi_index::composite_key<
-                                    subscription_connection,
-                                    BOOST_MULTI_INDEX_MEMBER(subscription_connection, std::shared_ptr<MQTT_NS::server<>::endpoint_t>, con),
-                                    BOOST_MULTI_INDEX_MEMBER(subscription_connection, MQTT_NS::buffer, topic)
-                            >
-                    >,
-                    boost::multi_index::ordered_non_unique<
-                            boost::multi_index::tag<tag_topic>,
-                            BOOST_MULTI_INDEX_MEMBER(subscription_connection, MQTT_NS::buffer, topic)
-                    >,
-                    boost::multi_index::ordered_non_unique<
-                            boost::multi_index::tag<tag_connection>,
-                            BOOST_MULTI_INDEX_MEMBER(subscription_connection, std::shared_ptr<MQTT_NS::server<>::endpoint_t>, con)
-                    >
-            >
-    >;
-
 
     /**
      * @author Moritz Herzog
@@ -79,10 +87,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         virtual  ~CommunicationService() = default;
 
     private:
-        void close_process(std::set<std::shared_ptr<MQTT_NS::server<>::endpoint_t>>& cons, mi_subscription_connnection& subs, std::shared_ptr<MQTT_NS::server<>::endpoint_t> const& con);
 
-        template<typename Server>
-        void server_process(Server& s, std::set<std::shared_ptr<MQTT_NS::server<>::endpoint_t>>& connections, mi_subscription_connnection& subs);
     };
 }
 

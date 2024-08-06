@@ -4,6 +4,7 @@ project(CppPhysicalTwinCommunication CXX)
 
 find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(mosquitto REQUIRED)
 find_package(mqtt_cpp REQUIRED CONFIG)
 
 add_library(CppPhysicalTwinCommunication
@@ -13,7 +14,8 @@ add_library(CppPhysicalTwinCommunication
         src/Services/AuthenticationService.h)
 
 target_link_libraries(CppPhysicalTwinCommunication
-        mqtt_cpp::mqtt_cpp)
+        mqtt_cpp::mqtt_cpp
+        mosquitto::mosquitto)
 
 install(TARGETS CppPhysicalTwinCommunication DESTINATION "."
         RUNTIME DESTINATION bin

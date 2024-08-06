@@ -28,6 +28,7 @@ class CppDigitalTwinRecipe(ConanFile):
     def requirements(self):
         self.requires("boost/1.83.0")
         self.requires("redboltz-mqtt_cpp/13.2.1")
+        self.requires("mosquitto/2.0.18")
         self.requires("libcurl/8.4.0")
         self.requires("nlohmann_json/3.11.3")
         self.requires("date/3.0.1")
