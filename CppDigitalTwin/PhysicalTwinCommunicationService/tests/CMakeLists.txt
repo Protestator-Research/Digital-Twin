@@ -3,7 +3,8 @@ find_package(GTest REQUIRED)
 find_package(Boost REQUIRED)
 
 add_executable(PhysicalTwinCommunicationServiceLibTests
-        main.cpp)
+        main.cpp
+        entities/SerializationTests.cpp)
 
 target_include_directories(PhysicalTwinCommunicationServiceLibTests PRIVATE
                                     ../src/)

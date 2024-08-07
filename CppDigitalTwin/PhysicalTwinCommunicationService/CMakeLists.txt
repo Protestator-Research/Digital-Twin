@@ -15,10 +15,14 @@ add_library(CppPhysicalTwinCommunication
         src/Services/MqttBrokerService.h
         src/Services/MqttClientService.cpp
         src/Services/MqttClientService.h
+        src/entities/DigitalTwinEntity.cpp
+        src/entities/DigitalTwinEntity.h
+        src/entities/JsonEntities.hpp
 )
 
 target_link_libraries(CppPhysicalTwinCommunication
-        mqtt_cpp::mqtt_cpp)
+        mqtt_cpp::mqtt_cpp
+        nlohmann_json::nlohmann_json)
 
 install(TARGETS CppPhysicalTwinCommunication DESTINATION "."
         RUNTIME DESTINATION bin
