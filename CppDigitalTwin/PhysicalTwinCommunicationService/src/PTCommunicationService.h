@@ -5,6 +5,8 @@
 #pragma once
 #include <string>
 #include <cstdint>
+#include <memory>
+#include "Services/MqttClientService.h"
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
 
@@ -39,6 +41,8 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
     private:
         void startThreads();
+
+        std::unique_ptr<MqttClientService> ClientService;
 
         uint16_t MqttPort;
     };

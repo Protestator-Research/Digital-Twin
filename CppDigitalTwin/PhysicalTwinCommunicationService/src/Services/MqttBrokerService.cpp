@@ -30,7 +30,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         Server.close();
     }
 
-    void MQTTBrokerService::runBroker(uint16_t port) {
+    std::thread* MQTTBrokerService::runBroker(uint16_t port, bool&) {
         try {
             as::io_context timer_ioc;
             MQTT_NS::broker::broker_t b(timer_ioc);
@@ -86,13 +86,13 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                     };
 
             MQTT_NS::optional<MQTTBrokerService> s;
-                s.emplace(
-                        accept_ioc,
-                        con_ioc_getter,
-                        b,
-                        port
-                );
-                s->listen();
+            s.emplace(
+                accept_ioc,
+                con_ioc_getter,
+                b,
+                port);
+            s->listen();
+
 
 
             std::thread th_accept {
@@ -138,7 +138,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                         }
                     }
             );
-            std::thread th_signal {
+            std::thread th_signal  {
                     [&] {
                         ioc_signal.run();
                     }
@@ -162,6 +162,8 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         } catch(std::exception &e) {
             std::cout << "[mqtt_broker]" << e.what() << std::endl;
         }
+
+        return nullptr;
     }
 
 }

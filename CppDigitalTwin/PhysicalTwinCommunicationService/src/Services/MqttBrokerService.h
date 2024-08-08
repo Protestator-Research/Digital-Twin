@@ -36,7 +36,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
         void close();
 
-        static void runBroker(uint16_t port);
+        static std::thread* runBroker(uint16_t port, bool& serverStarted);
     private:
         MQTT_NS::server<> Server;
         MQTT_NS::broker::broker_t& Broker;
