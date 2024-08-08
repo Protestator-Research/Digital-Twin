@@ -6,6 +6,7 @@
 #include <string>
 #include <cstdint>
 #include <memory>
+#include <functional>
 #include "Services/MqttClientService.h"
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
@@ -33,14 +34,18 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
          */
         CommunicationService(std::string address, std::string mqttPort);
 
-
         /**
          * Destructor
          */
         virtual  ~CommunicationService() = default;
 
-    private:
         void startThreads();
+
+        void addObservationCallbackForTopic(std::string topic, std::function<void(std::string)> callback);
+
+        void publishMQTTMessage(std::string topic, std::string content);
+    private:
+
 
         std::unique_ptr<MqttClientService> ClientService;
 

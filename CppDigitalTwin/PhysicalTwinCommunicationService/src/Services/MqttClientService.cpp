@@ -34,8 +34,10 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                     std::cout << "Connack Return Code: "
                               << MQTT_NS::connect_return_code_to_str(connack_return_code) << std::endl;
                     if (connack_return_code == MQTT_NS::connect_return_code::accepted) {
-                        uint16_t pid_sub = Client->subscribe("connectToTwin", MQTT_NS::qos::at_most_once);
-                        PackedIdToTopicMapping[pid_sub]="connectToTwin";
+                        for(auto elem : CallbackFuctionsPerTopic) {
+                            uint16_t pid_sub = Client->subscribe(elem.first, MQTT_NS::qos::at_most_once);
+                            PackedIdToTopicMapping[pid_sub]=elem.first;
+                        }
                     }
                     return true;
                 });
@@ -116,21 +118,13 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
     void MqttClientService::setCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction) {
         CallbackFuctionsPerTopic[topic] = callbackFunction;
+        if(ClientStarted) {
         uint16_t packetId = Client->subscribe(topic, MQTT_NS::qos::at_least_once);
         PackedIdToTopicMapping[packetId] = topic;
+        }
     }
 
     void MqttClientService::connectClientStartCommunication() {
-
-        CallbackFuctionsPerTopic["connectToTwin"] = [&](std::string value) {
-            if(value.empty()) {
-                DigitalTwinEntity entity;
-                Client->publish("connectToTwin",entity.serialize());
-            } else {
-                std::cout<<"Message Received"<<std::endl;
-            }
-        };
-
         Client->connect();
         IoContext.run();
     }

@@ -27,12 +27,16 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
         void connectClientStartCommunication();
 
+
+
     private:
         std::map<std::string,std::function<void(std::string)>> CallbackFuctionsPerTopic;
         std::map<uint16_t, std::string> PackedIdToTopicMapping;
         boost::asio::io_context IoContext;
         std::shared_ptr<mqtt::callable_overlay<mqtt::sync_client<mqtt::tcp_endpoint<boost::asio::basic_stream_socket<boost::asio::ip::tcp>, boost::asio::strand<boost::asio::io_context::basic_executor_type<std::allocator<void>, 0>>>>>> Client;
         using packet_id_t = typename std::remove_reference_t<decltype(*Client)>::packet_id_t;
+
+        bool ClientStarted = false;
     };
 }
 

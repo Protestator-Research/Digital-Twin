@@ -5,6 +5,7 @@
 #include "DigitalTwinServerInstanceManager.h"
 #include <Model/DigitalTwinModel.h>
 #include <BaseFuctions/StringExtention.hpp>
+#include <entities/DigitalTwinEntity.h>
 #include <iostream>
 #include <utility>
 
@@ -27,13 +28,26 @@ namespace DIGITAL_TWIN_SERVER {
                 ArgumentsMap[AGILA_URL],
                 std::stoi(ArgumentsMap[AGILA_PORT]));
         DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService);
+        PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService(ArgumentsMap[INSTANCE_MQTT_PORT]);
 
+
+        PhysicalTwinCommunicationService->addObservationCallbackForTopic("connectToTwin",[&](std::string value) {
+            if(value.empty()) {
+                PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity;
+                PhysicalTwinCommunicationService->publishMQTTMessage("connectToTwin",entity.serialize());
+            } else {
+                std::cout<<"Message Received"<<std::endl;
+            }
+        });
     }
 
     void DigitalTwinServerInstanceManager::runInstance() {
         BackendCommunicationService->setUserForLoginInBackend(ArgumentsMap[AGILA_USERNAME], ArgumentsMap[AGILA_PASSWORD]);
         BackendCommunicationService->getAllProjects();
-        PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService(ArgumentsMap[INSTANCE_MQTT_PORT]);
+
+
+
+        PhysicalTwinCommunicationService->startThreads();
     }
 
     int DigitalTwinServerInstanceManager::getRunTimeCode() {
