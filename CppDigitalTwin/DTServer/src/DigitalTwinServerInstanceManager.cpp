@@ -30,22 +30,20 @@ namespace DIGITAL_TWIN_SERVER {
         DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService);
         PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService(ArgumentsMap[INSTANCE_MQTT_PORT]);
 
+    }
 
+    void DigitalTwinServerInstanceManager::runInstance() {
         PhysicalTwinCommunicationService->addObservationCallbackForTopic("connectToTwin",[&](std::string value) {
             if(value.empty()) {
                 PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity;
                 PhysicalTwinCommunicationService->publishMQTTMessage("connectToTwin",entity.serialize());
             } else {
-                std::cout<<"Message Received"<<std::endl;
+                PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(value);
+                DigitalTwinManager->downloadDigitalTwin(entity.projectId(),entity.digitalTwinId());
             }
         });
-    }
 
-    void DigitalTwinServerInstanceManager::runInstance() {
         BackendCommunicationService->setUserForLoginInBackend(ArgumentsMap[AGILA_USERNAME], ArgumentsMap[AGILA_PASSWORD]);
-        BackendCommunicationService->getAllProjects();
-
-
 
         PhysicalTwinCommunicationService->startThreads();
     }

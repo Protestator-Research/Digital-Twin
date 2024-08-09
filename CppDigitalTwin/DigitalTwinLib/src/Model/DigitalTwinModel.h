@@ -20,6 +20,7 @@ namespace DigitalTwin::Model {
         explicit DigitalTwinModel(SysMLv2::Entities::DigitalTwin* digitalTwin);
         virtual ~DigitalTwinModel() = default;
 
+        void generateDigitalTwinBackend();
     private:
         [[maybe_unused]] SysMLv2::Entities::DigitalTwin* DigitalTwin;
         std::vector<SysMLv2::Entities::Data*> DigitalTwinModelElements;

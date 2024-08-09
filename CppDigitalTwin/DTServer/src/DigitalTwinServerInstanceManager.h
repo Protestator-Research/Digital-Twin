@@ -79,8 +79,9 @@ namespace DIGITAL_TWIN_SERVER {
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
         PHYSICAL_TWIN_COMMUNICATION::CommunicationService* PhysicalTwinCommunicationService = nullptr;
 
-
+        std::vector<SysMLv2::Entities::Project*> Projects;
         std::map<ARGUMENTS,std::string> ArgumentsMap;
+
 
         int ErrorCode = EXIT_SUCCESS;
     };

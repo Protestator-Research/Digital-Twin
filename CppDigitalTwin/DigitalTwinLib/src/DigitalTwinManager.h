@@ -6,6 +6,7 @@
 #define DIGITALTWIN_DIGITALTWINMANAGER_H
 
 #include <map>
+#include <string>
 #include <boost/uuid/uuid.hpp>
 
 namespace BACKEND_COMMUNICATION {
@@ -28,7 +29,7 @@ namespace DigitalTwin {
         explicit DigitalTwinManager(BACKEND_COMMUNICATION::CommunicationService* communicationService);
         virtual ~DigitalTwinManager() = default;
 
-        void addDigitalTwin(SysMLv2::Entities::DigitalTwin* digitalTwin);
+        void downloadDigitalTwin(boost::uuids::uuid projectId, boost::uuids::uuid digitalTwinId);
 
     private:
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService;

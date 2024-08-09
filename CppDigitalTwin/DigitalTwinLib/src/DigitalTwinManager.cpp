@@ -14,7 +14,12 @@ namespace DigitalTwin {
         BackendCommunicationService = communicationService;
     }
 
-    void DigitalTwinManager::addDigitalTwin(SysMLv2::Entities::DigitalTwin *digitalTwin) {
-        DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), digitalTwin));
+    void DigitalTwinManager::downloadDigitalTwin(boost::uuids::uuid projectId, boost::uuids::uuid digitalTwinId) {
+        auto digitalTwins = BackendCommunicationService->getAllDigitalTwinsForProjectWithId(projectId);
+        for(auto digitalTwin : digitalTwins)
+            if(digitalTwin->getId()==digitalTwinId) {
+                DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), digitalTwin));
+            }
     }
+
 }

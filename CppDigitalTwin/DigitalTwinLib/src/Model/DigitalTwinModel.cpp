@@ -10,4 +10,8 @@ namespace DigitalTwin::Model {
     DigitalTwin(digitalTwin){
 
     }
+
+    void DigitalTwinModel::generateDigitalTwinBackend() {
+
+    }
 }
