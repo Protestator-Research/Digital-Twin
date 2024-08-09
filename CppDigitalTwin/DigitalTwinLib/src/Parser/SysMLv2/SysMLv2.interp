@@ -106,8 +106,8 @@ port
 attribute
 item
 package
-assert
-action
+assertion
+actions
 alias
 visibility
 import_rule

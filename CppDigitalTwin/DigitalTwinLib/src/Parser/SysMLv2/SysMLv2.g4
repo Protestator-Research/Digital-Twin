@@ -9,8 +9,8 @@ start: start start |
        item |
        package |
        attribute |
-       assert |
-       action |
+       assertion |
+       actions |
        alias |
        visibility |
        import_rule |
@@ -27,8 +27,8 @@ port: PORT DEFINITION? NAME specilization? delimiter_rule;
 attribute: (ATTRIBUTE|MEASURABLE|CONTROLLABLE) DEFINITION? NAME multiplicity? type_definition? unit? delimiter_rule;
 item: ITEM NAME delimiter_rule;
 package: PACKAGE NAME delimiter_rule;
-assert: ASSERT NAME delimiter_rule;
-action: ACTION DEFINITION? NAME? fuction_arguments bracketed_content;
+assertion: ASSERT NAME delimiter_rule;
+actions: ACTION DEFINITION? NAME? fuction_arguments bracketed_content;
 alias: ALIAS address FOR address DELIMITER;
 visibility: PRIVATE start | PUBLIC start | PROTECTED start;
 import_rule: IMPORT address DELIMITER;

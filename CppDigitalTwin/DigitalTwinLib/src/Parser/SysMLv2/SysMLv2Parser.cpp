@@ -53,7 +53,7 @@ void sysmlv2ParserInitialize() {
   auto staticData = std::make_unique<SysMLv2ParserStaticData>(
     std::vector<std::string>{
       "start", "dependency", "textual_representaion", "comment", "part", 
-      "port", "attribute", "item", "package", "assert", "action", "alias", 
+      "port", "attribute", "item", "package", "assertion", "actions", "alias", 
       "visibility", "import_rule", "abstraction", "variation", "variant", 
       "type_definition", "about", "specilization", "decriptor", "namelist", 
       "name", "address", "bracketed_content", "fuction_arguments", "argument", 
@@ -259,12 +259,12 @@ SysMLv2Parser::AttributeContext* SysMLv2Parser::StartContext::attribute() {
   return getRuleContext<SysMLv2Parser::AttributeContext>(0);
 }
 
-SysMLv2Parser::AssertContext* SysMLv2Parser::StartContext::assert() {
-  return getRuleContext<SysMLv2Parser::AssertContext>(0);
+SysMLv2Parser::AssertionContext* SysMLv2Parser::StartContext::assertion() {
+  return getRuleContext<SysMLv2Parser::AssertionContext>(0);
 }
 
-SysMLv2Parser::ActionContext* SysMLv2Parser::StartContext::action() {
-  return getRuleContext<SysMLv2Parser::ActionContext>(0);
+SysMLv2Parser::ActionsContext* SysMLv2Parser::StartContext::actions() {
+  return getRuleContext<SysMLv2Parser::ActionsContext>(0);
 }
 
 SysMLv2Parser::AliasContext* SysMLv2Parser::StartContext::alias() {
@@ -402,13 +402,13 @@ SysMLv2Parser::StartContext* SysMLv2Parser::start(int precedence) {
 
       case SysMLv2Parser::ASSERT: {
         setState(69);
-        assert();
+        assertion();
         break;
       }
 
       case SysMLv2Parser::ACTION: {
         setState(70);
-        action();
+        actions();
         break;
       }
 
@@ -1237,44 +1237,44 @@ SysMLv2Parser::PackageContext* SysMLv2Parser::package() {
   return _localctx;
 }
 
-//----------------- AssertContext ------------------------------------------------------------------
+//----------------- AssertionContext ------------------------------------------------------------------
 
-SysMLv2Parser::AssertContext::AssertContext(ParserRuleContext *parent, size_t invokingState)
+SysMLv2Parser::AssertionContext::AssertionContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-tree::TerminalNode* SysMLv2Parser::AssertContext::ASSERT() {
+tree::TerminalNode* SysMLv2Parser::AssertionContext::ASSERT() {
   return getToken(SysMLv2Parser::ASSERT, 0);
 }
 
-tree::TerminalNode* SysMLv2Parser::AssertContext::NAME() {
+tree::TerminalNode* SysMLv2Parser::AssertionContext::NAME() {
   return getToken(SysMLv2Parser::NAME, 0);
 }
 
-SysMLv2Parser::Delimiter_ruleContext* SysMLv2Parser::AssertContext::delimiter_rule() {
+SysMLv2Parser::Delimiter_ruleContext* SysMLv2Parser::AssertionContext::delimiter_rule() {
   return getRuleContext<SysMLv2Parser::Delimiter_ruleContext>(0);
 }
 
 
-size_t SysMLv2Parser::AssertContext::getRuleIndex() const {
-  return SysMLv2Parser::RuleAssert;
+size_t SysMLv2Parser::AssertionContext::getRuleIndex() const {
+  return SysMLv2Parser::RuleAssertion;
 }
 
-void SysMLv2Parser::AssertContext::enterRule(tree::ParseTreeListener *listener) {
+void SysMLv2Parser::AssertionContext::enterRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SysMLv2Listener *>(listener);
   if (parserListener != nullptr)
-    parserListener->enterAssert(this);
+    parserListener->enterAssertion(this);
 }
 
-void SysMLv2Parser::AssertContext::exitRule(tree::ParseTreeListener *listener) {
+void SysMLv2Parser::AssertionContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SysMLv2Listener *>(listener);
   if (parserListener != nullptr)
-    parserListener->exitAssert(this);
+    parserListener->exitAssertion(this);
 }
 
-SysMLv2Parser::AssertContext* SysMLv2Parser::assert() {
-  AssertContext *_localctx = _tracker.createInstance<AssertContext>(_ctx, getState());
-  enterRule(_localctx, 18, SysMLv2Parser::RuleAssert);
+SysMLv2Parser::AssertionContext* SysMLv2Parser::assertion() {
+  AssertionContext *_localctx = _tracker.createInstance<AssertionContext>(_ctx, getState());
+  enterRule(_localctx, 18, SysMLv2Parser::RuleAssertion);
 
 #if __cplusplus > 201703L
   auto onExit = finally([=, this] {
@@ -1302,52 +1302,52 @@ SysMLv2Parser::AssertContext* SysMLv2Parser::assert() {
   return _localctx;
 }
 
-//----------------- ActionContext ------------------------------------------------------------------
+//----------------- ActionsContext ------------------------------------------------------------------
 
-SysMLv2Parser::ActionContext::ActionContext(ParserRuleContext *parent, size_t invokingState)
+SysMLv2Parser::ActionsContext::ActionsContext(ParserRuleContext *parent, size_t invokingState)
   : ParserRuleContext(parent, invokingState) {
 }
 
-tree::TerminalNode* SysMLv2Parser::ActionContext::ACTION() {
+tree::TerminalNode* SysMLv2Parser::ActionsContext::ACTION() {
   return getToken(SysMLv2Parser::ACTION, 0);
 }
 
-SysMLv2Parser::Fuction_argumentsContext* SysMLv2Parser::ActionContext::fuction_arguments() {
+SysMLv2Parser::Fuction_argumentsContext* SysMLv2Parser::ActionsContext::fuction_arguments() {
   return getRuleContext<SysMLv2Parser::Fuction_argumentsContext>(0);
 }
 
-SysMLv2Parser::Bracketed_contentContext* SysMLv2Parser::ActionContext::bracketed_content() {
+SysMLv2Parser::Bracketed_contentContext* SysMLv2Parser::ActionsContext::bracketed_content() {
   return getRuleContext<SysMLv2Parser::Bracketed_contentContext>(0);
 }
 
-tree::TerminalNode* SysMLv2Parser::ActionContext::DEFINITION() {
+tree::TerminalNode* SysMLv2Parser::ActionsContext::DEFINITION() {
   return getToken(SysMLv2Parser::DEFINITION, 0);
 }
 
-tree::TerminalNode* SysMLv2Parser::ActionContext::NAME() {
+tree::TerminalNode* SysMLv2Parser::ActionsContext::NAME() {
   return getToken(SysMLv2Parser::NAME, 0);
 }
 
 
-size_t SysMLv2Parser::ActionContext::getRuleIndex() const {
-  return SysMLv2Parser::RuleAction;
+size_t SysMLv2Parser::ActionsContext::getRuleIndex() const {
+  return SysMLv2Parser::RuleActions;
 }
 
-void SysMLv2Parser::ActionContext::enterRule(tree::ParseTreeListener *listener) {
+void SysMLv2Parser::ActionsContext::enterRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SysMLv2Listener *>(listener);
   if (parserListener != nullptr)
-    parserListener->enterAction(this);
+    parserListener->enterActions(this);
 }
 
-void SysMLv2Parser::ActionContext::exitRule(tree::ParseTreeListener *listener) {
+void SysMLv2Parser::ActionsContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SysMLv2Listener *>(listener);
   if (parserListener != nullptr)
-    parserListener->exitAction(this);
+    parserListener->exitActions(this);
 }
 
-SysMLv2Parser::ActionContext* SysMLv2Parser::action() {
-  ActionContext *_localctx = _tracker.createInstance<ActionContext>(_ctx, getState());
-  enterRule(_localctx, 20, SysMLv2Parser::RuleAction);
+SysMLv2Parser::ActionsContext* SysMLv2Parser::actions() {
+  ActionsContext *_localctx = _tracker.createInstance<ActionsContext>(_ctx, getState());
+  enterRule(_localctx, 20, SysMLv2Parser::RuleActions);
   size_t _la = 0;
 
 #if __cplusplus > 201703L
@@ -2722,7 +2722,7 @@ bool SysMLv2Parser::sempred(RuleContext *context, size_t ruleIndex, size_t predi
   return true;
 }
 
-bool SysMLv2Parser::startSempred(StartContext *_localctx, size_t predicateIndex) {
+bool SysMLv2Parser::startSempred(StartContext *, size_t predicateIndex) {
   switch (predicateIndex) {
     case 0: return precpred(_ctx, 17);
 

@@ -26,7 +26,7 @@ public:
   enum {
     RuleStart = 0, RuleDependency = 1, RuleTextual_representaion = 2, RuleComment = 3, 
     RulePart = 4, RulePort = 5, RuleAttribute = 6, RuleItem = 7, RulePackage = 8, 
-    RuleAssert = 9, RuleAction = 10, RuleAlias = 11, RuleVisibility = 12, 
+    RuleAssertion = 9, RuleActions = 10, RuleAlias = 11, RuleVisibility = 12, 
     RuleImport_rule = 13, RuleAbstraction = 14, RuleVariation = 15, RuleVariant = 16, 
     RuleType_definition = 17, RuleAbout = 18, RuleSpecilization = 19, RuleDecriptor = 20, 
     RuleNamelist = 21, RuleName = 22, RuleAddress = 23, RuleBracketed_content = 24, 
@@ -60,8 +60,8 @@ public:
   class AttributeContext;
   class ItemContext;
   class PackageContext;
-  class AssertContext;
-  class ActionContext;
+  class AssertionContext;
+  class ActionsContext;
   class AliasContext;
   class VisibilityContext;
   class Import_ruleContext;
@@ -94,8 +94,8 @@ public:
     ItemContext *item();
     PackageContext *package();
     AttributeContext *attribute();
-    AssertContext *assert();
-    ActionContext *action();
+    AssertionContext *assertion();
+    ActionsContext *actions();
     AliasContext *alias();
     VisibilityContext *visibility();
     Import_ruleContext *import_rule();
@@ -249,9 +249,9 @@ public:
 
   PackageContext* package();
 
-  class  AssertContext : public antlr4::ParserRuleContext {
+  class  AssertionContext : public antlr4::ParserRuleContext {
   public:
-    AssertContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    AssertionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *ASSERT();
     antlr4::tree::TerminalNode *NAME();
@@ -262,11 +262,11 @@ public:
    
   };
 
-  AssertContext* assert();
+  AssertionContext* assertion();
 
-  class  ActionContext : public antlr4::ParserRuleContext {
+  class  ActionsContext : public antlr4::ParserRuleContext {
   public:
-    ActionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    ActionsContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *ACTION();
     Fuction_argumentsContext *fuction_arguments();
@@ -279,7 +279,7 @@ public:
    
   };
 
-  ActionContext* action();
+  ActionsContext* actions();
 
   class  AliasContext : public antlr4::ParserRuleContext {
   public:

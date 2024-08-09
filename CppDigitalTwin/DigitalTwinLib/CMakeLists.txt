@@ -22,7 +22,17 @@ add_library(CppDigitalTwinLib
         src/Parser/KerML/KerMLListener.h
         src/Parser/KerML/KerMLParser.h
         src/Parser/KerML/KerMLParser.cpp
-        )
+        src/Parser/SysMLv2/SysMLv2BaseListener.cpp
+        src/Parser/SysMLv2/SysMLv2BaseListener.h
+        src/Parser/SysMLv2/SysMLv2Lexer.h
+        src/Parser/SysMLv2/SysMLv2Lexer.cpp
+        src/Parser/SysMLv2/SysMLv2Listener.cpp
+        src/Parser/SysMLv2/SysMLv2Listener.h
+        src/Parser/SysMLv2/SysMLv2Parser.h
+        src/Parser/SysMLv2/SysMLv2Parser.cpp
+        src/Parser/Parser.cpp
+        src/Parser/Parser.h
+)
 
 target_include_directories(CppDigitalTwinLib PUBLIC
         ../PhysicalTwinCommunicationService/src/

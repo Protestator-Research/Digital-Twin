@@ -41,11 +41,11 @@ public:
   virtual void enterPackage(SysMLv2Parser::PackageContext *ctx) = 0;
   virtual void exitPackage(SysMLv2Parser::PackageContext *ctx) = 0;
 
-  virtual void enterAssert(SysMLv2Parser::AssertContext *ctx) = 0;
-  virtual void exitAssert(SysMLv2Parser::AssertContext *ctx) = 0;
+  virtual void enterAssertion(SysMLv2Parser::AssertionContext *ctx) = 0;
+  virtual void exitAssertion(SysMLv2Parser::AssertionContext *ctx) = 0;
 
-  virtual void enterAction(SysMLv2Parser::ActionContext *ctx) = 0;
-  virtual void exitAction(SysMLv2Parser::ActionContext *ctx) = 0;
+  virtual void enterActions(SysMLv2Parser::ActionsContext *ctx) = 0;
+  virtual void exitActions(SysMLv2Parser::ActionsContext *ctx) = 0;
 
   virtual void enterAlias(SysMLv2Parser::AliasContext *ctx) = 0;
   virtual void exitAlias(SysMLv2Parser::AliasContext *ctx) = 0;

@@ -43,11 +43,11 @@ public:
   virtual void enterPackage(SysMLv2Parser::PackageContext * /*ctx*/) override { }
   virtual void exitPackage(SysMLv2Parser::PackageContext * /*ctx*/) override { }
 
-  virtual void enterAssert(SysMLv2Parser::AssertContext * /*ctx*/) override { }
-  virtual void exitAssert(SysMLv2Parser::AssertContext * /*ctx*/) override { }
+  virtual void enterAssertion(SysMLv2Parser::AssertionContext * /*ctx*/) override { }
+  virtual void exitAssertion(SysMLv2Parser::AssertionContext * /*ctx*/) override { }
 
-  virtual void enterAction(SysMLv2Parser::ActionContext * /*ctx*/) override { }
-  virtual void exitAction(SysMLv2Parser::ActionContext * /*ctx*/) override { }
+  virtual void enterActions(SysMLv2Parser::ActionsContext * /*ctx*/) override { }
+  virtual void exitActions(SysMLv2Parser::ActionsContext * /*ctx*/) override { }
 
   virtual void enterAlias(SysMLv2Parser::AliasContext * /*ctx*/) override { }
   virtual void exitAlias(SysMLv2Parser::AliasContext * /*ctx*/) override { }
