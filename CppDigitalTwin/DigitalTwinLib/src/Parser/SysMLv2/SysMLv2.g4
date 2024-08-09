@@ -1,0 +1,88 @@
+grammar SysMLv2;
+
+start: start start |
+       dependency |
+       textual_representaion |
+       comment |
+       part |
+       port |
+       item |
+       package |
+       attribute |
+       assert |
+       action |
+       alias |
+       visibility |
+       import_rule |
+       abstraction |
+       variation |
+       variant;
+
+
+dependency: DEPENDENCY namelist (FROM namelist)? TO namelist DELIMITER;
+textual_representaion: REPRESENTATION? NAME? decriptor BLOCK_COMMENT;
+comment: BLOCK_COMMENT | COMMENT NAME? about? BLOCK_COMMENT | DOCUMENTATION NAME? BLOCK_COMMENT | LINE_COMMENT;
+part: PART DEFINITION? NAME specilization? delimiter_rule;
+port: PORT DEFINITION? NAME specilization? delimiter_rule;
+attribute: (ATTRIBUTE|MEASURABLE|CONTROLLABLE) DEFINITION? NAME multiplicity? type_definition? unit? delimiter_rule;
+item: ITEM NAME delimiter_rule;
+package: PACKAGE NAME delimiter_rule;
+assert: ASSERT NAME delimiter_rule;
+action: ACTION DEFINITION? NAME? fuction_arguments bracketed_content;
+alias: ALIAS address FOR address DELIMITER;
+visibility: PRIVATE start | PUBLIC start | PROTECTED start;
+import_rule: IMPORT address DELIMITER;
+abstraction: ABSTRACT start;
+variation: VARIATION start;
+variant: VARIANT part;
+
+type_definition: ':' address;
+about: ABOUT address(','address)*;
+specilization: ':' address;
+decriptor: LANGUAGE_DESCRIPTOR '"'NAME'"';
+namelist: name(',' name)*;
+name: NAME | '\''NAME+'\'';
+address: NAME('::'(NAME | STAR STAR?))*;
+bracketed_content: '{' start '}';
+fuction_arguments: '(' argument?(',' argument*) ')';
+argument: NAME type_definition;
+delimiter_rule: (bracketed_content|DELIMITER);
+multiplicity: '[' (STAR | NUMBER) ']';
+unit: '[' NAME ']';
+
+DEPENDENCY: 'dependency';
+REPRESENTATION: 'rep';
+LANGUAGE_DESCRIPTOR: 'language';
+DOCUMENTATION: 'doc';
+COMMENT: 'comment';
+ABOUT: 'about';
+PART: 'part';
+BLOCK_COMMENT: '/*' .*? '*/';
+LINE_COMMENT: '//'  ~( '\r' | '\n' )*;
+TO:'to';
+FROM: 'from';
+FOR: 'for';
+DELIMITER: ';';
+PORT: 'port';
+ITEM: 'item';
+PACKAGE: 'package';
+DEFINITION: 'def';
+ATTRIBUTE: 'attribute';
+MEASURABLE: 'measruable';
+CONTROLLABLE: 'controllable';
+ASSERT: 'assert';
+ACTION: 'action';
+ALIAS: 'alias';
+PRIVATE: 'private';
+PROTECTED: 'protected';
+PUBLIC: 'public';
+IMPORT: 'import';
+ABSTRACT: 'abstract';
+VARIATION: 'variation';
+VARIANT: 'variant';
+STAR: '*';
+
+NUMBER: [0-9]+;
+NAME: ('_'|[a-z]|[A-Z]|[0-9])+ ;
+INT     : [0-9]+ ;
+WS : [ \t\r\n]+ -> skip ;
