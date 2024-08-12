@@ -43,7 +43,7 @@ target_link_libraries(CppDigitalTwinLib
         CppPhysicalTwinCommunication
         CppBackendCommunication
         CPSBaseLib
-        antlr4_static)
+        antlr4_shared)
 
 if(MSVC)
     target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX)
