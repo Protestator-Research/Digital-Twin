@@ -14,6 +14,7 @@
 #include <SysMLv2Standard/entities/Commit.h>
 #include <SysMLv2Standard/entities/Branch.h>
 #include <SysMLv2Standard/entities/DigitalTwin.h>
+#include <SysMLv2Standard/entities/Element.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -75,6 +76,8 @@ namespace BACKEND_COMMUNICATION {
         return nullptr;
     }
 
+
+
     bool CommunicationService::setUserForLoginInBackend(std::string username, std::string password) {
         BarrierString = SysMLAPIImplementation::loginUserWithPassword(username,password);
         return !BarrierString.empty();
@@ -82,5 +85,16 @@ namespace BACKEND_COMMUNICATION {
 
     std::vector<SysMLv2::Entities::Branch*> CommunicationService::getAllBranchesForProjectWithID(boost::uuids::uuid ) {
         return std::vector<SysMLv2::Entities::Branch *>();
+    }
+
+    std::vector<SysMLv2::Entities::Element *>
+    CommunicationService::getAllElementsOfCommit(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
+        auto elements = SysMLAPIImplementation::getAllElementsFromCommit(boost::lexical_cast<std::string>(projectId),boost::lexical_cast<std::string>(commitId), BarrierString);
+        std::vector<SysMLv2::Entities::Element*> returnValue;
+
+        for(auto elem : elements)
+            returnValue.push_back(dynamic_cast<SysMLv2::Entities::Element*>(elem));
+
+        return returnValue;
     }
 }

@@ -61,6 +61,11 @@ namespace SysMLv2::Entities {
          */
         bool operator==(DigitalTwin const &other);
 
+        DataIdentity* branchId() const;
+
+        DataIdentity* commitId() const;
+
+        DataIdentity* parentProjectId() const;
 
         std::string serializeToJson() override;
 

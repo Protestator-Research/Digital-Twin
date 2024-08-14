@@ -54,4 +54,16 @@ namespace SysMLv2::Entities {
         return Record::operator==(other);
     }
 
+    DataIdentity *DigitalTwin::branchId() const {
+        return BranchId;
+    }
+
+    DataIdentity *DigitalTwin::commitId() const {
+        return CommitId;
+    }
+
+    DataIdentity *DigitalTwin::parentProjectId() const {
+        return ParentProjectId;
+    }
+
 }

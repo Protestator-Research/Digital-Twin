@@ -10,7 +10,7 @@
 // External Classes
 //---------------------------------------------------------
 #include <boost/uuid/uuid.hpp>
-
+#include <string>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
@@ -30,13 +30,21 @@ namespace SysMLv2::Entities {
      */
     class Data  : public IEntity{
     public:
-        Data() = default;
+        Data();
+        Data(boost::uuids::uuid id);
+        Data(std::string jsonString);
+
         virtual ~Data() = default;
 
         boost::uuids::uuid getId();
 
+        std::string getType();
+
+        std::string serializeToJson() override;
+    protected:
+        std::string Type;
     private:
-        
+        boost::uuids::uuid Id;
     };
 }
 

@@ -173,6 +173,7 @@ namespace BACKEND_COMMUNICATION {
         return returnValue;
     }
 
+
     INTERNAL_STATUS_CODE SysMLAPIImplementation::tryToResolveHTTPError(long httpErrorCode, void* instance) {
         if(httpErrorCode>STANDARDS::HTTP::HTTP_PROPRIATARY)
             throw BACKEND_COMMUNICATION::EXCEPTIONS::HTTPException(httpErrorCode);
@@ -257,5 +258,38 @@ namespace BACKEND_COMMUNICATION {
         }
 
         return INTERNAL_STATUS_CODE::THROW_ERROR;
+    }
+
+    std::vector<SysMLv2::Entities::IEntity *>
+    SysMLAPIImplementation::getAllElementsFromCommit(std::string projectId, std::string commitId,
+                                                     std::string barrierString) {
+
+
+        connectToServer(ServerAddress);
+        std::vector<SysMLv2::Entities::IEntity*> returnValue;
+        CURLcode ServerResult;
+
+        std::string urlAppendix = "projects/" + projectId + "/commits/" + commitId + "/elements";
+
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str());
+
+        ServerResult = curl_easy_perform(serverConnection);
+
+        if (ServerResult == CURLE_OK) {
+            long httpResult;
+            curl_easy_getinfo(serverConnection, CURLINFO_RESPONSE_CODE, &httpResult);
+
+            if(tryToResolveHTTPError(httpResult, serverConnection)==INTERNAL_STATUS_CODE::SUCCESS){
+                returnValue = SysMLv2::SysMLv2Deserializer::deserializeJsonArray(Data);
+            }
+
+        } else {
+            throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
+                    static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
+        }
+        curl_slist_free_all(HeaderList);
+        curl_easy_cleanup(serverConnection);
+
+        return returnValue;
     }
 }

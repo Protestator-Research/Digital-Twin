@@ -12,18 +12,22 @@ namespace SysMLv2::Entities {
     class Data;
 }
 
+namespace DigitalTwin {
+    class DigitalTwinManager;
+}
 
 namespace DigitalTwin::Model {
     class DigitalTwinModel {
     public:
         DigitalTwinModel() = delete;
-        explicit DigitalTwinModel(SysMLv2::Entities::DigitalTwin* digitalTwin);
+        explicit DigitalTwinModel(SysMLv2::Entities::DigitalTwin* digitalTwin, DigitalTwinManager* manager);
         virtual ~DigitalTwinModel() = default;
 
         void generateDigitalTwinBackend();
     private:
-        [[maybe_unused]] SysMLv2::Entities::DigitalTwin* DigitalTwin;
+        SysMLv2::Entities::DigitalTwin* DigitalTwin;
         std::vector<SysMLv2::Entities::Data*> DigitalTwinModelElements;
+        DigitalTwinManager* Manager;
     };
 }
 

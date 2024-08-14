@@ -7,6 +7,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 #include <boost/uuid/uuid.hpp>
 
 namespace BACKEND_COMMUNICATION {
@@ -15,6 +16,7 @@ namespace BACKEND_COMMUNICATION {
 
 namespace SysMLv2::Entities {
     class DigitalTwin;
+    class Element;
 }
 
 namespace DigitalTwin::Model {
@@ -30,6 +32,7 @@ namespace DigitalTwin {
         virtual ~DigitalTwinManager() = default;
 
         void downloadDigitalTwin(boost::uuids::uuid projectId, boost::uuids::uuid digitalTwinId);
+        std::vector<SysMLv2::Entities::Element*> downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
     private:
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService;

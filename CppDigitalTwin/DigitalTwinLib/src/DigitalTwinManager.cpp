@@ -7,6 +7,7 @@
 
 #include <BECommunicationService.h>
 #include <SysMLv2Standard/entities/DigitalTwin.h>
+#include <SysMLv2Standard/entities/Element.h>
 
 namespace DigitalTwin {
 
@@ -18,8 +19,13 @@ namespace DigitalTwin {
         auto digitalTwins = BackendCommunicationService->getAllDigitalTwinsForProjectWithId(projectId);
         for(auto digitalTwin : digitalTwins)
             if(digitalTwin->getId()==digitalTwinId) {
-                DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), digitalTwin));
+                DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), Model::DigitalTwinModel(digitalTwin, this)));
             }
+    }
+
+    std::vector<SysMLv2::Entities::Element *>
+    DigitalTwinManager::downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
+        return BackendCommunicationService->getAllElementsOfCommit(projectId,commitId);
     }
 
 }

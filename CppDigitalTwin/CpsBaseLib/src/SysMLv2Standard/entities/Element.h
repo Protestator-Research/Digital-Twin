@@ -20,6 +20,9 @@
 
 namespace SysMLv2::Entities {
     class Element : public Data{
+    public:
+        Element();
+
 
     };
 } // SysMLv2

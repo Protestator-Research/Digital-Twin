@@ -24,6 +24,7 @@ namespace SysMLv2::Entities {
     class Branch;
     class Project;
     class DigitalTwin;
+    class Element;
 }
 
 namespace BACKEND_COMMUNICATION {
@@ -95,11 +96,20 @@ namespace BACKEND_COMMUNICATION {
         /**
          * Download the commits with its commit id and project id identifying the specific commit.
          * @param projectId UUID ("@id") of the project.
-         * @param commitId UUID ("@id") of the project
+         * @param commitId UUID ("@id") of the commit.
          * @return The complete Commit
          * @see ENTITIES::Commit
          */
         SysMLv2::Entities::Commit* getCommitWithId(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
+
+        /**
+         * Downloads all the elements of a specific commit.
+         * @param projectId UUID ("@id") of the project.
+         * @param commitId UUID ("@id") of the commit.
+         * @return All elements of the specific commit.
+         * @see ENTITIES::Element
+         */
+        std::vector<SysMLv2::Entities::Element*> getAllElementsOfCommit(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
         /**
          * Sets and checks internally the user, that the server is connected to.

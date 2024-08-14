@@ -68,12 +68,22 @@ namespace BACKEND_COMMUNICATION {
 
         /**
          *
+         * @param projectId
+         * @param commitId
+         * @param barrierString
+         * @return
+         */
+        static std::vector<SysMLv2::Entities::IEntity*> getAllElementsFromCommit(std::string projectId,std::string commitId, std::string barrierString);
+
+        /**
+         *
          * @param username
          * @param password
          * @return
          */
         static std::string loginUserWithPassword(const std::string& username,const std::string& password);
     private:
+
         /**
          *
          * @param urlAppendix
