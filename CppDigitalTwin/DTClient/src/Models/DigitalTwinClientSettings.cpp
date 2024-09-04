@@ -18,6 +18,8 @@ namespace DigitalTwin::Client {
 
         if (getRESTServer().isEmpty())
             resetToDefault();
+        if (getRESTFolder().isEmpty())
+            Settings->setValue(RESTFolderIdentifier,DefaultRestFolder);
     }
 
     void DigitalTwinClientSettings::resetToDefault() {
@@ -106,5 +108,17 @@ namespace DigitalTwin::Client {
 
     std::string DigitalTwinClientSettings::getRESTPasswordAsString() {
         return Settings->value(RESTPasswordIdentifier).toString().toStdString();
+    }
+
+    QString DigitalTwinClientSettings::getRESTFolder() {
+        return Settings->value(RESTFolderIdentifier).toString();
+    }
+
+    void DigitalTwinClientSettings::setRESTFolder(QString folder) {
+        Settings->setValue(RESTFolderIdentifier, folder);
+    }
+
+    std::string DigitalTwinClientSettings::getRESTFolderAsString() {
+        return Settings->value(RESTFolderIdentifier).toString().toStdString();
     }
 } // DigitalTwin::Client

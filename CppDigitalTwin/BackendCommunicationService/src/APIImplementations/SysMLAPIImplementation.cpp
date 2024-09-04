@@ -29,33 +29,16 @@
 
 namespace BACKEND_COMMUNICATION {
 
-    std::string SysMLAPIImplementation::ServerAddress = "http://localhost:8080/agila-server";
+    std::string SysMLAPIImplementation::ServerAddress = "http://localhost:8080/";
     std::string SysMLAPIImplementation::ReturnedHeaderData = "";
     std::string SysMLAPIImplementation::Data = "";
     struct curl_slist *SysMLAPIImplementation::HeaderList = NULL;
 
     std::string SysMLAPIImplementation::loginUserWithPassword(std::string const& username, std::string const& passwod) {
-        std::string barrierString;
-
-        CURLcode ServerResult;
-        nlohmann::json jsonData;
-        jsonData["email"] = username;
-        jsonData["password"] = passwod;
-
-
-        auto serverConnection = setUpServerConnection("users/login", "", jsonData.dump().c_str());
-
-        ServerResult = curl_easy_perform(serverConnection);
-        if (ServerResult == CURLE_OK) {
-            auto splittedAnswer = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(Data, ' ');
-            barrierString = splittedAnswer[2];
-        } else {
-            throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
-                    static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
-        }
-
-        curl_easy_cleanup(serverConnection);
-        return barrierString;
+        if(getVersionOfBackend()=="2.X")
+            return loginToBackendVersion2(username,passwod);
+        else
+            return loginToBackendVersion3(username,passwod);
     }
 
     void SysMLAPIImplementation::disconnectAndCleanUp() {
@@ -123,17 +106,19 @@ namespace BACKEND_COMMUNICATION {
         std::strcpy(completeServerAddress,serverAddress);
         std::strcat(completeServerAddress,urlAppendix);
 
+        std::cout<<"Asking for Element: "<<completeServerAddress<<std::endl;
+
         if(std::strcmp(barrierString, "")!=0)
             HeaderList = curl_slist_append(HeaderList, authorizationHeader);
+
+        HeaderList = curl_slist_append(HeaderList,"Content-Type: application/json");
 
         curl_easy_setopt(serverConnection, CURLOPT_URL, completeServerAddress);
         curl_easy_setopt(serverConnection, CURLOPT_WRITEFUNCTION, WriteBufferCallback);
         curl_easy_setopt(serverConnection, CURLOPT_WRITEDATA, &Data);
         curl_easy_setopt(serverConnection, CURLOPT_HEADERFUNCTION, WriteBufferCallback);
         curl_easy_setopt(serverConnection, CURLOPT_HEADERDATA, &ReturnedHeaderData);
-
-        if(std::strcmp(barrierString, "")!=0)
-            curl_easy_setopt(serverConnection, CURLOPT_HTTPHEADER, HeaderList);
+        curl_easy_setopt(serverConnection, CURLOPT_HTTPHEADER, HeaderList);
 
         if(std::strcmp(postPayload, "")!=0) {
             char* payload = new char[std::strlen(postPayload)+1];
@@ -292,4 +277,80 @@ namespace BACKEND_COMMUNICATION {
 
         return returnValue;
     }
+
+    std::string SysMLAPIImplementation::getVersionOfBackend() {
+        connectToServer(ServerAddress);
+        std::string returnValue;
+
+        CURLcode ServerResult;
+
+        std::string urlAppendix = "version";
+
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str());
+        ServerResult = curl_easy_perform(serverConnection);
+        if(ServerResult == CURLE_OK) {
+            long httpResult;
+            curl_easy_getinfo(serverConnection, CURLINFO_RESPONSE_CODE, &httpResult);
+
+            if(httpResult==STANDARDS::HTTP::HTTP_OK)
+                returnValue = Data;
+            else
+                returnValue="2.X";
+        }
+
+        curl_slist_free_all(HeaderList);
+        curl_easy_cleanup(serverConnection);
+
+        return returnValue;
+    }
+
+    std::string
+    SysMLAPIImplementation::loginToBackendVersion3(const std::string &username, const std::string &passwod) {
+        std::string barrierString;
+
+        CURLcode ServerResult;
+        nlohmann::json jsonData;
+        jsonData["username"] = username;
+        jsonData["password"] = passwod;
+
+
+        auto serverConnection = setUpServerConnection("login", "", jsonData.dump().c_str());
+
+        ServerResult = curl_easy_perform(serverConnection);
+        if (ServerResult == CURLE_OK) {
+            barrierString = Data;
+        } else {
+            throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
+                    static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
+        }
+
+        curl_easy_cleanup(serverConnection);
+        return barrierString;
+    }
+
+    std::string
+    SysMLAPIImplementation::loginToBackendVersion2(const std::string &username, const std::string &passwod) {
+        std::string barrierString;
+
+        CURLcode ServerResult;
+        nlohmann::json jsonData;
+        jsonData["email"] = username;
+        jsonData["password"] = passwod;
+
+
+        auto serverConnection = setUpServerConnection("users/login", "", jsonData.dump().c_str());
+
+        ServerResult = curl_easy_perform(serverConnection);
+        if (ServerResult == CURLE_OK) {
+            auto splittedAnswer = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(Data, ' ');
+            barrierString = splittedAnswer[2];
+        } else {
+            throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
+                    static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
+        }
+
+        curl_easy_cleanup(serverConnection);
+        return barrierString;
+    }
+
 }

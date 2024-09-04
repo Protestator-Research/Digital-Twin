@@ -27,19 +27,21 @@
 #include "APIImplementations/SysMLAPIImplementation.h"
 
 namespace BACKEND_COMMUNICATION {
-    CommunicationService::CommunicationService(std::string serverAddress, unsigned int port) :
-        ServerAddress(serverAddress),
-        Port(port)
+    CommunicationService::CommunicationService(std::string serverAddress, unsigned int port, std::string serverFolder) :
+            Entry_URI(serverFolder),
+            ServerAddress(serverAddress),
+            Port(port)
     {
         if(Port==443)
-            REST_PROTOCOL="https://";
+            REST_Protocol="https://";
 
-        if(!SysMLAPIImplementation::connectToServer(REST_PROTOCOL + ServerAddress + ":" + std::to_string(Port) + ENTRY_URI))
+        if(!SysMLAPIImplementation::connectToServer(REST_Protocol + ServerAddress + ":" + std::to_string(Port) + Entry_URI))
             throw EXCEPTIONS::ConnectionError(EXCEPTIONS::CONNECTION_ERROR_TYPE::COULD_NOT_CONNECT);
     }
 
-    CommunicationService::CommunicationService(std::string serverAddress) {
+    CommunicationService::CommunicationService(std::string serverAddress, std::string serverFolder) {
         ServerAddress = std::move(serverAddress);
+        Entry_URI = std::move(serverFolder);
     }
 
     std::vector<SysMLv2::Entities::IEntity*> CommunicationService::getAllElements(boost::uuids::uuid , boost::uuids::uuid ) {

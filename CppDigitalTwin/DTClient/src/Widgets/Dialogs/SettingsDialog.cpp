@@ -54,6 +54,7 @@ namespace DigitalTwin::Client {
         Settings->setRESTPort(Ui->SysMLServerPort->text());
         Settings->setRESTPassword(Ui->PasswordLineEdit->text());
         Settings->setRESTUser(Ui->UserLineEdit->text());
+        Settings->setRESTFolder(Ui->FolderLineEdit->text());
         accept();
     }
 
@@ -65,6 +66,7 @@ namespace DigitalTwin::Client {
         Ui->DTPortLineEdit->setText(Settings->getMQTTPort());
         Ui->UserLineEdit->setText(Settings->getRESTUser());
         Ui->PasswordLineEdit->setText(Settings->getRESTPassword());
+        Ui->FolderLineEdit->setText(Settings->getRESTFolder());
     }
 
     void SettingsDialog::resetToDefaults() {

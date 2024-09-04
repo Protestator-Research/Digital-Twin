@@ -18,15 +18,16 @@ namespace DigitalTwin::Client::ViewModels {
     }
 
     void ProjectTreeViewModel::setProjects(std::vector<SysMLv2::Entities::Project *> projects) {
-        beginInsertRows(QModelIndex(), 0, projects.size()-1);
+        if(projects.empty())
+            return;
 
+        beginInsertRows(QModelIndex(), 0, projects.size()-1);
         Projects = projects;
 
         for(auto project : Projects)
             RootItem->appendProject(project);
 
         endInsertRows();
-
         emit dataChanged(index(0,0), index(projects.size()-1,1), {Qt::DisplayRole});
     }
 

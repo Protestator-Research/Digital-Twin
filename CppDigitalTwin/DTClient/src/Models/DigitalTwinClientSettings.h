@@ -62,6 +62,10 @@ namespace DigitalTwin::Client {
 
         std::string getRESTPasswordAsString();
 
+        void setRESTFolder(QString folder);
+        QString getRESTFolder();
+        std::string getRESTFolderAsString();
+
     private:
         QSettings *Settings;
 
@@ -73,6 +77,8 @@ namespace DigitalTwin::Client {
         const QString DefaultRESTPort = "8080";
         const char *RESTLoginIdentifier = "RESTLogin";
         const QString DefaultRESTLogin = "admin@cps.de";
+        const char *RESTFolderIdentifier = "RESTFolder";
+        const QString DefaultRestFolder = "/agila-server/";
         const char *RESTPasswordIdentifier = "RESTPassword";
         const QString DefaultRESTPassword = "admin";
         const char *MQTTServerIdentifier = "MQTTServer";

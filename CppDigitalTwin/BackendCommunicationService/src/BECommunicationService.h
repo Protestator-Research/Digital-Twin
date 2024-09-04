@@ -42,12 +42,13 @@ namespace BACKEND_COMMUNICATION {
          * @param serverAddress Address of the Server. The server address can be an IP address or a url.
          * @param port Port of the AGILA Backend server.
          */
-        CommunicationService(std::string serverAddress, unsigned int port);
+        CommunicationService(std::string serverAddress, unsigned int port, std::string serverFolder);
         /**
         * Constructor allows for the settings for the connection to the AGILA Backend.
         * @param serverAddress Address of the Server. The server address can be an IP address or a url.
+        * @param serverFolder Folder where the Backend is directed to.
         */
-        explicit CommunicationService(std::string serverAddress);
+        CommunicationService(std::string serverAddress, std::string serverFolder);
 
         /**
          * D-Tor
@@ -120,8 +121,8 @@ namespace BACKEND_COMMUNICATION {
         bool setUserForLoginInBackend(std::string username, std::string password);
 
     private:
-        std::string REST_PROTOCOL = "http://";
-        const std::string ENTRY_URI = "/agila-server/";
+        std::string REST_Protocol = "http://";
+        std::string Entry_URI = "/agila-server/";
         std::string ServerAddress = "localhost";
         unsigned int Port = 8080;
 

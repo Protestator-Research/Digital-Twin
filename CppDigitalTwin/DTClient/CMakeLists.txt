@@ -4,6 +4,8 @@ project(CppDigitalTwinServer CXX)
 
 find_package(mqtt_cpp REQUIRED CONFIG)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui)
+find_package(md4c REQUIRED)
+
 qt_standard_project_setup()
 
 set(CMAKE_AUTOMOC ON)
@@ -30,6 +32,8 @@ add_executable(CppDigitalTwinClient
         src/Widgets/DigitalTwinTabWidget.cpp
         src/Widgets/DigitalTwinTabWidget.h
         ui/DigitalTwinTabWidget.ui
+        src/Models/Markdown/MarkdownParser.cpp
+        src/Models/Markdown/MarkdownParser.h
 )
 
 target_include_directories(CppDigitalTwinClient PUBLIC
@@ -44,7 +48,8 @@ target_link_libraries(CppDigitalTwinClient PUBLIC
         CppPhysicalTwinCommunication
         CPSBaseLib
         qt::qt
-        mqtt_cpp::mqtt_cpp)
+        mqtt_cpp::mqtt_cpp
+        md4c::md4c)
 
 if (!UNIX)
 set_target_properties(CppDigitalTwinClient PROPERTIES

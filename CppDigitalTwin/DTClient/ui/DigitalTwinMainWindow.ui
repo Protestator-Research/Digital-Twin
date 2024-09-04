@@ -24,7 +24,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>-1</number>
       </property>
      </widget>
     </item>
@@ -44,6 +44,8 @@
      <string>File</string>
     </property>
     <addaction name="actionSave_Results"/>
+    <addaction name="separator"/>
+    <addaction name="actionOpen_SysMLv2_File"/>
    </widget>
    <widget class="QMenu" name="menuRemotes">
     <property name="title">
@@ -145,6 +147,11 @@
   <action name="actionDisconnect">
    <property name="text">
     <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="actionOpen_SysMLv2_File">
+   <property name="text">
+    <string>Open SysMLv2 File</string>
    </property>
   </action>
  </widget>

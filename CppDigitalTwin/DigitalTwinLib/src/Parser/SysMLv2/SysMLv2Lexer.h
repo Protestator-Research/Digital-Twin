@@ -4,7 +4,7 @@
 #pragma once
 
 
-#include <antlr4-runtime.h>
+#include "antlr4-runtime.h"
 
 
 
@@ -19,8 +19,8 @@ public:
     FOR = 23, DELIMITER = 24, PORT = 25, ITEM = 26, PACKAGE = 27, DEFINITION = 28, 
     ATTRIBUTE = 29, MEASURABLE = 30, CONTROLLABLE = 31, ASSERT = 32, ACTION = 33, 
     ALIAS = 34, PRIVATE = 35, PROTECTED = 36, PUBLIC = 37, IMPORT = 38, 
-    ABSTRACT = 39, VARIATION = 40, VARIANT = 41, STAR = 42, NUMBER = 43, 
-    NAME = 44, INT = 45, WS = 46
+    ABSTRACT = 39, VARIATION = 40, VARIANT = 41, STAR = 42, CALC = 43, IN = 44, 
+    OUT = 45, RETURN = 46, NUMBER = 47, NAME = 48, INT = 49, WS = 50
   };
 
   explicit SysMLv2Lexer(antlr4::CharStream *input);

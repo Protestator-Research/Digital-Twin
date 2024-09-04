@@ -36,7 +36,7 @@ namespace SysMLv2::Entities {
         Branch(std::string jsonStringOrName);
 
         /**
-         *
+         * Compares the two Branches
          * @param other
          * @return
          */

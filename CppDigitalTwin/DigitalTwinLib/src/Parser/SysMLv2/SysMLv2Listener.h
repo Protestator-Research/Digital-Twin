@@ -3,7 +3,8 @@
 
 #pragma once
 
-#include <antlr4-runtime/antlr4-runtime.h>
+
+#include "antlr4-runtime.h"
 #include "SysMLv2Parser.h"
 
 
@@ -64,6 +65,18 @@ public:
   virtual void enterVariant(SysMLv2Parser::VariantContext *ctx) = 0;
   virtual void exitVariant(SysMLv2Parser::VariantContext *ctx) = 0;
 
+  virtual void enterFunction(SysMLv2Parser::FunctionContext *ctx) = 0;
+  virtual void exitFunction(SysMLv2Parser::FunctionContext *ctx) = 0;
+
+  virtual void enterInput(SysMLv2Parser::InputContext *ctx) = 0;
+  virtual void exitInput(SysMLv2Parser::InputContext *ctx) = 0;
+
+  virtual void enterOutput(SysMLv2Parser::OutputContext *ctx) = 0;
+  virtual void exitOutput(SysMLv2Parser::OutputContext *ctx) = 0;
+
+  virtual void enterReturn(SysMLv2Parser::ReturnContext *ctx) = 0;
+  virtual void exitReturn(SysMLv2Parser::ReturnContext *ctx) = 0;
+
   virtual void enterType_definition(SysMLv2Parser::Type_definitionContext *ctx) = 0;
   virtual void exitType_definition(SysMLv2Parser::Type_definitionContext *ctx) = 0;
 
@@ -102,6 +115,9 @@ public:
 
   virtual void enterUnit(SysMLv2Parser::UnitContext *ctx) = 0;
   virtual void exitUnit(SysMLv2Parser::UnitContext *ctx) = 0;
+
+  virtual void enterDefinition_rule(SysMLv2Parser::Definition_ruleContext *ctx) = 0;
+  virtual void exitDefinition_rule(SysMLv2Parser::Definition_ruleContext *ctx) = 0;
 
 
 };

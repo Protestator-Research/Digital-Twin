@@ -4,7 +4,7 @@
 #pragma once
 
 
-#include <antlr4-runtime.h>
+#include "antlr4-runtime.h"
 #include "SysMLv2Listener.h"
 
 
@@ -67,6 +67,18 @@ public:
   virtual void enterVariant(SysMLv2Parser::VariantContext * /*ctx*/) override { }
   virtual void exitVariant(SysMLv2Parser::VariantContext * /*ctx*/) override { }
 
+  virtual void enterFunction(SysMLv2Parser::FunctionContext * /*ctx*/) override { }
+  virtual void exitFunction(SysMLv2Parser::FunctionContext * /*ctx*/) override { }
+
+  virtual void enterInput(SysMLv2Parser::InputContext * /*ctx*/) override { }
+  virtual void exitInput(SysMLv2Parser::InputContext * /*ctx*/) override { }
+
+  virtual void enterOutput(SysMLv2Parser::OutputContext * /*ctx*/) override { }
+  virtual void exitOutput(SysMLv2Parser::OutputContext * /*ctx*/) override { }
+
+  virtual void enterReturn(SysMLv2Parser::ReturnContext * /*ctx*/) override { }
+  virtual void exitReturn(SysMLv2Parser::ReturnContext * /*ctx*/) override { }
+
   virtual void enterType_definition(SysMLv2Parser::Type_definitionContext * /*ctx*/) override { }
   virtual void exitType_definition(SysMLv2Parser::Type_definitionContext * /*ctx*/) override { }
 
@@ -105,6 +117,9 @@ public:
 
   virtual void enterUnit(SysMLv2Parser::UnitContext * /*ctx*/) override { }
   virtual void exitUnit(SysMLv2Parser::UnitContext * /*ctx*/) override { }
+
+  virtual void enterDefinition_rule(SysMLv2Parser::Definition_ruleContext * /*ctx*/) override { }
+  virtual void exitDefinition_rule(SysMLv2Parser::Definition_ruleContext * /*ctx*/) override { }
 
 
   virtual void enterEveryRule(antlr4::ParserRuleContext * /*ctx*/) override { }

@@ -82,6 +82,12 @@ namespace BACKEND_COMMUNICATION {
          * @return
          */
         static std::string loginUserWithPassword(const std::string& username,const std::string& password);
+
+        /**
+         *
+         * @return
+         */
+        static std::string getVersionOfBackend();
     private:
 
         /**
@@ -110,6 +116,9 @@ namespace BACKEND_COMMUNICATION {
          * @return
          */
         static INTERNAL_STATUS_CODE tryToResolveHTTPError(long httpErrorCode, void* instance);
+
+        static std::string loginToBackendVersion3(std::string const& username, std::string const& passwod);
+        static std::string loginToBackendVersion2(std::string const& username, std::string const& passwod);
 
         static std::string ServerAddress;
         static std::string ReturnedHeaderData;

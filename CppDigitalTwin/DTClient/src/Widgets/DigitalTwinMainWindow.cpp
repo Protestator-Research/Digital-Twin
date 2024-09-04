@@ -9,11 +9,15 @@
 #include "Dialogs/SettingsDialog.h"
 #include "../Models/MainWindowModel.h"
 
+#include <QFileDialog>
+#include <QStandardPaths>
+
 namespace DigitalTwin::Client {
     DigitalTwinMainWindow::DigitalTwinMainWindow(QWidget *parent) :
             QMainWindow(parent),
             ui(new Ui::DigitalTwinMainWindow),
             toolBar(new QToolBar(this)) {
+
         ui->setupUi(this);
 
         Model = new MainWindowModel(this);
@@ -32,6 +36,7 @@ namespace DigitalTwin::Client {
         connect(ui->actionConnect, SIGNAL(triggered(bool)), this, SLOT(connectToServer()));
         connect(ui->actionConnect_to_Remotes,&QAction::triggered, this, &DigitalTwinMainWindow::showSettingsDialog);
         connect(ui->ProjectTreeView, SIGNAL(clicked(const QModelIndex &)), Model, SLOT(onTreeViewClicked(const QModelIndex &)));
+        connect(ui->actionOpen_SysMLv2_File, SIGNAL(triggered(bool)), this, SLOT(openSysMLv2File()));
     }
 
     void DigitalTwinMainWindow::toggleButtonCheckBoxProjects(bool visibility) {
@@ -67,6 +72,13 @@ namespace DigitalTwin::Client {
 
     void DigitalTwinMainWindow::setProjectTreeViewModel(QAbstractItemModel *model) {
         ui->ProjectTreeView->setModel(model);
+    }
+
+    void DigitalTwinMainWindow::openSysMLv2File() {
+        auto paths = QFileDialog::getOpenFileNames(this,tr("Open SysMLv2 Files"),QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), tr("SysMLv2 Files (*.sysml);;Markdown Files (*.md)"));
+        if(!paths.isEmpty()) {
+            
+        }
     }
 
 } // DigitalTwin::Client

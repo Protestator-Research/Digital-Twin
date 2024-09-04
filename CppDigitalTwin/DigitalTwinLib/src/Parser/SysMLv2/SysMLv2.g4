@@ -16,7 +16,11 @@ start: start start |
        import_rule |
        abstraction |
        variation |
-       variant;
+       variant |
+       function |
+       input |
+       output |
+       return;
 
 
 dependency: DEPENDENCY namelist (FROM namelist)? TO namelist DELIMITER;
@@ -35,6 +39,10 @@ import_rule: IMPORT address DELIMITER;
 abstraction: ABSTRACT start;
 variation: VARIATION start;
 variant: VARIANT part;
+function: CALC definition_rule bracketed_content;
+input: IN NAME type_definition DELIMITER;
+output: OUT NAME type_definition DELIMITER;
+return: RETURN type_definition DELIMITER;
 
 type_definition: ':' address;
 about: ABOUT address(','address)*;
@@ -49,6 +57,7 @@ argument: NAME type_definition;
 delimiter_rule: (bracketed_content|DELIMITER);
 multiplicity: '[' (STAR | NUMBER) ']';
 unit: '[' NAME ']';
+definition_rule: DEFINITION NAME;
 
 DEPENDENCY: 'dependency';
 REPRESENTATION: 'rep';
@@ -81,6 +90,10 @@ ABSTRACT: 'abstract';
 VARIATION: 'variation';
 VARIANT: 'variant';
 STAR: '*';
+CALC: 'calc';
+IN: 'in';
+OUT: 'out';
+RETURN: 'return';
 
 NUMBER: [0-9]+;
 NAME: ('_'|[a-z]|[A-Z]|[0-9])+ ;
