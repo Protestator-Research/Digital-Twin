@@ -15,6 +15,7 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "StatusCode.h"
+#include "Interfaces/IAPIInterface.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -25,29 +26,26 @@ namespace SysMLv2::Entities {
 namespace BACKEND_COMMUNICATION {
     /**
      * Implements the Protocol of the SysMLv2 API Standard.
-     * @version 1.0
+     * @version 1.1
      * @author Moritz Herzog <herzogm@rptu.de>
      */
-    class SysMLAPIImplementation {
+    class SysMLAPIImplementation : public IAPIInterface{
     public:
         /**
-         * Deleted Constructor, because the Interface is Static
+         * Deleted Constructorr
          */
         SysMLAPIImplementation() = delete;
 
-        virtual ~SysMLAPIImplementation() = default;
+        /**
+         * The constructor that allows the needed server address.
+         * @param serverAddress Server address as a string.
+         */
+        SysMLAPIImplementation(std::string serverAddress);
 
         /**
-         *
-         * @param address
-         * @return
+         * D-TOR
          */
-        static bool connectToServer(std::string address);
-
-        /**
-         *
-         */
-        static void disconnectAndCleanUp();
+        virtual ~SysMLAPIImplementation();
 
         /**
          * Returns a std::vector of all projects that are available within the backend.
@@ -56,7 +54,7 @@ namespace BACKEND_COMMUNICATION {
          * @param barrierString The barrier authentication that is provided by the server.
          * @return A list of all Projects.
          */
-        static std::vector<SysMLv2::Entities::IEntity*> getAllProjects(std::string barrierString);
+        std::vector<SysMLv2::Entities::IEntity*> getAllProjects(std::string barrierString);
 
         /**
          * Downloads all digital twins from a project.
@@ -64,66 +62,59 @@ namespace BACKEND_COMMUNICATION {
          * @param barrierString
          * @return A vector of all digital twins, returned as a vector of IEntitiy.
          */
-        static std::vector<SysMLv2::Entities::IEntity*> getAllDigitalTwinsForProject(std::string projectId, std::string barrierString);
+        std::vector<SysMLv2::Entities::IEntity*> getAllDigitalTwinsForProject(std::string projectId, std::string barrierString);
 
         /**
-         *
-         * @param projectId
-         * @param commitId
-         * @param barrierString
-         * @return
+         * Downloads and returns all elements of a commit from a specific project.
+         * @param projectId The UUID of the Project as a String
+         * @param commitId The UUID of the Commit as a String
+         * @param barrierString The Barrier-String given after login.
+         * @return All elements received from the backend.
          */
-        static std::vector<SysMLv2::Entities::IEntity*> getAllElementsFromCommit(std::string projectId,std::string commitId, std::string barrierString);
+        std::vector<SysMLv2::Entities::IEntity*> getAllElementsFromCommit(std::string projectId,std::string commitId, std::string barrierString);
 
         /**
-         *
-         * @param username
-         * @param password
-         * @return
+         * Performs the login of the digital twin client and server at the backend. This login is also automatically
+         * algorithmically changed dependent on the version of the Backend.
+         * @param username The username as a string.
+         * @param password Password of the user.
+         * @return Barrier string after the login.
          */
-        static std::string loginUserWithPassword(const std::string& username,const std::string& password);
+        std::string loginUserWithPassword(const std::string& username,const std::string& password);
 
         /**
-         *
-         * @return
+         * Downloads the version of the backend. Version 3 of the backend has an endpoint to download the version of
+         * the Backend. Whereas the backend Version 2.X does not have the option. Thus the error is returning version 2.x.
+         * @return The version of the Backend.
          */
-        static std::string getVersionOfBackend();
+        std::string getVersionOfBackend();
+
+    protected:
+        CURL* setUpServerConnection(const char* urlAppendix, const char* barrierString, const char* postPayload) override;
+
+        INTERNAL_STATUS_CODE tryToResolveHTTPError(long httpErrorCode, void* instance) override;
+
+        /**
+         * Performs the login in to the AGILA backend from Version 3 and upwards
+         * @param username The username given as a string.
+         * @param passwod The password of the user given as a string.
+         * @return The barrier string from the server.
+         */
+        std::string loginToBackendVersion3(std::string const& username, std::string const& passwod);
+
+        /**
+         * Performs the login into the backend version 2.
+         * @param username The username given as a string.
+         * @param passwod The password of the user given as a string.
+         * @return The barrier string from the server.
+         */
+        std::string loginToBackendVersion2(std::string const& username, std::string const& passwod);
+
     private:
-
-        /**
-         *
-         * @param urlAppendix
-         * @param barrierString
-         * @param postPayload
-         * @return
-         */
-        static CURL* setUpServerConnection(const char* urlAppendix, const char* barrierString="", const char* postPayload="");
-
-        /**
-         *
-         * @param contents
-         * @param size
-         * @param nmemb
-         * @param userp
-         * @return
-         */
-        static size_t WriteBufferCallback(char *contents, size_t size, size_t nmemb, void* userp);
-
-        /**
-         *
-         * @param httpErrorCode
-         * @param instance
-         * @return
-         */
-        static INTERNAL_STATUS_CODE tryToResolveHTTPError(long httpErrorCode, void* instance);
-
-        static std::string loginToBackendVersion3(std::string const& username, std::string const& passwod);
-        static std::string loginToBackendVersion2(std::string const& username, std::string const& passwod);
-
-        static std::string ServerAddress;
-        static std::string ReturnedHeaderData;
-        static std::string Data;
-        static struct curl_slist *HeaderList;
+        std::string ServerAddress = "http://localhost:8080/";
+        std::string ReturnedHeaderData;
+        std::string Data;
+        struct curl_slist *HeaderList = NULL;
     };
 }
 

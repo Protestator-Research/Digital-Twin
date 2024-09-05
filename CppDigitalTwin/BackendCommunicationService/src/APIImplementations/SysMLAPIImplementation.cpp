@@ -29,10 +29,15 @@
 
 namespace BACKEND_COMMUNICATION {
 
-    std::string SysMLAPIImplementation::ServerAddress = "http://localhost:8080/";
-    std::string SysMLAPIImplementation::ReturnedHeaderData = "";
-    std::string SysMLAPIImplementation::Data = "";
-    struct curl_slist *SysMLAPIImplementation::HeaderList = NULL;
+    SysMLAPIImplementation::SysMLAPIImplementation(std::string serverAddress) {
+        curl_global_init(CURL_GLOBAL_ALL);
+
+        ServerAddress = serverAddress;
+    }
+
+    SysMLAPIImplementation::~SysMLAPIImplementation() {
+        disconnectAndCleanUp();
+    }
 
     std::string SysMLAPIImplementation::loginUserWithPassword(std::string const& username, std::string const& passwod) {
         if(getVersionOfBackend()=="2.X")
@@ -41,30 +46,11 @@ namespace BACKEND_COMMUNICATION {
             return loginToBackendVersion3(username,passwod);
     }
 
-    void SysMLAPIImplementation::disconnectAndCleanUp() {
-
-        curl_global_cleanup();
-    }
-
-    bool SysMLAPIImplementation::connectToServer(std::string address) {
-        curl_global_init(CURL_GLOBAL_ALL);
-
-        ServerAddress = address;
-
-        return true;
-    }
-
-    size_t SysMLAPIImplementation::WriteBufferCallback(char *contents, size_t size, size_t nmemb, void* userp){
-        ((std::string*)userp)->append((char*)contents, size * nmemb);
-        return size * nmemb;
-    }
-
     std::vector<SysMLv2::Entities::IEntity*> SysMLAPIImplementation::getAllProjects(std::string barrierString) {
-        connectToServer(ServerAddress);
         std::vector<SysMLv2::Entities::IEntity*> returnValue;
         CURLcode ServerResult;
 
-        auto serverConnection = setUpServerConnection("projects", barrierString.c_str());
+        auto serverConnection = setUpServerConnection("projects", barrierString.c_str(), "");
 
         ServerResult = curl_easy_perform(serverConnection);
 
@@ -130,13 +116,12 @@ namespace BACKEND_COMMUNICATION {
     }
 
     std::vector<SysMLv2::Entities::IEntity*> SysMLAPIImplementation::getAllDigitalTwinsForProject(std::string projectId, std::string barrierString) {
-        connectToServer(ServerAddress);
         std::vector<SysMLv2::Entities::IEntity*> returnValue;
         CURLcode ServerResult;
 
         std::string urlAppendix = "projects/" + projectId + "/digital-twin/";
 
-        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str());
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str(), "");
 
         ServerResult = curl_easy_perform(serverConnection);
 
@@ -249,14 +234,12 @@ namespace BACKEND_COMMUNICATION {
     SysMLAPIImplementation::getAllElementsFromCommit(std::string projectId, std::string commitId,
                                                      std::string barrierString) {
 
-
-        connectToServer(ServerAddress);
         std::vector<SysMLv2::Entities::IEntity*> returnValue;
         CURLcode ServerResult;
 
         std::string urlAppendix = "projects/" + projectId + "/commits/" + commitId + "/elements";
 
-        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str());
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str(), "");
 
         ServerResult = curl_easy_perform(serverConnection);
 
@@ -279,14 +262,13 @@ namespace BACKEND_COMMUNICATION {
     }
 
     std::string SysMLAPIImplementation::getVersionOfBackend() {
-        connectToServer(ServerAddress);
         std::string returnValue;
 
         CURLcode ServerResult;
 
         std::string urlAppendix = "version";
 
-        auto serverConnection = setUpServerConnection(urlAppendix.c_str());
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), "", "");
         ServerResult = curl_easy_perform(serverConnection);
         if(ServerResult == CURLE_OK) {
             long httpResult;
@@ -352,5 +334,4 @@ namespace BACKEND_COMMUNICATION {
         curl_easy_cleanup(serverConnection);
         return barrierString;
     }
-
 }

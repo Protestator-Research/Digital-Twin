@@ -10,12 +10,16 @@
 #include "entities/Tag.h"
 #include "entities/Query.h"
 #include "entities/DigitalTwin.h"
+#include "entities/Element.h"
 #include "../BaseFuctions/StringExtention.hpp"
 #include <nlohmann/json.hpp>
 #include <vector>
+#include <iostream>
 
 namespace SysMLv2 {
     SysMLv2::Entities::IEntity *SysMLv2Deserializer::deserializeJsonString(std::string inputValue) {
+        std::cout<<"Deserializing Value: "<<std::endl<<inputValue<<std::endl;
+
         nlohmann::json json = nlohmann::json::parse(inputValue);
 
         std::string type = CPSBASELIB::STD_EXTENTION::StringExtention::toLower(
@@ -39,10 +43,14 @@ namespace SysMLv2 {
         if(type==Entities::DIGITAL_TWIN_TYPE)
             return new Entities::DigitalTwin(inputValue);
 
+        if(type==Entities::ELEMENT_TYPE)
+            return new Entities::Element(inputValue);
+
         return nullptr;
     }
 
     std::vector<SysMLv2::Entities::IEntity*> SysMLv2Deserializer::deserializeJsonArray(std::string inputValue) {
+        std::cout<<"Deserializing Array: "<<std::endl<<inputValue<<std::endl;
         nlohmann::json json = nlohmann::json::parse(inputValue);
         std::vector<nlohmann::json> arrayValues = json.get<std::vector<nlohmann::json>>();
         std::vector<SysMLv2::Entities::IEntity*> returnValues;

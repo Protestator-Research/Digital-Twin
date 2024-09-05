@@ -27,6 +27,10 @@ namespace SysMLv2::Entities {
     class Element;
 }
 
+namespace BACKEND_COMMUNICATION{
+    class SysMLAPIImplementation;
+}
+
 namespace BACKEND_COMMUNICATION {
     /**
      * Abstracts the communication to an interface for the programmer. Allows the communication with the backend.
@@ -64,7 +68,7 @@ namespace BACKEND_COMMUNICATION {
          * @see std::vector
          * @see ENTITIES::Element
          */
-        std::vector<SysMLv2::Entities::IEntity*> getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId);
+        std::vector<SysMLv2::Entities::Element*> getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId);
 
         /**
          * Creates a connection to the REST endpoint of the given AGILA Backend sever, to get all saved projects within the instance of the Backend
@@ -127,5 +131,7 @@ namespace BACKEND_COMMUNICATION {
         unsigned int Port = 8080;
 
         std::string BarrierString = "";
+
+        SysMLAPIImplementation* APIImplementation;
     };
 }

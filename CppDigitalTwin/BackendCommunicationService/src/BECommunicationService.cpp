@@ -22,9 +22,8 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "BECommunicationService.h"
-#include "Exeptions/ConnectionError.h"
-
 #include "APIImplementations/SysMLAPIImplementation.h"
+
 
 namespace BACKEND_COMMUNICATION {
     CommunicationService::CommunicationService(std::string serverAddress, unsigned int port, std::string serverFolder) :
@@ -35,8 +34,7 @@ namespace BACKEND_COMMUNICATION {
         if(Port==443)
             REST_Protocol="https://";
 
-        if(!SysMLAPIImplementation::connectToServer(REST_Protocol + ServerAddress + ":" + std::to_string(Port) + Entry_URI))
-            throw EXCEPTIONS::ConnectionError(EXCEPTIONS::CONNECTION_ERROR_TYPE::COULD_NOT_CONNECT);
+        APIImplementation = new SysMLAPIImplementation(REST_Protocol + ServerAddress + ":" + std::to_string(Port) + Entry_URI);
     }
 
     CommunicationService::CommunicationService(std::string serverAddress, std::string serverFolder) {
@@ -44,13 +42,18 @@ namespace BACKEND_COMMUNICATION {
         Entry_URI = std::move(serverFolder);
     }
 
-    std::vector<SysMLv2::Entities::IEntity*> CommunicationService::getAllElements(boost::uuids::uuid , boost::uuids::uuid ) {
+    std::vector<SysMLv2::Entities::Element*> CommunicationService::getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId) {
+        auto entities = APIImplementation->getAllElementsFromCommit(boost::lexical_cast<std::string>(projectId),boost::lexical_cast<std::string>(commitId), BarrierString);
+        std::vector<SysMLv2::Entities::Element*> elements;
 
-        return std::vector<SysMLv2::Entities::IEntity*>();
+        for(auto entitiy : entities)
+            elements.push_back(dynamic_cast<SysMLv2::Entities::Element*>(entitiy));
+
+        return elements;
     }
 
     std::vector<SysMLv2::Entities::Project*> CommunicationService::getAllProjects() {
-        auto projects = SysMLAPIImplementation::getAllProjects(BarrierString);
+        auto projects = APIImplementation->getAllProjects(BarrierString);
         std::vector<SysMLv2::Entities::Project*> returnValue;
 
         for(auto oldProject : projects)
@@ -64,7 +67,7 @@ namespace BACKEND_COMMUNICATION {
     }
 
     std::vector<SysMLv2::Entities::DigitalTwin*> CommunicationService::getAllDigitalTwinsForProjectWithId(boost::uuids::uuid projectId) {
-        auto twins = SysMLAPIImplementation::getAllDigitalTwinsForProject(boost::lexical_cast<std::string>(projectId),BarrierString);
+        auto twins = APIImplementation->getAllDigitalTwinsForProject(boost::lexical_cast<std::string>(projectId),BarrierString);
         std::vector<SysMLv2::Entities::DigitalTwin*> returnValue;
 
         for(auto oldTwin : twins)
@@ -81,7 +84,7 @@ namespace BACKEND_COMMUNICATION {
 
 
     bool CommunicationService::setUserForLoginInBackend(std::string username, std::string password) {
-        BarrierString = SysMLAPIImplementation::loginUserWithPassword(username,password);
+        BarrierString = APIImplementation->loginUserWithPassword(username,password);
         return !BarrierString.empty();
     }
 
@@ -91,7 +94,7 @@ namespace BACKEND_COMMUNICATION {
 
     std::vector<SysMLv2::Entities::Element *>
     CommunicationService::getAllElementsOfCommit(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
-        auto elements = SysMLAPIImplementation::getAllElementsFromCommit(boost::lexical_cast<std::string>(projectId),boost::lexical_cast<std::string>(commitId), BarrierString);
+        auto elements = APIImplementation->getAllElementsFromCommit(boost::lexical_cast<std::string>(projectId),boost::lexical_cast<std::string>(commitId), BarrierString);
         std::vector<SysMLv2::Entities::Element*> returnValue;
 
         for(auto elem : elements)

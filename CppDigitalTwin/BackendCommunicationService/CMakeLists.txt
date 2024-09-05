@@ -19,7 +19,9 @@ add_library(CppBackendCommunication
         src/APIImplementations/Standards/HttpReturnCodes.h
         src/APIImplementations/StatusCode.h
         src/Exeptions/HttpException.cpp
-        src/Exeptions/HttpException.h)
+        src/Exeptions/HttpException.h
+        src/APIImplementations/Interfaces/IAPIInterface.cpp
+        src/APIImplementations/Interfaces/IAPIInterface.h)
 
 target_link_libraries(CppBackendCommunication
         CURL::libcurl
