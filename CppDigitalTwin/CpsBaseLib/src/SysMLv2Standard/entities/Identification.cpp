@@ -1,5 +1,5 @@
 //
-// Created by Moritz Herzog on 27.02.24.
+// Created by Moritz Herzog on 05.09.24.
 //
 //---------------------------------------------------------
 // Constants, Definitions, Pragmas
@@ -8,46 +8,36 @@
 //---------------------------------------------------------
 // External Classes
 //---------------------------------------------------------
+#include <nlohmann/json.hpp>
 #include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/lexical_cast.hpp>
-#include <nlohmann/json.hpp>
-
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
-#include "Data.h"
+#include "Identification.h"
 #include "JSONEntities.h"
 
-namespace SysMLv2::Entities {
-    Data::Data() {
-        Id = boost::uuids::random_generator()();
-    }
 
-    Data::Data(boost::uuids::uuid id) {
+namespace SysMLv2::Entities {
+
+    Identification::Identification(boost::uuids::uuid id) {
         Id = id;
     }
 
-    Data::Data(std::string jsonString) {
-        nlohmann::json json = nlohmann::json::parse(jsonString);
+    Identification::Identification(std::string JSONstring) {
+        nlohmann::json json = nlohmann::json::parse(JSONstring);
         Id = boost::uuids::string_generator()(json[JSON_ID_ENTITY].get<std::string>());
-        Type = json[JSON_TYPE_ENTITY].get<std::string>();
     }
 
-    boost::uuids::uuid Data::getId() {
-        return Id;
-    }
-
-    std::string Data::getType() {
-        return Type;
-    }
-
-    std::string Data::serializeToJson() {
+    std::string Identification::serializeToJson() {
         nlohmann::json json;
         json[JSON_ID_ENTITY] = boost::lexical_cast<std::string>(Id);
-        json[JSON_TYPE_ENTITY] = Type;
         return json.dump();
     }
 
+    boost::uuids::uuid Identification::getID() {
+        return Id;
+    }
 }

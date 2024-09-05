@@ -30,18 +30,43 @@ namespace SysMLv2::Entities {
      */
     class Data  : public IEntity{
     public:
+        /**
+         * C-Tor
+         */
         Data();
+
+        /**
+         * C-Tor with the option to set the id.
+         * @param id The given ID of the Data element
+         */
         Data(boost::uuids::uuid id);
+
+        /**
+         * C-Tor allowing for the parsing of the JSON String.
+         * @param jsonString The JSON string that is to be parsed.
+         */
         Data(std::string jsonString);
 
         virtual ~Data() = default;
 
+        /**
+         * Returns the Id that was given.
+         * @return The Id as a UUID
+         * @see boost::uuids::uuid
+         */
         boost::uuids::uuid getId();
 
+        /**
+         * Returns the type of the data element.
+         * @return Type as a String
+         */
         std::string getType();
 
         std::string serializeToJson() override;
     protected:
+        /**
+         * Type of the element.
+         */
         std::string Type;
     private:
         boost::uuids::uuid Id;

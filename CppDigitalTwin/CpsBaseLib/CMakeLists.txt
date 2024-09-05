@@ -50,6 +50,8 @@ add_library(CPSBaseLib
         src/SysMLv2Standard/SysMLv2Deserializer.h
         src/AGILABackendImplementation/Authentication.cpp
         src/AGILABackendImplementation/Authentication.h
+        src/SysMLv2Standard/entities/Identification.cpp
+        src/SysMLv2Standard/entities/Identification.h
 )
 
 set_target_properties(CPSBaseLib PROPERTIES LINKER_LANGUAGE CXX)
