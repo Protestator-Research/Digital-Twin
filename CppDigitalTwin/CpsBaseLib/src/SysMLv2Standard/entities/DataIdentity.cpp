@@ -63,7 +63,7 @@ namespace SysMLv2::Entities {
             return false;
 
         for(size_t i = 0; i<Version.size(); i++)
-            if(Version[i]!=other.Version[i])
+            if(Version[i] != other.Version[i])
                 return false;
 
         return true;

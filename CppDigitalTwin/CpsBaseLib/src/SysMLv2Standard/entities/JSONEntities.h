@@ -19,26 +19,49 @@
 //---------------------------------------------------------
 
 namespace SysMLv2::Entities {
-    //Generally used
+    // Generally used
     const std::string JSON_ID_ENTITY = "@id";
     const std::string JSON_TYPE_ENTITY = "@type";
-    //Used for Record and the Superclasses
+    // Used for Record and the Superclasses
     const std::string JSON_NAME_ENTITY = "name";
     const std::string JSON_ALIAS_ENTITY = "alias";
     const std::string JSON_DESCRIPTION_ENTITY = "description";
-    //Used for Project
+    // Used for Project
     const std::string JSON_DEFAULT_BRANCH_ENTITY = "defaultBranch";
     const std::string JSON_CREATION_ENTITY = "created";
     const std::string JSON_BRANCHES_LIST = "branches_list";
     const std::string JSON_COMMIT_LIST = "commits";
     const std::string JSON_HEAD_ID_LIST = "heads";
-    //Used for Digital Twin
+    // Used for Digital Twin
     const std::string JSON_CONNECTED_MODELS = "connectedModels";
     const std::string JSON_PARENT_PROJECT = "parentProject";
     const std::string JSON_BRANCH_ID = "branchId";
     const std::string JSON_COMMIT_ID = "commitId";
-
-
+    // Used for the element implementation of the Agila Backend
+    const std::string JSON_SHORT_NAME_ENTITY = "shortName";
+    const std::string JSON_DECLARED_NAME_ENTITY = "declaredName";
+    const std::string JSON_DECLARED_SHORT_NAME_ENTITY = "declaredShortName";
+    const std::string JSON_OWNED_ELEMENTS_ENTITY = "ownedElements";
+    const std::string JSON_OWNER_ENTITY = "owner";
+    const std::string JSON_OWNING_MEMBERSHIP_ENTITY = "owningMembership";
+    const std::string JSON_OWNING_NAMESPACE_ENTITY = "owningNamespace";
+    const std::string JSON_OWNING_RELATIONSHIP_ENTITY = "owningRelationship";
+    const std::string JSON_DIRECTION_ENTITY = "direction";
+    const std::string JSON_VALUE_STRING_ENTITY = "valueStr";
+    const std::string JSON_IMPORTED_MEMBER_NAME_ENTITY = "importedMemberName";
+    const std::string JSON_IMPORTED_NAMESPACE_ENTITY = "importedNamespace";
+    const std::string JSON_LANGUAGE_ENTITY = "language";
+    const std::string JSON_BODY_ENTITY = "body";
+    const std::string JSON_SOURCE_ENTITY = "source";
+    const std::string JSON_TARGET_ENTITY = "target";
+    const std::string JSON_IS_STANDARD_ENTITY = "isStandard";
+    const std::string JSON_IS_LIBRARY_ELEMENT_ENTITY = "isLibraryElement";
+    const std::string JSON_IS_IMPLIED_ELEMENT_ENTITY = "isImplied";
+    const std::string JSON_IS_IMPLIED_INCLUDED_ENTITY = "isImpliedIncluded";
+    const std::string JSON_DOCUMENTATION_ENTITY = "documentation";
+    const std::string JSON_TEXTUAL_REPRESENTATION_ENTITY = "textualRepresentation";
+    const std::string JSON_ALIAS_ID_ENTITY = "aliasIds";
+    const std::string JSON_ELEMENT_ID_ENTITY = "elementId";
 
 
     //Type Strings

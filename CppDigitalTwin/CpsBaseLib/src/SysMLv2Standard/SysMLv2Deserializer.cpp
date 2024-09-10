@@ -43,7 +43,7 @@ namespace SysMLv2 {
         if(type==Entities::DIGITAL_TWIN_TYPE)
             return new Entities::DigitalTwin(inputValue);
 
-        if(type==Entities::ELEMENT_TYPE)
+        if(checkIfIsElementType(type))
             return new Entities::Element(inputValue);
 
         return nullptr;
@@ -59,5 +59,15 @@ namespace SysMLv2 {
             returnValues.emplace_back(SysMLv2Deserializer::deserializeJsonString(elem.dump()));
         }
         return returnValues;
+    }
+
+    bool SysMLv2Deserializer::checkIfIsElementType(std::string type) {
+        std::vector<std::string> element_names = {"Element", "AnnotatingElement","Annotation", "Association", "Classifier", "Class", "Comment", "Connector", "DataType", "Dependency", "Documentation", "Element", "FeatureTyping", "NamespaceImport", "MembershipImport", "Multiplicity", "Specialization", "Subsetting", "Type", "Feature", "Expression", "Invairant", "Package", "Namespace", "Redefinition", "Relationship", "ReferencedSubsetting", "TextualRepresentation"};
+
+        for(auto elem_name : element_names)
+            if(type == CPSBASELIB::STD_EXTENTION::StringExtention::toLower(elem_name))
+                return true;
+
+        return false;
     }
 } // SysMLv2

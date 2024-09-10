@@ -3,10 +3,15 @@
 //
 
 #include <gtest/gtest.h>
+#include <typeinfo>
 #include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
+#include <SysMLv2Standard/entities/Identification.h>
 #include <SysMLv2Standard/entities/DataIdentity.h>
 #include <SysMLv2Standard/entities/Project.h>
 #include <SysMLv2Standard/entities/Branch.h>
+#include <SysMLv2Standard/entities/Element.h>
 #include <SysMLv2Standard/SysMLv2Deserializer.h>
 
 /**
@@ -362,7 +367,7 @@ TEST(TestDeserialization,TestDeserializeMultibleElement) {
                              "      \"target\":[],"
                              "      \"isStandard\":null,"
                              "      \"isLibraryElement\":null,"
-                             "      \"isImplied\":null,#"
+                             "      \"isImplied\":null,"
                              "      \"isImpliedIncluded\":null,"
                              "      \"documentation\":null,"
                              "      \"textualRepresentation\":null,"
@@ -550,7 +555,7 @@ TEST(TestDeserialization,TestDeserializeMultibleElement) {
                              "      \"declaredName\":null,"
                              "      \"declaredShortName\":null,"
                              "      \"ownedElements\":[],"
-                             "      \"owner\":{\"@id\":\"10aac60e-3f21-467e-90c4-32bedb1f8738\"},#"
+                             "      \"owner\":{\"@id\":\"10aac60e-3f21-467e-90c4-32bedb1f8738\"},"
                              "      \"owningMembership\":null,"
                              "      \"owningNamespace\":null,"
                              "      \"owningRelationship\":null,"
@@ -598,7 +603,7 @@ TEST(TestDeserialization,TestDeserializeMultibleElement) {
                              "      \"documentation\":null,"
                              "      \"textualRepresentation\":null,"
                              "      \"aliasIds\":[],"
-                             "      \"elementId\":\"f90f3ced-b313-498e-8ab1-fda93c2af922\"#"
+                             "      \"elementId\":\"f90f3ced-b313-498e-8ab1-fda93c2af922\""
                              "  },"
                              "  {"
                              "      \"@id\":\"f81a36d2-3d26-4ce4-a2b5-a012fcda4c7e\","
@@ -704,7 +709,7 @@ TEST(TestDeserialization,TestDeserializeMultibleElement) {
                              "      \"importedMemberName\":\"null\","
                              "      \"importedNamespace\":\"null\","
                              "      \"language\":\"Markdown\","
-                             "      \"body\":\"\\n## Battery\\n\\nThe battery that is charged and discharged. Normally the battery as a specific side on the dc-dc converter.\",#"
+                             "      \"body\":\"\\n## Battery\\n\\nThe battery that is charged and discharged. Normally the battery as a specific side on the dc-dc converter.\","
                              "      \"source\":[],"
                              "      \"target\":[],"
                              "      \"isStandard\":null,"
@@ -733,7 +738,7 @@ TEST(TestDeserialization,TestDeserializeMultibleElement) {
                              "      \"importedMemberName\":\"null\","
                              "      \"importedNamespace\":\"null\","
                              "      \"language\":\"SysML\","
-                             "      \"body\":\"part Battery {\\n    port plusVoltage : CablePort;\\n    port referenceVoltage : CablePort;\\n    measurable batteryVoltage : Voltage;\\n    attribute internalResistance : Resistance;\\n    controllable offSwitch : Boolean;\\n}\",#"
+                             "      \"body\":\"part Battery {\\n    port plusVoltage : CablePort;\\n    port referenceVoltage : CablePort;\\n    measurable batteryVoltage : Voltage;\\n    attribute internalResistance : Resistance;\\n    controllable offSwitch : Boolean;\\n}\","
                              "      \"source\":[],"
                              "      \"target\":[],"
                              "      \"isStandard\":null,"
@@ -771,7 +776,7 @@ TEST(TestDeserialization,TestDeserializeMultibleElement) {
                              "      \"isImpliedIncluded\":null,"
                              "      \"documentation\":null,"
                              "      \"textualRepresentation\":null,"
-                             "      \"aliasIds\":[],#"
+                             "      \"aliasIds\":[],"
                              "      \"elementId\":\"22bc987b-3dc7-4c4b-b9da-0e01f5e5b720\""
                              "  },"
                              "  {"
@@ -862,5 +867,113 @@ TEST(TestDeserialization,TestDeserializeMultibleElement) {
                              "      \"elementId\":\"bc3472ef-d3d4-46c3-9702-ae53a0265f54\""
                              "  }"
                              "]";
-    FAIL()
+    auto elements = SysMLv2::SysMLv2Deserializer::deserializeJsonArray(jsonString);
+    EXPECT_EQ(elements.size(),26);
 }
+
+TEST(TestDeserialization, AnnotatingElementExample) {
+    std::string jsonElement = "  {"
+                              "      \"@id\":\"10aac60e-3f21-467e-90c4-32bedb1f8738\","
+                              "      \"@type\":\"AnnotatingElement\","
+                              "      \"name\":\"Adding Content for the Digital Twin.md\","
+                              "      \"shortName\":null,"
+                              "      \"declaredName\":null,"
+                              "      \"declaredShortName\":null,"
+                              "      \"ownedElements\":"
+                              "          ["
+                              "              {\"@id\":\"f3ed8612-3e5a-40df-8b59-8f98d3b9a4d4\"},"
+                              "              {\"@id\":\"d8fe3743-4161-4115-81c3-ebb8273438fd\"},"
+                              "              {\"@id\":\"c700555b-6d0c-45d3-8a37-db5a209790fe\"},"
+                              "              {\"@id\":\"13cbe0ba-9cc3-4675-834a-d9fa1f0057fd\"},"
+                              "              {\"@id\":\"b6b8e029-cef4-4642-bd10-eab4cc4f75e5\"},"
+                              "              {\"@id\":\"221e93c4-93a3-4704-af48-2871ec6ffe6b\"},"
+                              "              {\"@id\":\"6edc9647-e439-4186-be3f-77f41ccb9b1e\"},"
+                              "              {\"@id\":\"da5c02d9-9395-4a42-a27c-57ef0591eca0\"},"
+                              "              {\"@id\":\"9d7d2ee9-1878-4fbf-b4a2-bca13ee9909d\"},"
+                              "              {\"@id\":\"dc44569e-e398-4862-a5d5-c7f58b9e9d9e\"},"
+                              "              {\"@id\":\"41ac9836-7e46-45b8-aad4-749f9daf3d44\"},"
+                              "              {\"@id\":\"0c6ebb14-4356-41f5-9c2a-99dae13e4636\"},"
+                              "              {\"@id\":\"6ddfa90b-fe26-4894-8ae5-4d34fff212b3\"},"
+                              "              {\"@id\":\"7b269e6f-7acf-4926-b38c-ee127c7649aa\"},"
+                              "              {\"@id\":\"24214046-a192-4e20-92be-09c097011853\"},"
+                              "              {\"@id\":\"f90f3ced-b313-498e-8ab1-fda93c2af922\"},"
+                              "              {\"@id\":\"f81a36d2-3d26-4ce4-a2b5-a012fcda4c7e\"},"
+                              "              {\"@id\":\"f51e7ccd-c58d-42d6-b290-c0c5743aa0bb\"},"
+                              "              {\"@id\":\"a2f70cea-0a1c-41be-9bf3-cb28bd6f5fed\"},"
+                              "              {\"@id\":\"c67d4d72-5168-4eb0-a9bd-f85d29156d83\"},"
+                              "              {\"@id\":\"9b99d15e-175d-4b6c-a036-49177dbddba8\"},"
+                              "              {\"@id\":\"22bc987b-3dc7-4c4b-b9da-0e01f5e5b720\"},"
+                              "              {\"@id\":\"c0316132-51bf-4fa8-9707-c08c15521a3f\"},"
+                              "              {\"@id\":\"e9d66df1-6f2a-4a0e-b8dd-e15d58e8e6d6\"},"
+                              "              {\"@id\":\"bc3472ef-d3d4-46c3-9702-ae53a0265f54\"}"
+                              "          ],"
+                              "      \"owner\": {\"@id\":null},"
+                              "      \"owningMembership\":null,"
+                              "      \"owningNamespace\":null,"
+                              "      \"owningRelationship\":null,"
+                              "      \"direction\":null,"
+                              "      \"valueStr\":null,"
+                              "      \"importedMemberName\":\"null\","
+                              "      \"importedNamespace\":\"null\","
+                              "      \"language\":null,"
+                              "      \"body\":\"\","
+                              "      \"source\":[],"
+                              "      \"target\":[],"
+                              "      \"isStandard\":null,"
+                              "      \"isLibraryElement\":null,"
+                              "      \"isImplied\":null,"
+                              "      \"isImpliedIncluded\":null,"
+                              "      \"documentation\":null,"
+                              "      \"textualRepresentation\":null,"
+                              "      \"aliasIds\":[],"
+                              "      \"elementId\":\"10aac60e-3f21-467e-90c4-32bedb1f8738\""
+                              "  }";
+    auto entity = SysMLv2::SysMLv2Deserializer::deserializeJsonString(jsonElement);
+    EXPECT_TRUE(entity!=NULL);
+    if(entity!=NULL) {
+        auto element = dynamic_cast<SysMLv2::Entities::Element *>(entity);
+        EXPECT_EQ(boost::lexical_cast<std::string>(element->getId()), "10aac60e-3f21-467e-90c4-32bedb1f8738");
+        EXPECT_EQ(element->ownedElements().size(), 25);
+    }
+}
+
+TEST(TestDeserialization, TextualRepresentation) {
+    std::string jsonElement = "  {"
+                              "      \"@id\":\"bc3472ef-d3d4-46c3-9702-ae53a0265f54\","
+                              "      \"@type\":\"TextualRepresentation\","
+                                                           "      \"name\":null,"
+                                                           "      \"shortName\":null,"
+                                                           "      \"declaredName\":null,"
+                                                           "      \"declaredShortName\":null,"
+                                                           "      \"ownedElements\":[],"
+                                                           "      \"owner\":{\"@id\":\"10aac60e-3f21-467e-90c4-32bedb1f8738\"},"
+                                                           "      \"owningMembership\":null,"
+                                                           "      \"owningNamespace\":null,"
+                                                           "      \"owningRelationship\":null,"
+                                                           "      \"direction\":null,"
+                                                           "      \"valueStr\":null,"
+                                                           "      \"importedMemberName\":\"null\","
+                                                           "      \"importedNamespace\":\"null\","
+                                                           "      \"language\":\"SysML\","
+                                                           "      \"body\":\"part EVCharger {\\n    part grid : Grid;\\n    part acdc : ACDC;\\n    part dcdc : DCDC;\\n    part battery : Battery;\\n    part load : Load;\\n}\\n\\nEVCharger::grid::ACVoltage connectTo EVCharger::acdc::ACVoltage;\\nEVCharger::acdc::DCVoltage connectTo EVCharger::dcdc::DCVoltageInput;\\nEVCharger::dcdc::DCVoltageOutput connectTo EVCharger::battery::DCVoltageOutput;\\nEVCharger::dcdc::DCVoltageOutput connectTo EVCharger::load::DCVoltage;\","
+                                                           "      \"source\":[],"
+                                                           "      \"target\":[],"
+                                                           "      \"isStandard\":null,"
+                                                           "      \"isLibraryElement\":null,"
+                                                           "      \"isImplied\":null,"
+                                                           "      \"isImpliedIncluded\":null,"
+                                                           "      \"documentation\":null,"
+                                                           "      \"textualRepresentation\":null,"
+                                                           "      \"aliasIds\":[],"
+                                                           "      \"elementId\":\"bc3472ef-d3d4-46c3-9702-ae53a0265f54\""
+                                                           "  }";
+    auto entity = SysMLv2::SysMLv2Deserializer::deserializeJsonString(jsonElement);
+    EXPECT_TRUE(entity!=NULL);
+    if(entity!=NULL) {
+        auto element = dynamic_cast<SysMLv2::Entities::Element *>(entity);
+        EXPECT_EQ(boost::lexical_cast<std::string>(element->getId()), "bc3472ef-d3d4-46c3-9702-ae53a0265f54");
+        EXPECT_EQ(boost::lexical_cast<std::string>(element->owner()->getID()),"10aac60e-3f21-467e-90c4-32bedb1f8738");
+        EXPECT_EQ(element->body(), "part EVCharger {\n    part grid : Grid;\n    part acdc : ACDC;\n    part dcdc : DCDC;\n    part battery : Battery;\n    part load : Load;\n}\n\nEVCharger::grid::ACVoltage connectTo EVCharger::acdc::ACVoltage;\nEVCharger::acdc::DCVoltage connectTo EVCharger::dcdc::DCVoltageInput;\nEVCharger::dcdc::DCVoltageOutput connectTo EVCharger::battery::DCVoltageOutput;\nEVCharger::dcdc::DCVoltageOutput connectTo EVCharger::load::DCVoltage;");
+    }
+}
+

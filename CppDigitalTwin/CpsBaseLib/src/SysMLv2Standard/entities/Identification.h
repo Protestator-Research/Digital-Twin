@@ -10,13 +10,20 @@
 // External Classes
 //---------------------------------------------------------
 #include <boost/uuid/uuid.hpp>
+#include <nlohmann/json.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/random_generator.hpp>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
 #include "IEntity.h"
+#include "JSONEntities.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
+
 
 namespace SysMLv2::Entities {
     /**
@@ -31,7 +38,7 @@ namespace SysMLv2::Entities {
         /**
          * CTOR deleted
          */
-        Identification() = delete;
+        Identification() = default;
 
         /**
          * Builds the Idenfication object from the uuid
@@ -49,20 +56,38 @@ namespace SysMLv2::Entities {
         /**
          * D-Tor
          */
-        ~Identification() = default;
+        virtual ~Identification() = default;
 
         /**
          * Returns the Id of the given Object.
          * @return Id of the object as uuid
          * @see boost::uuids::uuid
          */
-        boost::uuids::uuid getID();
+        boost::uuids::uuid getID() const;
 
         std::string serializeToJson() override;
 
+        Identification& operator=(const Identification& other);
+
     private:
-        boost::uuids::uuid Id;
+        boost::uuids::uuid Id = boost::uuids::random_generator()();
     };
 }
+
+inline void to_json(nlohmann::json &j, const SysMLv2::Entities::Identification &ident) {
+    j = nlohmann::json{{SysMLv2::Entities::JSON_ID_ENTITY, boost::lexical_cast<std::string>(ident.getID())}};
+}
+
+inline void to_json(nlohmann::json &j, const SysMLv2::Entities::Identification* ident) {
+    if(ident != nullptr)
+        j = nlohmann::json{{SysMLv2::Entities::JSON_ID_ENTITY, boost::lexical_cast<std::string>(ident->getID())}};
+    else
+        j = nlohmann::json(nlohmann::detail::value_t::null);
+}
+
+inline void from_json(const nlohmann::json &j, SysMLv2::Entities::Identification &ident) {
+    ident = SysMLv2::Entities::Identification(boost::uuids::string_generator()(j[SysMLv2::Entities::JSON_ID_ENTITY].get<std::string>()));
+}
+
 
 #endif //DIGITALTWIN_IDENTIFICATION_H

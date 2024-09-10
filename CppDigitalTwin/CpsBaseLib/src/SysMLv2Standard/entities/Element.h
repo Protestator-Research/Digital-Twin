@@ -11,6 +11,7 @@
 //---------------------------------------------------------
 #include <vector>
 #include <string>
+#include <nlohmann/json.hpp>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
@@ -47,45 +48,78 @@ namespace SysMLv2::Entities {
         /**
          * D-Tor
          */
-        ~Element();
+        virtual ~Element();
 
         std::string serializeToJson() override;
+
+        void setName(std::string name);
+        std::string name();
+        void setShortName(std::string shortName);
+        std::string shortName();
+        void setDeclaredName(std::string declaredName);
+        std::string declaredName();
+        void setDeclaredShortName(std::string declaredShortName);
+        std::string getDeclaredShortName();
+        std::vector<Identification*> ownedElements();
+        Identification* owner() const;
+        Identification* owningMembership() const;
+        Identification* owningNamespace() const;
+        Identification* owningRelationship() const;
+
+        std::string direction();
+        std::string importedMemberName();
+        std::string importedNamespace();
+
+        std::string valueString();
+
+        std::string language();
+        std::string body();
+
+        bool isImplied();
+        bool isImpliedIncluded();
+        bool isStandard();
+        bool isLibrary();
+
+        Identification* documentation() const;
+
+        std::vector<Identification*> textualRepresentation();
+
+        std::vector<Identification*> source();
+        std::vector<Identification*> target();
     protected:
 
     private:
-        std::vector<std::string> AliasIDs;
+        void serializeNullString(nlohmann::json& json, const std::string& value, const std::string& entity_value);
+
         std::string Name;
         std::string ShortName;
         std::string DeclaredName;
+        std::string DeclaredShortName;
 
         std::vector<Identification*> OwnedElements;
-        Identification* Owner;
-        Identification* OwningMembership;
-        Identification* OwningNamespace;
-        Identification* OwningRelationship;
+        Identification* Owner = nullptr;
+        Identification* OwningMembership = nullptr;
+        Identification* OwningNamespace = nullptr;
+        Identification* OwningRelationship = nullptr;
 
         std::string Direction;
         std::string ImportedMemberName;
         std::string ImportedNamespace;
 
         /**
-         * Value Specs only there for the Compatibility to the AGILA Backend Version 2
+         * Value String only there for the Compatibility to the AGILA Backend Version 2
          */
-        std::vector<std::string> ValueSpecs;
-        /**
-         * Unit Spec only there for the Compatibility to the AGILA Backend Version 2
-         */
-        std::string UnitSpec;
+        std::string ValueStr;
 
         std::string Language;
         std::string Body;
 
-        bool IsImplied;
-        bool IsImpliedIncluded;
-        bool IsStandard;
-        bool IsLibraryElement;
+        bool IsImplied = false;
+        bool IsImpliedIncluded = false;
+        bool IsStandard = false;
+        bool IsLibraryElement = false;
 
-        Identification* Documentation;
+        Identification* Documentation = nullptr;
         std::vector<Identification*> TextualRepresentation;
 
         std::vector<Identification*> Source;

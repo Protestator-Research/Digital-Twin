@@ -8,11 +8,7 @@
 //---------------------------------------------------------
 // External Classes
 //---------------------------------------------------------
-#include <nlohmann/json.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/string_generator.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/lexical_cast.hpp>
+
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
@@ -28,7 +24,10 @@ namespace SysMLv2::Entities {
 
     Identification::Identification(std::string JSONstring) {
         nlohmann::json json = nlohmann::json::parse(JSONstring);
-        Id = boost::uuids::string_generator()(json[JSON_ID_ENTITY].get<std::string>());
+        if(!json[JSON_ID_ENTITY].is_null())
+            Id = boost::uuids::string_generator()(json[JSON_ID_ENTITY].get<std::string>());
+        else
+            Id = boost::uuids::random_generator()();
     }
 
     std::string Identification::serializeToJson() {
@@ -37,7 +36,14 @@ namespace SysMLv2::Entities {
         return json.dump();
     }
 
-    boost::uuids::uuid Identification::getID() {
+    boost::uuids::uuid Identification::getID() const {
         return Id;
     }
+
+    Identification& Identification::operator=(const Identification &other) {
+        Id = other.Id;
+        return *this;
+    }
 }
+
+
