@@ -9,6 +9,7 @@ find_package(md4c REQUIRED)
 qt_standard_project_setup()
 
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
 add_executable(CppDigitalTwinClient
@@ -29,8 +30,8 @@ add_executable(CppDigitalTwinClient
         src/Widgets/TreeViewModels/ProjectTreeViewModel.h
         src/Widgets/TreeViewModels/ProjectTreeViewItem.cpp
         src/Widgets/TreeViewModels/ProjectTreeViewItem.h
-        src/Widgets/DigitalTwinTabWidget.cpp
-        src/Widgets/DigitalTwinTabWidget.h
+        src/Widgets/DigitalTwinTabWidget/DigitalTwinTabWidget.cpp
+        src/Widgets/DigitalTwinTabWidget/DigitalTwinTabWidget.h
         ui/DigitalTwinTabWidget.ui
         src/Models/Markdown/MarkdownParser.cpp
         src/Models/Markdown/MarkdownParser.h

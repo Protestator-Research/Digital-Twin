@@ -66,4 +66,8 @@ namespace SysMLv2::Entities {
         return ParentProjectId;
     }
 
+    std::vector<DataIdentity *> DigitalTwin::getConnectedModels() {
+        return ConnectedModels;
+    }
+
 }

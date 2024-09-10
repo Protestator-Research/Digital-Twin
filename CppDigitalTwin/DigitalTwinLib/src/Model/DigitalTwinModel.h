@@ -6,10 +6,11 @@
 #define DIGITALTWIN_DIGITALTWINMODEL_H
 
 #include <vector>
+#include <string>
 
 namespace SysMLv2::Entities {
     class DigitalTwin;
-    class Data;
+    class Element;
 }
 
 namespace DigitalTwin {
@@ -21,12 +22,15 @@ namespace DigitalTwin::Model {
     public:
         DigitalTwinModel() = delete;
         explicit DigitalTwinModel(SysMLv2::Entities::DigitalTwin* digitalTwin, DigitalTwinManager* manager);
-        virtual ~DigitalTwinModel() = default;
+        virtual ~DigitalTwinModel();
 
         void generateDigitalTwinBackend();
+
+        std::string digitalTwinName();
+
     private:
         SysMLv2::Entities::DigitalTwin* DigitalTwin;
-        std::vector<SysMLv2::Entities::Data*> DigitalTwinModelElements;
+        std::vector<SysMLv2::Entities::Element*> DigitalTwinModelElements;
         DigitalTwinManager* Manager;
     };
 }

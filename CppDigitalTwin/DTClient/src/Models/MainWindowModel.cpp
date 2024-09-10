@@ -63,8 +63,7 @@ namespace DigitalTwin::Client {
         auto item = ProjectViewModel->getProjectTreeViewItemFromIndex(index);
         auto possibleDigitalTwin = item->getDigitalTwin();
         if(possibleDigitalTwin!= nullptr){
-            qDebug()<<possibleDigitalTwin->getName();
+
         }
-        qDebug()<<index;
     }
 }

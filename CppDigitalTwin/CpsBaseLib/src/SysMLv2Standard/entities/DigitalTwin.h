@@ -69,6 +69,8 @@ namespace SysMLv2::Entities {
 
         std::string serializeToJson() override;
 
+        std::vector<DataIdentity*> getConnectedModels();
+
 
     private:
         DataIdentity* ParentProjectId;
