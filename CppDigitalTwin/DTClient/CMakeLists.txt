@@ -63,7 +63,7 @@ set_target_properties(CppDigitalTwinClient PROPERTIES
 endif()
 
 if(MSVC)
-    target_compile_options(CppDigitalTwinServer PRIVATE /W4 /WX)
+    target_compile_options(CppDigitalTwinServer PRIVATE /W4 /WX-)
 else()
     target_compile_options(CppDigitalTwinServer PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

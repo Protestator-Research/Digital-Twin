@@ -7,6 +7,8 @@
 #include <boost/asio.hpp>
 #include <boost/optional.hpp>
 
+typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_context::executor_type> socket_type;
+
 namespace PHYSICAL_TWIN_COMMUNICATION {
 
     MQTTBrokerService::MQTTBrokerService(as::io_context &ioc_accept, std::function<as::io_context &()> ioc_con_getter,

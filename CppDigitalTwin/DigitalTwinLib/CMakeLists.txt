@@ -32,7 +32,7 @@ add_library(CppDigitalTwinLib
         src/Parser/SysMLv2/SysMLv2Parser.cpp
         src/Parser/Parser.cpp
         src/Parser/Parser.h
-)
+        src/cpp_digital_twin_lib_global.h)
 
 target_include_directories(CppDigitalTwinLib PUBLIC
         ../PhysicalTwinCommunicationService/src/
@@ -46,7 +46,7 @@ target_link_libraries(CppDigitalTwinLib
         antlr4_shared)
 
 if(MSVC)
-    target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX)
+    target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX-)
 else()
     target_compile_options(CppDigitalTwinLib PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

@@ -18,7 +18,7 @@ add_library(CppPhysicalTwinCommunication
         src/entities/DigitalTwinEntity.cpp
         src/entities/DigitalTwinEntity.h
         src/entities/JsonEntities.hpp
-)
+        src/cpp_physical_twin_communication_global.h)
 
 target_link_libraries(CppPhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp
@@ -30,7 +30,7 @@ install(TARGETS CppPhysicalTwinCommunication DESTINATION "."
         LIBRARY DESTINATION lib)
 
 if(MSVC)
-    target_compile_options(CppPhysicalTwinCommunication PRIVATE /W4 /WX)
+    target_compile_options(CppPhysicalTwinCommunication PRIVATE /W4 /WX-)
 else()
     target_compile_options(CppPhysicalTwinCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

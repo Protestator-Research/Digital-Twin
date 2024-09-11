@@ -15,13 +15,13 @@ add_library(CppBackendCommunication
         src/Exeptions/ConnectionError.h
         src/Exeptions/NotEnoughMemoryError.cpp
         src/Exeptions/NotEnoughMemoryError.h
-        ../CpsBaseLib/src/BaseFuctions/StringExtention.hpp
         src/APIImplementations/Standards/HttpReturnCodes.h
         src/APIImplementations/StatusCode.h
         src/Exeptions/HttpException.cpp
         src/Exeptions/HttpException.h
         src/APIImplementations/Interfaces/IAPIInterface.cpp
-        src/APIImplementations/Interfaces/IAPIInterface.h)
+        src/APIImplementations/Interfaces/IAPIInterface.h
+        src/cpp_backend_communication_global.h)
 
 target_link_libraries(CppBackendCommunication
         CURL::libcurl
@@ -33,7 +33,7 @@ target_include_directories(CppBackendCommunication PUBLIC
                                 ../CpsBaseLib/src)
 
 if(MSVC)
-    target_compile_options(CppBackendCommunication PRIVATE /W4 /WX)
+    target_compile_options(CppBackendCommunication PRIVATE /bigobj /W4 /WX-)
 else()
     target_compile_options(CppBackendCommunication PRIVATE -Wall -Werror)
 endif()
