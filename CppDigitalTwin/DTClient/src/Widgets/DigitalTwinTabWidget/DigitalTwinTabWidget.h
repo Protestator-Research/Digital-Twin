@@ -7,9 +7,7 @@
 
 #include <QWidget>
 
-QT_BEGIN_NAMESPACE
-namespace Ui { class DigitalTwinTabWidget; }
-QT_END_NAMESPACE
+#include "../../../ui/ui_DigitalTwinTabWidget.h"
 
 namespace DigitalTwin::Model{
     class DigitalTwinModel;
