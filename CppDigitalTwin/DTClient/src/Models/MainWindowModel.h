@@ -55,6 +55,7 @@ namespace DigitalTwin::Client {
         ViewModels::ProjectTreeViewModel *ProjectViewModel;
         BACKEND_COMMUNICATION::CommunicationService *BackendCommunication = nullptr;
         std::map<boost::uuids::uuid,std::vector<SysMLv2::Entities::DigitalTwin*>> DigitalTwinMap;
+
         std::vector<SysMLv2::Entities::Project*> Projects;
     };
 }

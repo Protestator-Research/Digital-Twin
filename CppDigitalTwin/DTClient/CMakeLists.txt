@@ -9,17 +9,14 @@ find_package(md4c REQUIRED)
 qt_standard_project_setup()
 
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOUIC OFF)
 set(CMAKE_AUTORCC ON)
 
-add_executable(CppDigitalTwinClient
-        src/Widgets/DigitalTwinMainWindow.cpp
+set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Widgets/DigitalTwinMainWindow.h
-        ui/DigitalTwinMainWindow.ui
         src/main.cpp
         src/Widgets/Dialogs/SettingsDialog.cpp
         src/Widgets/Dialogs/SettingsDialog.h
-        ui/SettingsDialog.ui
         src/Models/DigitalTwinClientSettings.cpp
         src/Models/DigitalTwinClientSettings.h
         ui/Resources.qrc
@@ -32,10 +29,16 @@ add_executable(CppDigitalTwinClient
         src/Widgets/TreeViewModels/ProjectTreeViewItem.h
         src/Widgets/DigitalTwinTabWidget/DigitalTwinTabWidget.cpp
         src/Widgets/DigitalTwinTabWidget/DigitalTwinTabWidget.h
-        ui/DigitalTwinTabWidget.ui
         src/Models/Markdown/MarkdownParser.cpp
-        src/Models/Markdown/MarkdownParser.h
-)
+        src/Models/Markdown/MarkdownParser.h)
+
+qt_wrap_ui(SOURCES ui/DigitalTwinTabWidget.ui
+        ui/SettingsDialog.ui
+        ui/DigitalTwinMainWindow.ui)
+
+add_executable(CppDigitalTwinClient ${SOURCES})
+
+
 
 target_include_directories(CppDigitalTwinClient PUBLIC
         ../BackendCommunicationService/src/
