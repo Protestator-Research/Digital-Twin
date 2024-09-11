@@ -26,6 +26,12 @@
       <property name="currentIndex">
        <number>-1</number>
       </property>
+      <property name="usesScrollButtons">
+       <bool>false</bool>
+      </property>
+      <property name="movable">
+       <bool>false</bool>
+      </property>
      </widget>
     </item>
    </layout>
