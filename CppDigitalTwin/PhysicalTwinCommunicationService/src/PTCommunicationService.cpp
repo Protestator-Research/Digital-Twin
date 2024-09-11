@@ -7,7 +7,10 @@
 #include "Services/MqttBrokerService.h"
 
 #include <thread>
+
+#ifdef WIN32
 #include <windows.h>
+#endif
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
 
