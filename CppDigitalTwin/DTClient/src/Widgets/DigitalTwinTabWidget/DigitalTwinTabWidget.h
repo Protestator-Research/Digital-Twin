@@ -6,8 +6,7 @@
 #define DIGITALTWIN_DIGITALTWINTABWIDGET_H
 
 #include <QWidget>
-
-#include "../../../ui/ui_DigitalTwinTabWidget.h"
+#include "../../../build/CppDigitalTwin/DTClient/ui/ui_DigitalTwinTabWidget.h"
 
 namespace DigitalTwin::Model{
     class DigitalTwinModel;
