@@ -3,3 +3,17 @@
 //
 
 #include "Component.h"
+
+namespace DigitalTwin::Model {
+    Component::Component(std::string name) : IDigitalTwinElement(name) {
+
+    }
+
+    Component::~Component() {
+
+    }
+
+    void Component::appendComponent(Component *component) {
+
+    }
+}

@@ -55,6 +55,7 @@ namespace DigitalTwin::Client {
          void showSettingsDialog();
          void connectToServer();
          void openSysMLv2File();
+         void onTabClosed(int index);
     };
 } // DigitalTwin::Client
 

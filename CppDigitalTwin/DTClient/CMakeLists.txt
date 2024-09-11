@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 project(CppDigitalTwinServer CXX)
 
 find_package(mqtt_cpp REQUIRED CONFIG)
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Charts)
 find_package(md4c REQUIRED)
 
 qt_standard_project_setup()
@@ -30,11 +30,14 @@ set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Widgets/DigitalTwinTabWidget/DigitalTwinTabWidget.cpp
         src/Widgets/DigitalTwinTabWidget/DigitalTwinTabWidget.h
         src/Models/Markdown/MarkdownParser.cpp
-        src/Models/Markdown/MarkdownParser.h)
+        src/Models/Markdown/MarkdownParser.h
+        src/Widgets/DigitalTwinTabWidget/TabContentWidget.cpp
+        src/Widgets/DigitalTwinTabWidget/TabContentWidget.h)
 
 qt_wrap_ui(SOURCES ui/DigitalTwinTabWidget.ui
         ui/SettingsDialog.ui
-        ui/DigitalTwinMainWindow.ui)
+        ui/DigitalTwinMainWindow.ui
+        ui/TabContentWidget.ui)
 
 add_executable(CppDigitalTwinClient ${SOURCES})
 

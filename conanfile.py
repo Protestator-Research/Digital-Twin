@@ -51,7 +51,6 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["nlohmann_json/*"].shared = True
             self.options["date/*"].shared = True
             self.options["antlr4-cppruntime/*"].shared = True
-            self.options["qt/*"].shared = True
         else:
             self.options["boost/*"].shared = False
             self.options["gtest/*"].shared = False
@@ -60,7 +59,9 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["nlohmann_json/*"].shared = False
             self.options["date/*"].shared = False
             self.options["antlr4-cppruntime/*"].shared = False
-            self.options["qt/*"].shared = True
+
+        self.options["qt/*"].shared = True
+        self.options["qt/*"].qtcharts = True
 
     
     def layout(self):

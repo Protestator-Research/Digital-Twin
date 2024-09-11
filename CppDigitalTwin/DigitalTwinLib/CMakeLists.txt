@@ -32,6 +32,9 @@ add_library(CppDigitalTwinLib
         src/Parser/SysMLv2/SysMLv2Parser.cpp
         src/Parser/Parser.cpp
         src/Parser/Parser.h
+        src/Model/Variable.cpp
+        src/Model/Variable.h
+        src/Model/IDigitalTwinElement.h
 )
 
 target_include_directories(CppDigitalTwinLib PUBLIC
