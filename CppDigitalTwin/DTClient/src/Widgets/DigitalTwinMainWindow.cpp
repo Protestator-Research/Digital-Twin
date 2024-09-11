@@ -19,6 +19,7 @@ namespace DigitalTwin::Client {
             toolBar(new QToolBar(this)) {
 
         ui->setupUi(this);
+        ui->CentralTabWidget->setTabsClosable(true);
 
         Model = new MainWindowModel(this);
 
@@ -37,6 +38,7 @@ namespace DigitalTwin::Client {
         connect(ui->actionConnect_to_Remotes,&QAction::triggered, this, &DigitalTwinMainWindow::showSettingsDialog);
         connect(ui->ProjectTreeView, SIGNAL(clicked(const QModelIndex &)), Model, SLOT(onTreeViewClicked(const QModelIndex &)));
         connect(ui->actionOpen_SysMLv2_File, SIGNAL(triggered(bool)), this, SLOT(openSysMLv2File()));
+        connect(ui->CentralTabWidget, SIGNAL(tabCloseRequested(int)), this, SLOT(onTabClosed(int)));
     }
 
     void DigitalTwinMainWindow::toggleButtonCheckBoxProjects(bool visibility) {
@@ -83,6 +85,11 @@ namespace DigitalTwin::Client {
 
     void DigitalTwinMainWindow::addTabWidget(QWidget *tabWidget, QString title) {
         ui->CentralTabWidget->addTab(tabWidget,title);
+    }
+
+    void DigitalTwinMainWindow::onTabClosed(int index) {
+        //TODO Delete Digital Twin Model and close Connections
+        ui->CentralTabWidget->removeTab(index);
     }
 
 } // DigitalTwin::Client

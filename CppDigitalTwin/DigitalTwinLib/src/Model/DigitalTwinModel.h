@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
 #include "../cpp_digital_twin_lib_global.h"
 
@@ -17,6 +18,9 @@ namespace SysMLv2::Entities {
 
 namespace DigitalTwin {
     class DigitalTwinManager;
+    namespace Model{
+        class Component;
+    }
 }
 
 namespace DigitalTwin::Model {
@@ -30,10 +34,12 @@ namespace DigitalTwin::Model {
 
         std::string digitalTwinName();
 
+
     private:
         SysMLv2::Entities::DigitalTwin* DigitalTwin;
         std::vector<SysMLv2::Entities::Element*> DigitalTwinModelElements;
         DigitalTwinManager* Manager;
+        std::map<std::string, Component*> ComponentMap;
     };
 }
 

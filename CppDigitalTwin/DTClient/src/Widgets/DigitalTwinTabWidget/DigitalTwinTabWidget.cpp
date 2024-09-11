@@ -17,6 +17,8 @@ namespace DigitalTwin::Client {
         Model = model;
         ui->DigitalTwinNamLabel->setText(QString::fromStdString(Model->digitalTwinName()));
         makeConnections();
+        ui->VariableListView->setModel(VariableModel);
+        generateModel();
     }
 
     DigitalTwinTabWidget::~DigitalTwinTabWidget() {
@@ -24,6 +26,12 @@ namespace DigitalTwin::Client {
     }
 
     void DigitalTwinTabWidget::makeConnections() {
+
+    }
+
+    void DigitalTwinTabWidget::generateModel() {
+        QStringList header;
+        header<<"Variables";
 
     }
 }

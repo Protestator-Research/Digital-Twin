@@ -6,6 +6,7 @@
 #define DIGITALTWIN_DIGITALTWINTABWIDGET_H
 
 #include <QWidget>
+#include <QStandardItemModel>
 
 namespace DigitalTwin::Client {
     namespace Ui {
@@ -30,8 +31,11 @@ namespace DigitalTwin::Client {
     private:
         void makeConnections();
 
+        void generateModel();
+
         Ui::DigitalTwinTabWidget *ui;
         Model::DigitalTwinModel* Model;
+        QStandardItemModel* VariableModel;
     };
 }
 
