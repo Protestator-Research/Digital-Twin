@@ -17,7 +17,7 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "Record.h"
-
+#include "../../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -38,7 +38,7 @@ namespace SysMLv2::Entities {
      * @see boost::uuids::uuid
      * @see SysMLv2::Entities::Record
      */
-    class DataIdentity : public Record {
+    class CPSBASELIB_EXPORT DataIdentity : public Record {
     public:
         /**
          * Default constructor is delted.

@@ -14,6 +14,7 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "Data.h"
+#include "../../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -27,7 +28,7 @@ namespace SysMLv2::Entities {
      * Defines the Project Usage according to the SysML v2 Standard
      * @author Moritz Herzog <herzogm@rptu.de>
      */
-    class ProjectUsage : public Data {
+    class CPSBASELIB_EXPORT ProjectUsage : public Data {
     public:
         /**
          * Constructor

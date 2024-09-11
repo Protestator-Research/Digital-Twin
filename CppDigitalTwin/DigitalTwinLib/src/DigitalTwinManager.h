@@ -10,6 +10,8 @@
 #include <vector>
 #include <boost/uuid/uuid.hpp>
 
+#include "cpp_digital_twin_lib_global.h"
+
 namespace BACKEND_COMMUNICATION {
     class CommunicationService;
 }
@@ -25,7 +27,7 @@ namespace DigitalTwin::Model {
 
 
 namespace DigitalTwin {
-    class DigitalTwinManager {
+    class CPPDIGITALTWINLIB_EXPORT DigitalTwinManager {
     public:
         DigitalTwinManager() = delete;
         explicit DigitalTwinManager(BACKEND_COMMUNICATION::CommunicationService* communicationService);

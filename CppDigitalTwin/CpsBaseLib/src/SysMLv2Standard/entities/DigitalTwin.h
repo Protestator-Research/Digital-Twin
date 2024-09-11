@@ -18,7 +18,7 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "Record.h"
-
+#include "../../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -35,7 +35,7 @@ namespace SysMLv2::Entities {
      * @version 1.0
      * @see Record
      */
-    class DigitalTwin : public Record {
+    class CPSBASELIB_EXPORT DigitalTwin : public Record {
     public:
         /**
          * Default Constructor

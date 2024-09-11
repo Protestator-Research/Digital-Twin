@@ -14,12 +14,13 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "Data.h"
+#include "../../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
 
 namespace SysMLv2::Entities {
-    class ExternalData : public Data{
+    class CPSBASELIB_EXPORT ExternalData : public Data{
 
     };
 } // SysMLv2

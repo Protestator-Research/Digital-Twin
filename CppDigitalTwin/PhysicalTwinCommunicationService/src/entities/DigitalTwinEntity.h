@@ -9,8 +9,10 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <string>
 
+#include "../cpp_physical_twin_communication_global.h"
+
 namespace PHYSICAL_TWIN_COMMUNICATION {
-    class DigitalTwinEntity {
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT DigitalTwinEntity {
     public:
         DigitalTwinEntity()=default;
         DigitalTwinEntity(boost::uuids::uuid digitalTwinId, boost::uuids::uuid projectId);

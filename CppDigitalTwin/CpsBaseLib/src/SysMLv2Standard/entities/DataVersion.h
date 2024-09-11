@@ -14,7 +14,7 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "Record.h"
-
+#include "../../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -31,7 +31,7 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-    class DataVersion : public Record {
+    class CPSBASELIB_EXPORT DataVersion : public Record {
     public:
         DataVersion() = delete;
 

@@ -5,6 +5,8 @@
 #ifndef DIGITALTWIN_HTTPRETURNCODES_H
 #define DIGITALTWIN_HTTPRETURNCODES_H
 
+#include "../../cpp_backend_communication_global.h"
+
 namespace BACKEND_COMMUNICATION::STANDARDS::HTTP {
     /**
      * This enum represents a human readable version of the HTTP return codes.
@@ -14,7 +16,7 @@ namespace BACKEND_COMMUNICATION::STANDARDS::HTTP {
      * @version 1.0
      * @class HTTP_RETURN_CODES
      */
-    enum HTTP_RETURN_CODES {
+    enum CPSBACKENDCOMMUNICATION_EXPORT HTTP_RETURN_CODES {
         // Information Codes
         HTTP_CONTINUE = 100,
         HTTP_PROTOCOL_SWITCH,

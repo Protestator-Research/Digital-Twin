@@ -16,6 +16,7 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "Data.h"
+#include "../../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -32,7 +33,7 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @class Element
      */
-    class Element : public Data{
+    class CPSBASELIB_EXPORT Element : public Data{
     public:
         /**
          * C-Tor

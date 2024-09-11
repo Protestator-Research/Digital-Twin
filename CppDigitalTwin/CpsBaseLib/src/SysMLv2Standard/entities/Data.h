@@ -15,7 +15,7 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "IEntity.h"
-
+#include "../../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -28,7 +28,7 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-    class Data  : public IEntity{
+    class CPSBASELIB_EXPORT Data  : public IEntity{
     public:
         /**
          * C-Tor

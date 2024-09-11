@@ -7,7 +7,7 @@
 #include "Services/MqttBrokerService.h"
 
 #include <thread>
-
+#include <windows.h>
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
 
@@ -23,7 +23,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                 MQTTBrokerService::runBroker(MqttPort,serverStarted);
             });
             std::thread clientThread = std::thread([&]{
-                sleep(2);
+                //sleep(2);
                 ClientService->connectClientStartCommunication();
             });
 

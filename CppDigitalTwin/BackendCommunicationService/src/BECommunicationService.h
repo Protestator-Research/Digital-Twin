@@ -14,7 +14,7 @@
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
-
+#include "cpp_backend_communication_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -39,14 +39,14 @@ namespace BACKEND_COMMUNICATION {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-    class CommunicationService {
+    class CPSBACKENDCOMMUNICATION_EXPORT CommunicationService {
     public:
         /**
          * Constructor allows for the settings for the connection to the AGILA Backend.
          * @param serverAddress Address of the Server. The server address can be an IP address or a url.
          * @param port Port of the AGILA Backend server.
          */
-        CommunicationService(std::string serverAddress, unsigned int port, std::string serverFolder);
+        CommunicationService(std::string serverAddress, unsigned int port, std::string serverFolder = "/agila-server/");
         /**
         * Constructor allows for the settings for the connection to the AGILA Backend.
         * @param serverAddress Address of the Server. The server address can be an IP address or a url.

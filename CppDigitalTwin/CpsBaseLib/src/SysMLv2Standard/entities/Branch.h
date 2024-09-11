@@ -14,7 +14,7 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "CommitReference.h"
-
+#include "../../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -27,7 +27,7 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-    class Branch : public CommitReference{
+    class CPSBASELIB_EXPORT Branch : public CommitReference{
     public:
         /**
          *

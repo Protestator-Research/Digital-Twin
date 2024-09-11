@@ -5,9 +5,11 @@
 #pragma once
 
 #include <stdexcept>
+#include "../cpp_backend_communication_global.h"
+
 
 namespace BACKEND_COMMUNICATION::EXCEPTIONS {
-    class NotEnoughMemoryError : public std::runtime_error {
+    class CPSBACKENDCOMMUNICATION_EXPORT NotEnoughMemoryError : public std::runtime_error {
     public:
         NotEnoughMemoryError();
         ~NotEnoughMemoryError();

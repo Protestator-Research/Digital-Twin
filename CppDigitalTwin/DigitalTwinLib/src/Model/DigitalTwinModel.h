@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 
+#include "../cpp_digital_twin_lib_global.h"
+
 namespace SysMLv2::Entities {
     class DigitalTwin;
     class Element;
@@ -18,7 +20,7 @@ namespace DigitalTwin {
 }
 
 namespace DigitalTwin::Model {
-    class DigitalTwinModel {
+    class CPPDIGITALTWINLIB_EXPORT DigitalTwinModel {
     public:
         DigitalTwinModel() = delete;
         explicit DigitalTwinModel(SysMLv2::Entities::DigitalTwin* digitalTwin, DigitalTwinManager* manager);

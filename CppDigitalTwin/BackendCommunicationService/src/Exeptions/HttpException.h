@@ -6,9 +6,10 @@
 #define DIGITALTWIN_HTTPEXCEPTION_H
 
 #include <exception>
+#include "../cpp_backend_communication_global.h"
 
 namespace BACKEND_COMMUNICATION::EXCEPTIONS {
-    class HTTPException : std::exception {
+    class CPSBACKENDCOMMUNICATION_EXPORT HTTPException : std::exception {
     public:
         HTTPException() = delete;
         HTTPException(long httpErrorCode);

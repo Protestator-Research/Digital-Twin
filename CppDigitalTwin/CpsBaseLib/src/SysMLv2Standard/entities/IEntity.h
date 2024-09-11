@@ -13,7 +13,7 @@
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
-
+#include "../../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -26,7 +26,7 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-    class IEntity {
+    class CPSBASELIB_EXPORT IEntity {
     public:
 
         /**

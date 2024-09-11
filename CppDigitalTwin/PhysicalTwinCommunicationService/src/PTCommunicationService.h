@@ -9,8 +9,8 @@
 #include <functional>
 #include "Services/MqttClientService.h"
 
-namespace PHYSICAL_TWIN_COMMUNICATION {
 
+namespace PHYSICAL_TWIN_COMMUNICATION {
     /**
      * @author Moritz Herzog
      * Creates the MQTT Communication Service for the Server or the Client.

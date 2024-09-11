@@ -4,6 +4,9 @@
 
 #include "MqttBrokerService.h"
 
+#include <boost/asio.hpp>
+#include <boost/optional.hpp>
+
 namespace PHYSICAL_TWIN_COMMUNICATION {
 
     MQTTBrokerService::MQTTBrokerService(as::io_context &ioc_accept, std::function<as::io_context &()> ioc_con_getter,

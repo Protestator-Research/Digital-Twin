@@ -5,9 +5,10 @@
 #pragma once
 
 #include <stdexcept>
+#include "../cpp_backend_communication_global.h"
 
 namespace BACKEND_COMMUNICATION::EXCEPTIONS {
-    enum CONNECTION_ERROR_TYPE {
+    enum CPSBACKENDCOMMUNICATION_EXPORT CONNECTION_ERROR_TYPE {
         UNSUPPORTED_PROTOCOL = 1,
         FAILED_INIT,
         URL_FORMAT,

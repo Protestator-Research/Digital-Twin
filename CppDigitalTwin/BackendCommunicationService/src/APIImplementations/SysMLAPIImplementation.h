@@ -16,6 +16,7 @@
 //---------------------------------------------------------
 #include "StatusCode.h"
 #include "Interfaces/IAPIInterface.h"
+#include "../cpp_backend_communication_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -29,7 +30,7 @@ namespace BACKEND_COMMUNICATION {
      * @version 1.1
      * @author Moritz Herzog <herzogm@rptu.de>
      */
-    class SysMLAPIImplementation : public IAPIInterface{
+    class CPSBACKENDCOMMUNICATION_EXPORT SysMLAPIImplementation : public IAPIInterface{
     public:
         /**
          * Deleted Constructorr

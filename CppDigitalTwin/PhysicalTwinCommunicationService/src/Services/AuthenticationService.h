@@ -5,8 +5,10 @@
 #ifndef DIGITALTWIN_AUTHENTICATIONSERVICE_H
 #define DIGITALTWIN_AUTHENTICATIONSERVICE_H
 
+#include "../cpp_physical_twin_communication_global.h"
+
 namespace PHYSICAL_TWIN_COMMUNICATION {
-    class AuthenticationService {
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT AuthenticationService {
     public:
         /**
          *

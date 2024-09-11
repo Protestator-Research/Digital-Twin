@@ -13,7 +13,7 @@
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
-
+#include "../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -27,7 +27,7 @@ namespace CPSBASELIB::STD_EXTENTION {
      * @version 1.0
      * @author Moritz Herzog <herzogm@rptu.de>
      */
-    class StringExtention {
+    class CPSBASELIB_EXPORT StringExtention {
     public:
         /**
          * Splits a string with another string as the delimiter. If the delimiter is not contained, the string is not

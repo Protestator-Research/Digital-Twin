@@ -14,19 +14,19 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "CommitReference.h"
-
+#include "../../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
 
 namespace SysMLv2::Entities {
+
     /**
      * Represents an abstract baseclass that is used for the SysMLv2 API
      * @class Record
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-
     class Tag : public CommitReference {
 
     public:

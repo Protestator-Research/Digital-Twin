@@ -13,9 +13,11 @@
 #include <cstdint>
 
 
+#include "../cpp_physical_twin_communication_global.h"
+
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
-    class MqttClientService {
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT MqttClientService {
     public:
         MqttClientService() = delete;
         MqttClientService(std::string server, std::string port);

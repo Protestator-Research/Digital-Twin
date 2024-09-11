@@ -14,7 +14,7 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "../StatusCode.h"
-
+#include "../../cpp_backend_communication_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -24,7 +24,7 @@
 
 namespace BACKEND_COMMUNICATION {
 
-    class IAPIInterface {
+    class CPSBACKENDCOMMUNICATION_EXPORT IAPIInterface {
     public:
         IAPIInterface() = default;
 
