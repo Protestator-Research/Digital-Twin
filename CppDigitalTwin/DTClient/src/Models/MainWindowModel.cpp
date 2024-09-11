@@ -5,14 +5,15 @@
 #include <QList>
 #include <BECommunicationService.h>
 #include <string>
-#include <vector>
 #include <SysMLv2Standard/entities/Project.h>
 #include <SysMLv2Standard/entities/DigitalTwin.h>
+#include <DigitalTwinManager.h>
 
 #include "MainWindowModel.h"
 #include "DigitalTwinClientSettings.h"
 #include "../Widgets/DigitalTwinMainWindow.h"
 #include "../Widgets/TreeViewModels/ProjectTreeViewModel.h"
+#include "../Widgets/DigitalTwinTabWidget/DigitalTwinTabWidget.h"
 
 
 namespace DigitalTwin::Client {
@@ -26,13 +27,17 @@ namespace DigitalTwin::Client {
     MainWindowModel::~MainWindowModel() {
         delete Settings;
         delete ProjectViewModel;
-        if(BackendCommunication!= nullptr)
+        delete DigitalTwinManager;
+        if(BackendCommunication != nullptr)
             delete BackendCommunication;
+        if(DigitalTwinManager != nullptr)
+            delete DigitalTwinManager;
     }
 
     void MainWindowModel::connectToBackend() {
         try {
             BackendCommunication=new BACKEND_COMMUNICATION::CommunicationService(Settings->getRESTServerAsString(),std::stoi(Settings->getRESTPortAsString()), Settings->getRESTFolderAsString());
+            DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunication);
             BackendCommunication->setUserForLoginInBackend(Settings->getRESTUserAsString(),Settings->getRESTPasswordAsString());
             Status = MainWindowStatus::CONNECTED;
 
@@ -63,7 +68,8 @@ namespace DigitalTwin::Client {
         auto item = ProjectViewModel->getProjectTreeViewItemFromIndex(index);
         auto possibleDigitalTwin = item->getDigitalTwin();
         if(possibleDigitalTwin != nullptr){
-
+            auto model = DigitalTwinManager->addDigitalTwinAndCreateMode(possibleDigitalTwin);
+            MainWindow->addTabWidget(new DigitalTwinTabWidget(model,MainWindow),QString::fromStdString(possibleDigitalTwin->getName()));
         }
     }
 }

@@ -81,4 +81,8 @@ namespace DigitalTwin::Client {
         }
     }
 
+    void DigitalTwinMainWindow::addTabWidget(QWidget *tabWidget, QString title) {
+        ui->CentralTabWidget->addTab(tabWidget,title);
+    }
+
 } // DigitalTwin::Client

@@ -37,11 +37,12 @@ namespace DigitalTwin::Client {
 
         void setProjectTreeViewModel(QAbstractItemModel* model);
 
+        void addTabWidget(QWidget* tabWidget, QString title);
     private:
         Ui::DigitalTwinMainWindow *ui;
         QToolBar *toolBar;
-        MainWindowModel* Model;
 
+        MainWindowModel* Model;
 
         void makeConnections();
 

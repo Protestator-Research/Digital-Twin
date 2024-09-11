@@ -27,19 +27,25 @@ namespace DigitalTwin::Model {
 
 
 namespace DigitalTwin {
+    /**
+     *
+     */
     class CPPDIGITALTWINLIB_EXPORT DigitalTwinManager {
     public:
         DigitalTwinManager() = delete;
         explicit DigitalTwinManager(BACKEND_COMMUNICATION::CommunicationService* communicationService);
-        virtual ~DigitalTwinManager() = default;
+        virtual ~DigitalTwinManager();
 
         void downloadDigitalTwin(boost::uuids::uuid projectId, boost::uuids::uuid digitalTwinId);
+
+        DigitalTwin::Model::DigitalTwinModel* addDigitalTwinAndCreateMode(SysMLv2::Entities::DigitalTwin* digitalTwin);
+
         std::vector<SysMLv2::Entities::Element*> downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
     private:
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService;
-        std::map<boost::uuids::uuid, Model::DigitalTwinModel> DigitalTwinModelMap;
 
+        std::map<boost::uuids::uuid, Model::DigitalTwinModel*> DigitalTwinModelMap;
     };
 }
 

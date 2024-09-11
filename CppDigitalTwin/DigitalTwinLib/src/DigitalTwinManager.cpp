@@ -15,17 +15,27 @@ namespace DigitalTwin {
         BackendCommunicationService = communicationService;
     }
 
+    DigitalTwinManager::~DigitalTwinManager() {
+
+    }
+
     void DigitalTwinManager::downloadDigitalTwin(boost::uuids::uuid projectId, boost::uuids::uuid digitalTwinId) {
         auto digitalTwins = BackendCommunicationService->getAllDigitalTwinsForProjectWithId(projectId);
         for(auto digitalTwin : digitalTwins)
             if(digitalTwin->getId()==digitalTwinId) {
-                DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), Model::DigitalTwinModel(digitalTwin, this)));
+                DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), new Model::DigitalTwinModel(digitalTwin, this)));
             }
     }
 
     std::vector<SysMLv2::Entities::Element *>
     DigitalTwinManager::downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
         return BackendCommunicationService->getAllElementsOfCommit(projectId,commitId);
+    }
+
+    DigitalTwin::Model::DigitalTwinModel* DigitalTwinManager::addDigitalTwinAndCreateMode(SysMLv2::Entities::DigitalTwin *digitalTwin) {
+        Model::DigitalTwinModel* returnValue = new Model::DigitalTwinModel(digitalTwin,this);
+        DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(),returnValue));
+        return returnValue;
     }
 
 }

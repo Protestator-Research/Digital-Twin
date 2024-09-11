@@ -29,16 +29,20 @@ namespace SysMLv2::Entities{
     class Project;
 }
 
-/**
- *
- */
+namespace DigitalTwin {
+    class DigitalTwinManager;
+}
+
 namespace DigitalTwin::Client {
+    /**
+     *
+     */
     class MainWindowModel : public QObject{
         Q_OBJECT
     public:
         MainWindowModel() = delete;
         explicit MainWindowModel(DigitalTwinMainWindow* mainWindow);
-        ~MainWindowModel() override;
+        virtual ~MainWindowModel() override;
 
         void connectToBackend();
         [[nodiscard]] DigitalTwinClientSettings* clientSettings() const;
@@ -55,7 +59,7 @@ namespace DigitalTwin::Client {
         ViewModels::ProjectTreeViewModel *ProjectViewModel;
         BACKEND_COMMUNICATION::CommunicationService *BackendCommunication = nullptr;
         std::map<boost::uuids::uuid,std::vector<SysMLv2::Entities::DigitalTwin*>> DigitalTwinMap;
-
+        DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
         std::vector<SysMLv2::Entities::Project*> Projects;
     };
 }

@@ -24,7 +24,7 @@ namespace SysMLv2::Entities {
 
             ParentProjectId = new DataIdentity( boost::uuids::string_generator()(parsedJson[JSON_PARENT_PROJECT].get<std::string>()));
 
-            if(parsedJson[JSON_BRANCH_ID].get<std::string>()!="null")
+            if(!parsedJson[JSON_BRANCH_ID].is_null())
                 BranchId=new DataIdentity(boost::uuids::string_generator()(parsedJson[JSON_BRANCH_ID].get<std::string>()));
 
             CommitId = new DataIdentity(boost::uuids::string_generator()(parsedJson[JSON_COMMIT_ID].get<std::string>()));
