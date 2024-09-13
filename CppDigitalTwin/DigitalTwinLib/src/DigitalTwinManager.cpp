@@ -27,8 +27,7 @@ namespace DigitalTwin {
             }
     }
 
-    std::vector<SysMLv2::Entities::Element *>
-    DigitalTwinManager::downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
+    std::vector<SysMLv2::Entities::Element *> DigitalTwinManager::downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
         return BackendCommunicationService->getAllElementsOfCommit(projectId,commitId);
     }
 

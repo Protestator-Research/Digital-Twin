@@ -35,7 +35,9 @@ add_library(CppDigitalTwinLib
         src/Model/Variable.cpp
         src/Model/Variable.h
         src/Model/IDigitalTwinElement.h
-        src/cpp_digital_twin_lib_global.h)
+        src/cpp_digital_twin_lib_global.h
+        src/Model/SupportedTypes/SupportedTypes.h
+        src/Parser/SupportedModels.h)
 
 target_include_directories(CppDigitalTwinLib PUBLIC
         ../PhysicalTwinCommunicationService/src/
@@ -49,7 +51,7 @@ target_link_libraries(CppDigitalTwinLib
         antlr4_shared)
 
 if(MSVC)
-    target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX-)
+    target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX)
 else()
     target_compile_options(CppDigitalTwinLib PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

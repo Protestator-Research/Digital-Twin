@@ -18,6 +18,9 @@ namespace DigitalTwin::Model {
 
         virtual ~IDigitalTwinElement() = default;
 
+        std::string getName() {
+            return Name;
+        };
 
     protected:
         std::string Name;

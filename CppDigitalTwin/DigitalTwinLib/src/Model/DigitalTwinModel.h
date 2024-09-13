@@ -20,6 +20,7 @@ namespace DigitalTwin {
     class DigitalTwinManager;
     namespace Model{
         class Component;
+        class Variable;
     }
 }
 
@@ -34,12 +35,12 @@ namespace DigitalTwin::Model {
 
         std::string digitalTwinName();
 
-
     private:
         SysMLv2::Entities::DigitalTwin* DigitalTwin;
         std::vector<SysMLv2::Entities::Element*> DigitalTwinModelElements;
         DigitalTwinManager* Manager;
         std::map<std::string, Component*> ComponentMap;
+        std::map<std::string, Variable*> VariableMap;
     };
 }
 
