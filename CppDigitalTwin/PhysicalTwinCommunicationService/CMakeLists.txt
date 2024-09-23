@@ -18,7 +18,29 @@ add_library(CppPhysicalTwinCommunication
         src/entities/DigitalTwinEntity.cpp
         src/entities/DigitalTwinEntity.h
         src/entities/JsonEntities.hpp
-        src/cpp_physical_twin_communication_global.h)
+        src/cpp_physical_twin_communication_global.h
+        src/broker_includes/external/picosha2.h
+        src/broker_includes/broker.hpp
+        src/broker_includes/constant.hpp
+        src/broker_includes/endpoint_variant.hpp
+        src/broker_includes/fixed_core_map.hpp
+        src/broker_includes/inflight_message.hpp
+        src/broker_includes/mutex.hpp
+        src/broker_includes/offline_message.hpp
+        src/broker_includes/retain_type.hpp
+        src/broker_includes/retained_messages.hpp
+        src/broker_includes/retained_topic_map.hpp
+        src/broker_includes/security.hpp
+        src/broker_includes/session_state.hpp
+        src/broker_includes/session_state_fwd.hpp
+        src/broker_includes/shared_target.hpp
+        src/broker_includes/shared_target_impl.hpp
+        src/broker_includes/sub_con_map.hpp
+        src/broker_includes/subscription.hpp
+        src/broker_includes/subscription_map.hpp
+        src/broker_includes/tags.hpp
+        src/broker_includes/topic_filter.hpp
+        src/broker_includes/uuid.hpp)
 
 target_link_libraries(CppPhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp
