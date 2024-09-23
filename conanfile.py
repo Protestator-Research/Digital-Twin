@@ -27,12 +27,12 @@ class CppDigitalTwinRecipe(ConanFile):
 
     def requirements(self):
         self.requires("antlr4-cppruntime/4.13.1")
-        self.requires("boost/1.83.0")
-        self.requires("redboltz-mqtt_cpp/13.2.1")
+        self.requires("boost/1.84.0")
+        self.requires("async-mqtt/8.0.1")
         self.requires("libcurl/8.4.0")
         self.requires("nlohmann_json/3.11.3")
         self.requires("date/3.0.1")
-        self.requires("qt/6.7.0")
+        self.requires("qt/6.7.1")
         self.requires("md4c/0.4.8")
 
     def config_options(self):
@@ -82,7 +82,7 @@ class CppDigitalTwinRecipe(ConanFile):
     def build_requirements(self):
         self.tool_requires("cmake/3.30.0")
         self.tool_requires("icu/74.2")
-        self.tool_requires("qt/6.7.0")
+        self.tool_requires("qt/6.7.1")
         self.test_requires("gtest/1.14.0")
 
     def test(self):

@@ -19,7 +19,7 @@ namespace DigitalTwin::Parser {
         return std::vector<Model::Component>();
     }
 
-    std::vector<Model::Component> Parser::parseKerML(std::string ull) {
+    std::vector<Model::Component> Parser::parseKerML(std::string ) {
         return std::vector<Model::Component>();
     }
 }

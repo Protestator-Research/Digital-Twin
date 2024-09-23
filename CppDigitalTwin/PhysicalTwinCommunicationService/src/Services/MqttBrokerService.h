@@ -5,9 +5,7 @@
 #ifndef DIGITALTWIN_MQTTBROKERSERVICE_H
 #define DIGITALTWIN_MQTTBROKERSERVICE_H
 
-#include <mqtt/config.hpp>
-#include <mqtt/setup_log.hpp>
-#include <mqtt/broker/broker.hpp>
+#include <async_mqtt/all.hpp>
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 
@@ -18,30 +16,33 @@
 
 #include "../cpp_physical_twin_communication_global.h"
 
-namespace as = boost::asio;
+//namespace as = boost::asio;
 
-using con_t = MQTT_NS::server<>::endpoint_t;
-using con_sp_t = std::shared_ptr<con_t>;
+//using con_t = MQTT_NS::server<>::endpoint_t;
+//using con_sp_t = std::shared_ptr<con_t>;
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
+    /**
+     *
+     */
     class CPPPHYSICALTWINCOMMUNICATION_EXPORT MQTTBrokerService {
     public:
-        MQTTBrokerService() = delete;
-        MQTTBrokerService(as::io_context& ioc_accept,
+//        MQTTBrokerService() = delete;
+
+        MQTTBrokerService(/*as::io_context& ioc_accept,
                           std::function<as::io_context&()> ioc_con_getter,
                           MQTT_NS::broker::broker_t& broker,
-                          uint16_t port);
+                          uint16_t port*/);
 
         void listen();
 
-        MQTT_NS::broker::broker_t& getBroker() const;
+        //MQTT_NS::broker::broker_t& getBroker() const;
 
         void close();
 
         static std::thread* runBroker(uint16_t port, bool& serverStarted);
     private:
-        MQTT_NS::server<> Server;
-        MQTT_NS::broker::broker_t& Broker;
+
     };
 }
 

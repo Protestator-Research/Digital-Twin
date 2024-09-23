@@ -11,16 +11,13 @@ typedef boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::io_c
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
 
-    MQTTBrokerService::MQTTBrokerService(as::io_context &ioc_accept, std::function<as::io_context &()> ioc_con_getter,
-                                         mqtt::broker::broker_t &broker, uint16_t port)
-                                         : Server(as::ip::tcp::endpoint(as::ip::tcp::v4(), port),
-                                                  ioc_accept,
-                                                  MQTT_NS::force_move(ioc_con_getter),
-                                                  [](auto& acceptor){
-                                             acceptor.set_option(as::ip::tcp::acceptor::reuse_address(true));
-                                         }), Broker(broker){
-        Server.set_error_handler([](MQTT_NS::error_code){});
-        Server.set_accept_handler([&](con_sp_t spep){Broker.handle_accept(MQTT_NS::force_move(spep));});
+    MQTTBrokerService::MQTTBrokerService() {
+
+        using epv_type = async_mqtt::basic_endpoint_variant<async_mqtt::role::server,2,async_mqtt::protocol::mqtt>;
+
+        async_mqtt::broker<epv_typed> brk{};
+        auto num_of_iocs = 1;
+
     }
 
     void MQTTBrokerService::listen() {
