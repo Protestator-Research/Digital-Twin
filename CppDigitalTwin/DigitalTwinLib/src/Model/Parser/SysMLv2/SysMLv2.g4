@@ -1,8 +1,8 @@
 grammar SysMLv2;
 
-start: start start |
-       dependency |
-       textual_representaion |
+start: elemements*;
+
+elemements :  dependency |
        comment |
        part |
        port |
@@ -20,7 +20,10 @@ start: start start |
        function |
        input |
        output |
-       return;
+       return |
+       command_definition |
+       textual_representaion |
+       connectTo;
 
 
 dependency: DEPENDENCY namelist (FROM namelist)? TO namelist DELIMITER;
@@ -28,7 +31,7 @@ textual_representaion: REPRESENTATION? NAME? decriptor BLOCK_COMMENT;
 comment: BLOCK_COMMENT | COMMENT NAME? about? BLOCK_COMMENT | DOCUMENTATION NAME? BLOCK_COMMENT | LINE_COMMENT;
 part: PART DEFINITION? NAME specilization? delimiter_rule;
 port: PORT DEFINITION? NAME specilization? delimiter_rule;
-attribute: (ATTRIBUTE|MEASURABLE|CONTROLLABLE) DEFINITION? NAME multiplicity? type_definition? unit? delimiter_rule;
+attribute: (ATTRIBUTE|MEASURABLE|CONTROLLABLE|VARIABLE) DEFINITION? NAME multiplicity? type_definition? unit? delimiter_rule;
 item: ITEM NAME delimiter_rule;
 package: PACKAGE NAME delimiter_rule;
 assertion: ASSERT NAME delimiter_rule;
@@ -43,6 +46,8 @@ function: CALC definition_rule bracketed_content;
 input: IN NAME type_definition DELIMITER;
 output: OUT NAME type_definition DELIMITER;
 return: RETURN type_definition DELIMITER;
+command_definition: HASHTAG COMMAND NAME ATTRIBUTE DELIMITER;
+connectTo: address CONNECT_TO address DELIMITER;
 
 type_definition: ':' address;
 about: ABOUT address(','address)*;
@@ -51,7 +56,7 @@ decriptor: LANGUAGE_DESCRIPTOR '"'NAME'"';
 namelist: name(',' name)*;
 name: NAME | '\''NAME+'\'';
 address: NAME('::'(NAME | STAR STAR?))*;
-bracketed_content: '{' start '}';
+bracketed_content: '{' elemements* '}';
 fuction_arguments: '(' argument?(',' argument*) ')';
 argument: NAME type_definition;
 delimiter_rule: (bracketed_content|DELIMITER);
@@ -77,7 +82,7 @@ ITEM: 'item';
 PACKAGE: 'package';
 DEFINITION: 'def';
 ATTRIBUTE: 'attribute';
-MEASURABLE: 'measruable';
+MEASURABLE: 'measurable';
 CONTROLLABLE: 'controllable';
 ASSERT: 'assert';
 ACTION: 'action';
@@ -94,6 +99,11 @@ CALC: 'calc';
 IN: 'in';
 OUT: 'out';
 RETURN: 'return';
+HASHTAG: '#';
+COMMAND: 'command';
+VARIABLE: 'variable';
+CONNECT_TO: 'connectTo';
+
 
 NUMBER: [0-9]+;
 NAME: ('_'|[a-z]|[A-Z]|[0-9])+ ;

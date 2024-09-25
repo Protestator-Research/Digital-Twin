@@ -19,6 +19,9 @@ public:
   virtual void enterStart(SysMLv2Parser::StartContext * /*ctx*/) override { }
   virtual void exitStart(SysMLv2Parser::StartContext * /*ctx*/) override { }
 
+  virtual void enterElemements(SysMLv2Parser::ElemementsContext * /*ctx*/) override { }
+  virtual void exitElemements(SysMLv2Parser::ElemementsContext * /*ctx*/) override { }
+
   virtual void enterDependency(SysMLv2Parser::DependencyContext * /*ctx*/) override { }
   virtual void exitDependency(SysMLv2Parser::DependencyContext * /*ctx*/) override { }
 
@@ -78,6 +81,12 @@ public:
 
   virtual void enterReturn(SysMLv2Parser::ReturnContext * /*ctx*/) override { }
   virtual void exitReturn(SysMLv2Parser::ReturnContext * /*ctx*/) override { }
+
+  virtual void enterCommand_definition(SysMLv2Parser::Command_definitionContext * /*ctx*/) override { }
+  virtual void exitCommand_definition(SysMLv2Parser::Command_definitionContext * /*ctx*/) override { }
+
+  virtual void enterConnectTo(SysMLv2Parser::ConnectToContext * /*ctx*/) override { }
+  virtual void exitConnectTo(SysMLv2Parser::ConnectToContext * /*ctx*/) override { }
 
   virtual void enterType_definition(SysMLv2Parser::Type_definitionContext * /*ctx*/) override { }
   virtual void exitType_definition(SysMLv2Parser::Type_definitionContext * /*ctx*/) override { }

@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "IDigitalTwinElement.h"
-#include "SupportedTypes/SupportedTypes.h"
+#include "../SupportedTypes/SupportedTypes.h"
 
 namespace DigitalTwin::Model {
     class Variable : public IDigitalTwinElement {

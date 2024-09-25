@@ -12,32 +12,37 @@ add_library(CppDigitalTwinLib
         src/DigitalTwinManager.h
         src/Model/DigitalTwinModel.cpp
         src/Model/DigitalTwinModel.h
-        src/Model/Component.cpp
-        src/Model/Component.h
-        src/Parser/KerML/KerMLBaseListener.cpp
-        src/Parser/KerML/KerMLBaseListener.h
-        src/Parser/KerML/KerMLLexer.h
-        src/Parser/KerML/KerMLLexer.cpp
-        src/Parser/KerML/KerMLListener.cpp
-        src/Parser/KerML/KerMLListener.h
-        src/Parser/KerML/KerMLParser.h
-        src/Parser/KerML/KerMLParser.cpp
-        src/Parser/SysMLv2/SysMLv2BaseListener.cpp
-        src/Parser/SysMLv2/SysMLv2BaseListener.h
-        src/Parser/SysMLv2/SysMLv2Lexer.h
-        src/Parser/SysMLv2/SysMLv2Lexer.cpp
-        src/Parser/SysMLv2/SysMLv2Listener.cpp
-        src/Parser/SysMLv2/SysMLv2Listener.h
-        src/Parser/SysMLv2/SysMLv2Parser.h
-        src/Parser/SysMLv2/SysMLv2Parser.cpp
-        src/Parser/Parser.cpp
-        src/Parser/Parser.h
-        src/Model/Variable.cpp
-        src/Model/Variable.h
-        src/Model/IDigitalTwinElement.h
+        src/Model/Entities/Component.cpp
+        src/Model/Entities/Component.h
+        src/Model/Parser/KerML/KerMLBaseListener.cpp
+        src/Model/Parser/KerML/KerMLBaseListener.h
+        src/Model/Parser/KerML/KerMLLexer.h
+        src/Model/Parser/KerML/KerMLLexer.cpp
+        src/Model/Parser/KerML/KerMLListener.cpp
+        src/Model/Parser/KerML/KerMLListener.h
+        src/Model/Parser/KerML/KerMLParser.h
+        src/Model/Parser/KerML/KerMLParser.cpp
+        src/Model/Parser/SysMLv2/SysMLv2BaseListener.cpp
+        src/Model/Parser/SysMLv2/SysMLv2BaseListener.h
+        src/Model/Parser/SysMLv2/SysMLv2Lexer.h
+        src/Model/Parser/SysMLv2/SysMLv2Lexer.cpp
+        src/Model/Parser/SysMLv2/SysMLv2Listener.cpp
+        src/Model/Parser/SysMLv2/SysMLv2Listener.h
+        src/Model/Parser/SysMLv2/SysMLv2Parser.h
+        src/Model/Parser/SysMLv2/SysMLv2Parser.cpp
+        src/Model/Parser/Parser.cpp
+        src/Model/Parser/Parser.h
+        src/Model/Entities/Variable.cpp
+        src/Model/Entities/Variable.h
+        src/Model/Entities/IDigitalTwinElement.h
         src/cpp_digital_twin_lib_global.h
         src/Model/SupportedTypes/SupportedTypes.h
-        src/Parser/SupportedModels.h)
+        src/Model/Parser/SupportedModels.h
+        src/Model/Entities/Port.cpp
+        src/Model/Entities/Port.h
+        src/Model/Entities/Connection.cpp
+        src/Model/Entities/Connection.h
+)
 
 target_include_directories(CppDigitalTwinLib PUBLIC
         ../PhysicalTwinCommunicationService/src/

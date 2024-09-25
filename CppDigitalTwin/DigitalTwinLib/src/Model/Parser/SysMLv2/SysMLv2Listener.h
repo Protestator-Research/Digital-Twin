@@ -17,6 +17,9 @@ public:
   virtual void enterStart(SysMLv2Parser::StartContext *ctx) = 0;
   virtual void exitStart(SysMLv2Parser::StartContext *ctx) = 0;
 
+  virtual void enterElemements(SysMLv2Parser::ElemementsContext *ctx) = 0;
+  virtual void exitElemements(SysMLv2Parser::ElemementsContext *ctx) = 0;
+
   virtual void enterDependency(SysMLv2Parser::DependencyContext *ctx) = 0;
   virtual void exitDependency(SysMLv2Parser::DependencyContext *ctx) = 0;
 
@@ -76,6 +79,12 @@ public:
 
   virtual void enterReturn(SysMLv2Parser::ReturnContext *ctx) = 0;
   virtual void exitReturn(SysMLv2Parser::ReturnContext *ctx) = 0;
+
+  virtual void enterCommand_definition(SysMLv2Parser::Command_definitionContext *ctx) = 0;
+  virtual void exitCommand_definition(SysMLv2Parser::Command_definitionContext *ctx) = 0;
+
+  virtual void enterConnectTo(SysMLv2Parser::ConnectToContext *ctx) = 0;
+  virtual void exitConnectTo(SysMLv2Parser::ConnectToContext *ctx) = 0;
 
   virtual void enterType_definition(SysMLv2Parser::Type_definitionContext *ctx) = 0;
   virtual void exitType_definition(SysMLv2Parser::Type_definitionContext *ctx) = 0;

@@ -8,6 +8,7 @@
 
 #include "DigitalTwinModel.h"
 #include "../DigitalTwinManager.h"
+#include "Parser/Parser.h"
 
 namespace DigitalTwin::Model {
     DigitalTwinModel::DigitalTwinModel(SysMLv2::Entities::DigitalTwin *digitalTwin, DigitalTwinManager *manager) :
@@ -34,6 +35,7 @@ namespace DigitalTwin::Model {
         for(const auto elem : DigitalTwinModelElements)
             completeModel+=elem->body();
 
+        Parser::Parser::parse(Parser::SupportedModels::SysMLv2,completeModel);
 
     }
 
