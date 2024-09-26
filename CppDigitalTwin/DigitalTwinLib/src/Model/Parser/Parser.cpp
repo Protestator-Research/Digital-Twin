@@ -16,6 +16,8 @@
 #include "../Entities/Variable.h"
 
 namespace DigitalTwin::Parser {
+    std::vector<Model::IDigitalTwinElement*> DigitalTwin::Parser::Parser::Elements = std::vector<Model::IDigitalTwinElement*>();
+
     std::vector<Model::IDigitalTwinElement*> Parser::parse(DigitalTwin::Parser::SupportedModels models, std::string& model) {
         switch (models) {
             case KerML:
@@ -55,7 +57,7 @@ namespace DigitalTwin::Parser {
     }
 
     std::vector<Model::IDigitalTwinElement*> Parser::generateComponentVector(SysMLv2Parser::StartContext *context) {
-        std::vector<Model::IDigitalTwinElement*> returnValue;
+        Elements = std::vector<Model::IDigitalTwinElement*>();
 
         SysMLv2BaseListener listener;
 
@@ -67,41 +69,116 @@ namespace DigitalTwin::Parser {
         std::cout << "Number of Elements to be parsed: " << elements.size() << std::endl;
 
         for (const auto & element : elements) {
+
             if(element->port() != nullptr)
-            {
-                const auto &port = element->port();
-                Model::Port* _port = new Model::Port(port->NAME()->toString());
-                returnValue.push_back(_port);
-            }
-            if(element->part() != nullptr){
-                const auto &part = element->part();
-                Model::Component* _part = new Model::Component(part->NAME()->toString());
-                returnValue.push_back(_part);
+                Elements.push_back(generatePort(element->port()));
 
-                if(part->delimiter_rule()->DELIMITER() != nullptr)
-                    throw new std::exception();
+            if(element->part() != nullptr)
+                Elements.push_back(generatePart(element->part()));
 
-                auto partElements = part->delimiter_rule()->bracketed_content()->elemements();
-                for(auto intElement : partElements) {
-                    if(intElement->attribute() != nullptr){
+            if(element->connectTo()!= nullptr)
+                Elements.push_back(generateConnection(element->connectTo()));
 
-                    }
-                    if(intElement->port() != nullptr){
 
-                    }
-                    if(intElement->part() != nullptr){
-
-                    }
-                }
-            }
-            if(element->connectTo()!= nullptr){
-                const auto &connection = element->connectTo();
-                Model::Connection* _connection = new Model::Connection("");
-                returnValue.push_back(_connection);
-            }
         }
 
+        return Elements;
+    }
 
+    Model::SupportedTypes Parser::getTypeForTypeString(std::string &type) {
+
+        if(type.compare("Voltage") == 0)
+            return Model::SupportedTypes::DOUBLE;
+        if(type.compare("Double") == 0)
+            return Model::SupportedTypes::DOUBLE;
+        if(type.compare("Current") == 0)
+            return Model::SupportedTypes::DOUBLE;
+        if(type.compare("Resistance") == 0)
+            return Model::SupportedTypes::DOUBLE;
+        if(type.compare("Boolean") == 0)
+            return Model::SupportedTypes::BOOLEAN;
+
+        return Model::SupportedTypes::NA;
+    }
+
+    Model::Component *Parser::generatePart(SysMLv2Parser::PartContext *context) {
+        Model::Component* returnValue = new Model::Component(context->NAME()->toString());
+
+        if(context->delimiter_rule()->DELIMITER() != nullptr) {
+            auto elementNames = context->specilization()->address()->NAME();
+            std::string name = getNameOfString(elementNames);
+            auto element = getElementWithNameInVector(name,Elements);
+
+            if(element == nullptr)
+                throw new std::exception();
+
+            return dynamic_cast<Model::Component*>(element);
+        }else {
+            auto partElements = context->delimiter_rule()->bracketed_content()->elemements();
+            for (auto intElement: partElements) {
+                if (intElement->attribute() != nullptr)
+                    addAttributeToPart(returnValue, intElement->attribute());
+
+                if (intElement->part() != nullptr) {
+                    auto partToBeAdded = generatePart(intElement->part());
+                    returnValue->appendComponent(partToBeAdded);
+                }
+
+//                if (intElement->port() != nullptr) {
+//                    auto portToBeAdded = generatePort(intElement->port());
+
+//                }
+            }
+        }
         return returnValue;
+    }
+
+    Model::Connection *Parser::generateConnection(SysMLv2Parser::ConnectToContext *) {
+        Model::Connection* connection = new Model::Connection("");
+        return connection;
+    }
+
+    Model::Port *Parser::generatePort(SysMLv2Parser::PortContext *context) {
+        Model::Port* port = new Model::Port(context->NAME()->toString());
+        return port;
+    }
+
+    Model::Component* Parser::addAttributeToPart(Model::Component *component, SysMLv2Parser::AttributeContext *context) {
+        const auto addressData = context->type_definition()->address()->NAME();
+        std::string addressString = getNameOfString(addressData);
+         auto attribute = new Model::Variable(context->NAME()->toString(),getTypeForTypeString(addressString));
+
+
+        if(context->MEASURABLE() != nullptr) {
+            component->appendMeasurable(attribute);
+        }
+        if(context->CONTROLLABLE() != nullptr) {
+            component->appendControllable(attribute);
+        }
+        if((context->ATTRIBUTE() != nullptr)||(context->VARIABLE() != nullptr)) {
+            component->appendAttribute(attribute);
+        }
+
+        return component;
+    }
+
+    Model::IDigitalTwinElement* Parser::getElementWithNameInVector(std::string name, std::vector<Model::IDigitalTwinElement *> elements) {
+        for(auto element : elements)
+            if(element->getName()==name)
+                return element;
+
+
+        return nullptr;
+    }
+
+    std::string Parser::getNameOfString(std::vector<antlr4::tree::TerminalNode *> nameElements) {
+        std::string addressString;
+
+        for (size_t i = 0; i<nameElements.size(); i++) {
+            addressString += nameElements.at(i)->toString();
+            if(i<nameElements.size()-1)
+                addressString+="::";
+        }
+        return addressString;
     }
 }

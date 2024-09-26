@@ -7,6 +7,11 @@
 #include <SysMLv2Standard/entities/Element.h>
 
 #include "DigitalTwinModel.h"
+#include "Entities/IDigitalTwinElement.h"
+#include "Entities/Component.h"
+#include "Entities/Connection.h"
+#include "Entities/Variable.h"
+#include "Entities/Port.h"
 #include "../DigitalTwinManager.h"
 #include "Parser/Parser.h"
 
@@ -35,7 +40,10 @@ namespace DigitalTwin::Model {
         for(const auto elem : DigitalTwinModelElements)
             completeModel+=elem->body();
 
-        Parser::Parser::parse(Parser::SupportedModels::SysMLv2,completeModel);
+        auto digitalTwinElements = Parser::Parser::parse(Parser::SupportedModels::SysMLv2,completeModel);
+        for(auto dtElement : digitalTwinElements) {
+            ComponentMap.insert(std::make_pair(dtElement->getName(),dtElement));
+        }
 
     }
 

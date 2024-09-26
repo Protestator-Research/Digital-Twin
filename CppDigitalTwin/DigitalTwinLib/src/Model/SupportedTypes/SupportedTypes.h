@@ -6,9 +6,11 @@
 #define DIGITALTWIN_SUPPORTEDTYPES_H
 namespace DigitalTwin::Model {
     enum SupportedTypes {
+        BOOLEAN,
         CHAR,
         INT,
-        DOUBLE
+        DOUBLE,
+        NA
     };
 }
 #endif //DIGITALTWIN_SUPPORTEDTYPES_H

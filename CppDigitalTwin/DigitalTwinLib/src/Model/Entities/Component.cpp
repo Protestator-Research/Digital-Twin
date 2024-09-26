@@ -40,6 +40,11 @@ namespace DigitalTwin::Model {
         Measurables.insert(std::make_pair(variable->getName(),variable));
     }
 
+    void Component::appendAttribute(Variable *variable) {
+
+        Attributes.insert(std::make_pair(variable->getName(),variable));
+    }
+
     Variable *Component::getControllable(std::string name) {
         return Controllables.at(name);
     }
@@ -50,5 +55,9 @@ namespace DigitalTwin::Model {
 
     Component *Component::getComponent(std::string name) {
         return ComponentMap.at(name);
+    }
+
+    Variable *Component::getAttribute(std::string name) {
+        return Attributes.at(name);
     }
 }

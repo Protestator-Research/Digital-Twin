@@ -35,6 +35,12 @@ namespace DigitalTwin::Model {
             double* valueGetAsDouble = (double*)value;
             *valueAsDouble = *valueGetAsDouble;
         }
+
+        if(Type==SupportedTypes::BOOLEAN) {
+            bool* valueAsDouble = (bool*)Value;
+            bool* valueGetAsDouble = (bool*)value;
+            *valueAsDouble = *valueGetAsDouble;
+        }
     }
 
     void Variable::addLinkToVariable(Variable *variable) {
@@ -100,6 +106,27 @@ namespace DigitalTwin::Model {
             case DOUBLE:
                 Value = (void*)(new double);
                 break;
+            case BOOLEAN:
+                Value = (void*)(new bool);
+                break;
+            default:
+                throw new std::exception();
         }
+    }
+
+    bool Variable::getValueAsBoolean() {
+        if(Type==SupportedTypes::BOOLEAN) {
+            return *(bool*)Value;
+        }
+        else
+            throw std::exception();
+    }
+
+    void Variable::setNewValue(bool value) {
+        if(Type != SupportedTypes::BOOLEAN)
+            throw new std::exception();
+
+        *(bool *)Value=value;
+        updateLinkedVariables();
     }
 }

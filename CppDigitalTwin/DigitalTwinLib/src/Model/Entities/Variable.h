@@ -14,7 +14,7 @@ namespace DigitalTwin::Model {
     class Variable : public IDigitalTwinElement {
     public:
         Variable() = delete;
-        explicit Variable(std::string name, SupportedTypes type);
+        Variable(std::string name, SupportedTypes type);
         ~Variable() override = default;
 
         void addLinkToVariable(Variable* variable);
@@ -22,10 +22,12 @@ namespace DigitalTwin::Model {
         int getValueAsInt();
         char getValueAsChar();
         double getValueAsDouble();
+        bool getValueAsBoolean();
 
         void setNewValue(int value);
         void setNewValue(char value);
         void setNewValue(double value);
+        void setNewValue(bool value);
     private:
         void updateLinkedVariables();
         void setVariableValueWithoutPropagation(void* value);

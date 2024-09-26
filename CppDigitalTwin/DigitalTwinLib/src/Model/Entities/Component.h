@@ -33,19 +33,22 @@ namespace DigitalTwin::Model {
         ~Component() override;
 
         void appendComponent(Component* component);
+        void appendAttribute(Variable* variable);
         void appendControllable(Variable* variable);
         void appendMeasurable(Variable* variable);
 
+
         Variable* getControllable(std::string name);
         Variable* getMeasurable(std::string name);
+        Variable* getAttribute(std::string name);
         Component* getComponent(std::string name);
-
 
 
     private:
         std::map<std::string, Component*> ComponentMap;
         std::map<std::string, Variable*> Controllables;
         std::map<std::string, Variable*> Measurables;
+        std::map<std::string, Variable*> Attributes;
     };
 }
 
