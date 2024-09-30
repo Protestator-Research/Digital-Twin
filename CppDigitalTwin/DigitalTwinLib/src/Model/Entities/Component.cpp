@@ -60,4 +60,25 @@ namespace DigitalTwin::Model {
     Variable *Component::getAttribute(std::string name) {
         return Attributes.at(name);
     }
+
+    std::vector<Component *> Component::getAllComponents() {
+        std::vector<Component*> components;
+
+        for(auto element : ComponentMap)
+            components.push_back(element.second);
+
+        return components;
+    }
+
+    std::vector<Variable *> Component::getAllVariables() {
+        std::vector<Variable*> variables;
+
+        for(auto element : Controllables)
+            variables.push_back(element.second);
+
+        for(auto element : Measurables)
+            variables.push_back(element.second);
+
+        return variables;
+    }
 }

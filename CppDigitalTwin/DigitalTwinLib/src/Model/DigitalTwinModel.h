@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <functional>
 
 #include "../cpp_digital_twin_lib_global.h"
 
@@ -36,12 +37,20 @@ namespace DigitalTwin::Model {
 
         std::string digitalTwinName();
 
+        std::vector<IDigitalTwinElement*> getAllComponents() const;
+
+
         std::vector<std::string> getElementStrings();
+
+        void setUpdateModelFunction(std::function<void()> updateModel);
     private:
         SysMLv2::Entities::DigitalTwin* DigitalTwin;
         std::vector<SysMLv2::Entities::Element*> DigitalTwinModelElements;
         DigitalTwinManager* Manager;
         std::map<std::string, IDigitalTwinElement*> ComponentMap;
+        std::map<std::string, IDigitalTwinElement*> PortMap;
+        std::map<std::string, IDigitalTwinElement*> VariableMap;
+        std::function<void()> UpdateModelFunction;
 //        std::map<std::string, Variable*> VariableMap;
     };
 }

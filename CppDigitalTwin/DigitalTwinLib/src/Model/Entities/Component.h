@@ -43,6 +43,8 @@ namespace DigitalTwin::Model {
         Variable* getAttribute(std::string name);
         Component* getComponent(std::string name);
 
+        std::vector<Component*> getAllComponents();
+        std::vector<Variable*> getAllVariables();
 
     private:
         std::map<std::string, Component*> ComponentMap;

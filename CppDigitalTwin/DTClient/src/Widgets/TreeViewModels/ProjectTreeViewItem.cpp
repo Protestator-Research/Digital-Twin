@@ -54,8 +54,6 @@ namespace DigitalTwin::Client::ViewModels {
     }
 
     ProjectTreeViewItem *ProjectTreeViewItem::parentItem() {
-        if(Parent == nullptr)
-            return nullptr;
         return Parent;
     }
 

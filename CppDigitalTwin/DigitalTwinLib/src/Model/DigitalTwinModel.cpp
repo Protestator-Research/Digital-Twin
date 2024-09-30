@@ -18,7 +18,8 @@
 namespace DigitalTwin::Model {
     DigitalTwinModel::DigitalTwinModel(SysMLv2::Entities::DigitalTwin *digitalTwin, DigitalTwinManager *manager) :
             DigitalTwin(digitalTwin),
-            Manager(manager)
+            Manager(manager),
+            UpdateModelFunction([]{})
     {
         generateDigitalTwinBackend();
     }
@@ -42,12 +43,28 @@ namespace DigitalTwin::Model {
 
         auto digitalTwinElements = Parser::Parser::parse(Parser::SupportedModels::SysMLv2,completeModel);
         for(auto dtElement : digitalTwinElements) {
-            ComponentMap.insert(std::make_pair(dtElement->getName(),dtElement));
+            if(dynamic_cast<Component*>(dtElement) != nullptr)
+                ComponentMap.insert(std::make_pair(dtElement->getName(),dtElement));
+            if(dynamic_cast<Port*>(dtElement) != nullptr)
+                PortMap.insert(std::make_pair(dtElement->getName(), dtElement));
         }
 
     }
 
     std::string DigitalTwinModel::digitalTwinName() {
         return DigitalTwin->getName();
+    }
+
+    void DigitalTwinModel::setUpdateModelFunction(std::function<void()> updateModel) {
+        UpdateModelFunction = updateModel;
+    }
+
+    std::vector<IDigitalTwinElement *> DigitalTwinModel::getAllComponents() const {
+        std::vector<IDigitalTwinElement*> returnValue=std::vector<IDigitalTwinElement*>();
+
+        for(auto element : ComponentMap)
+            returnValue.push_back(element.second);
+
+        return returnValue;
     }
 }

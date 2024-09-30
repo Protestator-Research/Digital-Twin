@@ -6,12 +6,14 @@
 #define DIGITALTWIN_DIGITALTWINTABWIDGET_H
 
 #include <QWidget>
-#include <QStandardItemModel>
+#include <vector>
 
 namespace DigitalTwin::Client {
     namespace Ui {
         class DigitalTwinTabWidget;
     }
+    class VariableViewModel;
+    class TabContentWidget;
 }
 
 namespace DigitalTwin::Model{
@@ -35,7 +37,11 @@ namespace DigitalTwin::Client {
 
         Ui::DigitalTwinTabWidget *ui;
         Model::DigitalTwinModel* Model;
-        QStandardItemModel* VariableModel;
+        VariableViewModel* VariableModel;
+        std::vector<TabContentWidget*> TabContents;
+
+    private slots:
+        void onVariableClicked(const QModelIndex & index);
     };
 }
 

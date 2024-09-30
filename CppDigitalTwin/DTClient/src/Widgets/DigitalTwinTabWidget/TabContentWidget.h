@@ -17,10 +17,16 @@ namespace DigitalTwin::Client {
     class TabContentWidget : public QWidget {
     Q_OBJECT
 
+        enum TabContentWidgetStatus {
+            LineView = 0,
+            TableView
+        };
+
     public:
         explicit TabContentWidget(QWidget *parent = nullptr);
-
         ~TabContentWidget() override;
+
+        void makeConnection();
 
         void appendValue();
     private:
@@ -28,9 +34,13 @@ namespace DigitalTwin::Client {
         QChartView* Chart;
         QLineSeries* LineSeries;
 
+        TabContentWidgetStatus InternalStatus;
+
 
         void setupUi();
 
+    private slots:
+        void toogleButtonClicked();
     };
 } // DigitalTwin::Client
 
