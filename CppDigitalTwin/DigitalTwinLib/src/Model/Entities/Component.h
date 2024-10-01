@@ -10,6 +10,8 @@
 #include <map>
 
 #include "IDigitalTwinElement.h"
+#include "../../cpp_digital_twin_lib_global.h"
+
 namespace DigitalTwin::Model {
     class Variable;
 }
@@ -18,7 +20,7 @@ namespace DigitalTwin::Model {
     /**
      *
      */
-    class Component : public IDigitalTwinElement{
+    class CPPDIGITALTWINLIB_EXPORT Component : public IDigitalTwinElement{
     public:
         /**
          * CTor is Deleted

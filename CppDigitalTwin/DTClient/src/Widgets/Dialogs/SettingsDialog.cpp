@@ -7,7 +7,11 @@
 #include <QPushButton>
 
 #include "SettingsDialog.h"
+#if(WIN32)
+#include "../../ui_SettingsDialog.h"
+#else
 #include "../../../build/Debug/CppDigitalTwin/DTClient/ui_SettingsDialog.h"
+#endif
 
 namespace DigitalTwin::Client {
     SettingsDialog::SettingsDialog(DigitalTwinClientSettings *settings, QWidget *parent) :

@@ -56,7 +56,7 @@ target_link_libraries(CppDigitalTwinLib
         antlr4_shared)
 
 if(MSVC)
-    target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX)
+    target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX-)
 else()
     target_compile_options(CppDigitalTwinLib PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

@@ -9,9 +9,10 @@
 
 #include "IDigitalTwinElement.h"
 #include "../SupportedTypes/SupportedTypes.h"
+#include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model {
-    class Variable : public IDigitalTwinElement {
+    class CPPDIGITALTWINLIB_EXPORT Variable : public IDigitalTwinElement {
     public:
         Variable() = delete;
         Variable(std::string name, SupportedTypes type);

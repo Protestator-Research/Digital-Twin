@@ -52,7 +52,7 @@ install(TARGETS CppPhysicalTwinCommunication DESTINATION "."
         LIBRARY DESTINATION lib)
 
 if(MSVC)
-    target_compile_options(CppPhysicalTwinCommunication PRIVATE /W4 /WX-)
+    target_compile_options(CppPhysicalTwinCommunication PRIVATE /W4 /WX- /bigobj)
 else()
     target_compile_options(CppPhysicalTwinCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

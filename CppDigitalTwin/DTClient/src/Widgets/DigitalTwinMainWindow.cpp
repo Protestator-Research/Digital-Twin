@@ -5,7 +5,11 @@
 // You may need to build the project (run Qt uic code generator) to get "ui_DigitalTwinMainWindow.h" resolved
 
 #include "DigitalTwinMainWindow.h"
-#include "../../../../build/Debug/CppDigitalTwin/DTClient/ui_DigitalTwinMainWindow.h"
+#if(WIN32)
+    #include "../../ui/ui_DigitalTwinMainWindow.h"
+#else
+    #include "../../../../build/Debug/CppDigitalTwin/DTClient/ui_DigitalTwinMainWindow.h"
+#endif
 #include "Dialogs/SettingsDialog.h"
 #include "../Models/MainWindowModel.h"
 

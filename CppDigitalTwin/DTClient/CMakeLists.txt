@@ -32,7 +32,11 @@ set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Models/Markdown/MarkdownParser.cpp
         src/Models/Markdown/MarkdownParser.h
         src/Widgets/DigitalTwinTabWidget/TabContentWidget.cpp
-        src/Widgets/DigitalTwinTabWidget/TabContentWidget.h)
+        src/Widgets/DigitalTwinTabWidget/TabContentWidget.h
+        src/Widgets/TreeViewModels/VariableViewModel.h
+        src/Widgets/TreeViewModels/VariableViewModel.cpp
+        src/Widgets/TreeViewModels/VariableViewModelItem.h
+        src/Widgets/TreeViewModels/VariableViewModelItem.cpp)
 
 qt_wrap_ui(SOURCES ui/DigitalTwinTabWidget.ui
         ui/SettingsDialog.ui

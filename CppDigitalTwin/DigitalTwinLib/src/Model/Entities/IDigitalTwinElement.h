@@ -6,9 +6,10 @@
 #define DIGITALTWIN_IDIGITALTWINELEMENT_H
 
 #include <string>
+#include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model {
-    class IDigitalTwinElement {
+    class CPPDIGITALTWINLIB_EXPORT IDigitalTwinElement {
     public:
         IDigitalTwinElement() = delete;
 

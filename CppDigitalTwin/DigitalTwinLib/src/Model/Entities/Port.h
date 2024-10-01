@@ -8,9 +8,10 @@
 #include "IDigitalTwinElement.h"
 
 #include <string>
+#include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model {
-    class Port : public IDigitalTwinElement {
+    class CPPDIGITALTWINLIB_EXPORT Port : public IDigitalTwinElement {
     public:
         Port() = delete;
         explicit Port(std::string name);
