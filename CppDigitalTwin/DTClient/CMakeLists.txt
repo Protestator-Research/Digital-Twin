@@ -58,7 +58,10 @@ target_link_libraries(CppDigitalTwinClient PUBLIC
         CppDigitalTwinLib
         CppPhysicalTwinCommunication
         CPSBaseLib
-        qt::qt
+        Qt6::Widgets
+        Qt6::Gui
+        Qt6::Charts
+        Qt6::Core
         mqtt_cpp::mqtt_cpp
         md4c::md4c)
 
