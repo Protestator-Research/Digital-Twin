@@ -533,21 +533,20 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         }
     }
 
-    void MQTTBrokerService::listen() {
-        //Server.listen();
-    }
+//    void MQTTBrokerService::listen() {
+//        //Server.listen();
+//    }
 
 //    MQTT_NS::broker::broker_t &MQTTBrokerService::getBroker() const {
 //        return Broker;
 //    }
 
-    void MQTTBrokerService::close() {
-//        Server.close();
-    }
+//    void MQTTBrokerService::close() {
+////        Server.close();
+//    }
 
-    std::thread* MQTTBrokerService::runBroker(uint16_t , bool&) {
-
-        return nullptr;
+    void MQTTBrokerService::runBroker(uint16_t , bool&) {
+        MQTTBrokerService();
     }
 
 }

@@ -9,103 +9,16 @@
 #include <iostream>
 #include <thread>
 
+using client_t = async_mqtt::client<async_mqtt::protocol_version::v5,async_mqtt::protocol::mqtt>;
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
 
-    MqttClientService::MqttClientService(std::string , std::string )
+
+    MqttClientService::MqttClientService(std::string server, std::string port) :
+            Client(client_t::create(ioContext.get_executor()))
     {
-        // Create no TLS client
-//        Client = MQTT_NS::make_sync_client(IoContext, server, port);
-//
-//        auto disconnect = [&] {
-////            if (++count == 5) Client->disconnect();
-//        };
-//
-//        // Setup Client
-//        Client->set_client_id("DigitalTwinClient");
-//        Client->set_clean_session(true);
-//
-//        // Setup handlers
-//        Client->set_connack_handler(
-//                [&]
-//                        (bool sp, MQTT_NS::connect_return_code connack_return_code){
-//                    std::cout << "Connack handler called" << std::endl;
-//                    std::cout << "Session Present: " << std::boolalpha << sp << std::endl;
-//                    std::cout << "Connack Return Code: "
-//                              << MQTT_NS::connect_return_code_to_str(connack_return_code) << std::endl;
-//                    if (connack_return_code == MQTT_NS::connect_return_code::accepted) {
-//                        for(auto elem : CallbackFuctionsPerTopic) {
-//                            uint16_t pid_sub = Client->subscribe(elem.first, MQTT_NS::qos::at_most_once);
-//                            PackedIdToTopicMapping[pid_sub]=elem.first;
-//                        }
-//                    }
-//                    return true;
-//                });
-//        Client->set_close_handler(
-//                []
-//                        (){
-//                    std::cout << "closed." << std::endl;
-//                });
-//        Client->set_error_handler(
-//                []
-//                        (MQTT_NS::error_code ec){
-//                    std::cout << "error: " << ec.message() << std::endl;
-//                });
-//        Client->set_puback_handler(
-//                [&]
-//                        (packet_id_t packet_id){
-//                    std::cout << "puback received. packet_id: " << packet_id << std::endl;
-//                    disconnect();
-//                    return true;
-//                });
-//        Client->set_pubrec_handler(
-//                []
-//                        (packet_id_t packet_id){
-//                    std::cout << "pubrec received. packet_id: " << packet_id << std::endl;
-//                    return true;
-//                });
-//        Client->set_pubcomp_handler(
-//                [&]
-//                        (packet_id_t packet_id){
-//                    std::cout << "pubcomp received. packet_id: " << packet_id << std::endl;
-//                    disconnect();
-//                    return true;
-//                });
-//        Client->set_suback_handler(
-//                [&]
-//                        (packet_id_t packet_id, std::vector<MQTT_NS::suback_return_code> results){
-//                    std::cout << "suback received. packet_id: " << packet_id << std::endl;
-//                    for (auto const& e : results) {
-//                        std::cout << "[client] subscribe result: " << e << std::endl;
-//                    }
-//                    std::string topic = PackedIdToTopicMapping[packet_id];
-//                    if(!topic.empty()) {
-//                        CallbackFuctionsPerTopic[topic]("");
-//                    }
-//                    return true;
-//                });
-//        Client->set_publish_handler(
-//                [this]
-//                        (MQTT_NS::optional<packet_id_t> packet_id,
-//                         MQTT_NS::publish_options pubopts,
-//                         MQTT_NS::buffer topic_name,
-//                         MQTT_NS::buffer contents){
-//                    std::cout << "publish received."
-//                              << " dup: "    << pubopts.get_dup()
-//                              << " qos: "    << pubopts.get_qos()
-//                              << " retain: " << pubopts.get_retain() << std::endl;
-//                    if (packet_id)
-//                        std::cout << "packet_id: " << *packet_id << std::endl;
-//                    std::cout << "topic_name: " << topic_name << std::endl;
-//                    std::cout << "contents: " << contents << std::endl;
-//
-//                    CallbackFuctionsPerTopic[std::string(topic_name)](std::string(contents));
-//
-//                    return true;
-//                });
-
-
-
+        Server = server;
+        Port = port;
     }
 
     MqttClientService::~MqttClientService() {
@@ -125,7 +38,87 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     void MqttClientService::connectClientStartCommunication() {
+        async_mqtt::async_underlying_handshake(
+                Client->next_layer(),
+                Server, Port,
+                [this](auto&&... args) {
+                    handleUnderlyingHandshake(
+                            std::forward<std::remove_reference_t<decltype(args)>>(args)...
+                    );
+                }
+        );
 //        Client->connect();
 //        IoContext.run();
+    }
+
+    void MqttClientService::handleUnderlyingHandshake(async_mqtt::error_code errorCode) {
+        std::cout << "underlying_handshake:" << errorCode.message() << std::endl;
+        if(errorCode) return;
+        Client->async_start(true,
+                           std::uint16_t(0),
+                           "openDigitalTwin",
+                           std::nullopt,
+                           "", //Username
+                           "", //Password
+                           [this](auto&&... args) {
+                               handleStartResponse(std::forward<decltype(args)>(args)...);
+                           }
+                           );
+    }
+
+    void MqttClientService::handleStartResponse(async_mqtt::error_code ec,
+                                                std::optional<async_mqtt::client<async_mqtt::protocol_version::v5, async_mqtt::protocol::mqtt>::connack_packet> connack_opt) {
+        std::cout << "start:" << ec.message() << std::endl;
+        if (ec) return;
+        if (connack_opt) {
+            std::cout << *connack_opt << std::endl;
+            Client->async_publish(
+                    "topic1",
+                    "payload1",
+                    async_mqtt::qos::at_least_once,
+                    [this](auto&&... args) {
+                        handlePublishResponse(
+                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
+                        );
+                    }
+            );
+//            Client.async_publish(
+//                    *Client.acquire_unique_packet_id(), // sync version only works thread safe context
+//                    "topic2",
+//                    "payload2",
+//                    async_mqtt::qos::at_least_once,
+//                    [this](auto&&... args) {
+//                        handle_publish_response(
+//                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
+//                        );
+//                    }
+//            );
+//            Client.async_publish(
+//                    *Client.acquire_unique_packet_id(), // sync version only works thread safe context
+//                    "topic3",
+//                    "payload3",
+//                    async_mqtt::qos::exactly_once,
+//                    [this](auto&&... args) {
+//                        handle_publish_response(
+//                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
+//                        );
+//                    }
+//            );
+        }
+    }
+
+    void MqttClientService::handlePublishResponse(async_mqtt::error_code ec, client_t::pubres_type pubres) {
+        std::cout << "publish:" << ec.message() << std::endl;
+        if (ec) return;
+        if (pubres.puback_opt) {
+            std::cout << *pubres.puback_opt << std::endl;
+        }
+        if (pubres.pubrec_opt) {
+            std::cout << *pubres.pubrec_opt << std::endl;
+        }
+        if (pubres.pubcomp_opt) {
+            std::cout << *pubres.pubcomp_opt << std::endl;
+            Client->async_disconnect(boost::asio::detached);
+        }
     }
 }

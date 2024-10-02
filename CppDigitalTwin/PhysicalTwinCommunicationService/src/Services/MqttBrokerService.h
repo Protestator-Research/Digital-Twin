@@ -27,20 +27,9 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
      */
     class CPPPHYSICALTWINCOMMUNICATION_EXPORT MQTTBrokerService {
     public:
-//        MQTTBrokerService() = delete;
+        MQTTBrokerService();
 
-        MQTTBrokerService(/*as::io_context& ioc_accept,
-                          std::function<as::io_context&()> ioc_con_getter,
-                          MQTT_NS::broker::broker_t& broker,
-                          uint16_t port*/);
-
-        void listen();
-
-        //MQTT_NS::broker::broker_t& getBroker() const;
-
-        void close();
-
-        static std::thread* runBroker(uint16_t port, bool& serverStarted);
+        static void runBroker(uint16_t port, bool& serverStarted);
     private:
 
     };

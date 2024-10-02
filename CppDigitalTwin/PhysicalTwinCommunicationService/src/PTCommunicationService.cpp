@@ -26,7 +26,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                 MQTTBrokerService::runBroker(MqttPort,serverStarted);
             });
             std::thread clientThread = std::thread([&]{
-                //sleep(2);
+                sleep(2);
                 ClientService->connectClientStartCommunication();
             });
 
