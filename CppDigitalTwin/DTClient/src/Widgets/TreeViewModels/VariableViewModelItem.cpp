@@ -50,6 +50,7 @@ namespace DigitalTwin::Client {
             case VariableType:
                 return QVariant(QString::fromStdString(Variable->getName()));
         }
+        return QVariant();
     }
 
     int VariableViewModelItem::row() {

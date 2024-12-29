@@ -6,4 +6,4 @@
 .idea/
 **/cmake-**/**
 CMakeUserPresets.json
-ConanPresets.json
+CMakePresets.json

@@ -25,6 +25,7 @@ namespace DigitalTwin::Parser {
             case SysMLv2:
                 return parseSysMLv2(model);
         }
+        return std::vector<Model::IDigitalTwinElement*>();
     }
 
     std::vector<Model::IDigitalTwinElement*> Parser::parseSysMLv2(std::string& expression) {
