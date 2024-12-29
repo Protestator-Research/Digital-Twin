@@ -21,8 +21,8 @@ before_script:
   - apt install -y qt6-base-dev
   - pip install --upgrade conan --break-system-packages
   - conan profile detect
-  - conan remote add cps-artifactory http://131.246.211.170:8081/artifactory/api/conan/conan
-  - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory gitlab_runner
+  - conan remote add cps-artifactory $ARTIFACTORY_URL
+  - conan remote login -p $ARTIFACTORY_TOKEN cps-artifactory cps-gitlab-runner
   - conan remote remove conancenter
 
 build_gcc13:
