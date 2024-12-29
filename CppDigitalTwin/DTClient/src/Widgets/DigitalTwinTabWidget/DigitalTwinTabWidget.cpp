@@ -6,7 +6,7 @@
 #include "DigitalTwinTabWidget.h"
 #include "TabContentWidget.h"
 #include "../TreeViewModels/VariableViewModel.h"
-#include "../../ui_DigitalTwinTabWidget.h"
+#include "ui_DigitalTwinTabWidget.h"
 #include "../TreeViewModels/VariableViewModelItem.h"
 
 #include <Model/DigitalTwinModel.h>

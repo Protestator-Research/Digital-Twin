@@ -51,7 +51,8 @@ target_include_directories(CppDigitalTwinClient PUBLIC
         ../BackendCommunicationService/src/
         ../DigitalTwinLib/src/
         ../PhysicalTwinCommunicationService/src/
-        ../CpsBaseLib/src)
+        ../CpsBaseLib/src
+        "${CMAKE_CURRENT_BINARY_DIR}/")
 
 target_link_libraries(CppDigitalTwinClient PUBLIC
         CppBackendCommunication

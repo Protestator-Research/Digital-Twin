@@ -5,7 +5,7 @@
 // You may need to build the project (run Qt uic code generator) to get "ui_TabContentWidget.h" resolved
 
 #include "TabContentWidget.h"
-#include "../../ui_TabContentWidget.h"
+#include "ui_TabContentWidget.h"
 
 
 
