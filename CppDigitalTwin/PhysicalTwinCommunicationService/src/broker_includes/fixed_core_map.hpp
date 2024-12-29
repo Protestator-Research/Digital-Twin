@@ -4,9 +4,11 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
+
+
 #if !defined(ASYNC_MQTT_BROKER_FIXED_CORE_MAP_HPP)
 #define ASYNC_MQTT_BROKER_FIXED_CORE_MAP_HPP
-
+#pragma GCC diagnostic ignored "-Wunused-variable"
 #include <async_mqtt/util/log.hpp>
 
 #if defined(_GNU_SOURCE)
