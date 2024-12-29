@@ -86,7 +86,7 @@ namespace SysMLv2::Entities {
     }
 
     std::string Project::serializeToJson() {
-//        return Record::serializeToJson();
-        return std::string();
+        return Record::serializeToJson();
+        //return std::string();
     }
 }

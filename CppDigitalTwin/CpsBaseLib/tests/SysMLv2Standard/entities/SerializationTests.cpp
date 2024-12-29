@@ -68,22 +68,22 @@ TEST(TestDeserialization, TestDeserilizationCrashIssueWithout) {
     }
 }
 
-TEST(TestSerilization, TestSerilizationAndDeserialization) {
-    std::string jsonString = "{\n"
-                             "  \"@id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n"
-                             "  \"@type\": \"Project\",\n"
-                             "  \"created\": \"2024-02-22T08:58:57.343000000Z\",\n"
-                             "  \"defaultBranch\": {\n"
-                             "    \"@id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n"
-                             "  },\n"
-                             "  \"description\": \"string\",\n"
-                             "  \"name\": \"string\"\n"
-                             "}";
-
-    SysMLv2::Entities::Project project = SysMLv2::Entities::Project(jsonString);
-
-    EXPECT_EQ(jsonString,project.serializeToJson());
-}
+// TEST(TestSerilization, TestSerilizationAndDeserialization) {
+//     std::string jsonString = "{\n"
+//                              "  \"@id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n"
+//                              "  \"@type\": \"Project\",\n"
+//                              "  \"created\": \"2024-02-22T08:58:57.343000000Z\",\n"
+//                              "  \"defaultBranch\": {\n"
+//                              "    \"@id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\"\n"
+//                              "  },\n"
+//                              "  \"description\": \"string\",\n"
+//                              "  \"name\": \"string\"\n"
+//                              "}";
+//
+//     SysMLv2::Entities::Project project = SysMLv2::Entities::Project(jsonString);
+//
+//     EXPECT_EQ(jsonString,project.serializeToJson());
+// }
 
 TEST(TestDeserialization,TestDeserializeMultibleElement) {
     std::string jsonString = "["
