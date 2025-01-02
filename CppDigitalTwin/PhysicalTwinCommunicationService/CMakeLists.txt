@@ -5,6 +5,7 @@ project(CppPhysicalTwinCommunication CXX)
 find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(mqtt_cpp REQUIRED CONFIG)
+find_package(Threads::Threads REQUIRED)
 
 add_library(CppPhysicalTwinCommunication
         src/PTCommunicationService.cpp
@@ -44,7 +45,8 @@ add_library(CppPhysicalTwinCommunication
 
 target_link_libraries(CppPhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp
-        nlohmann_json::nlohmann_json)
+        nlohmann_json::nlohmann_json
+        Threads::Threads)
 
 install(TARGETS CppPhysicalTwinCommunication DESTINATION "."
         RUNTIME DESTINATION bin
