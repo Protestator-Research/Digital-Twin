@@ -7,9 +7,13 @@
 #include "../entities/DigitalTwinEntity.h"
 
 #include <iostream>
+#include <async_mqtt/predefined_layer/ws.hpp>
 #include <thread>
 
-using client_t = async_mqtt::client<async_mqtt::protocol_version::v5,async_mqtt::protocol::mqtt>;
+#include <boost/asio.hpp>
+#include <boost/asio/async_result.hpp>
+
+//using client_t = async_mqtt::client<async_mqtt::protocol_version::v5,async_mqtt::protocol::mqtt>;
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
 
@@ -25,30 +29,57 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
     }
 
-    void MqttClientService::sendValueToServer(std::string , std::string ) {
-//        Client->publish(Client->acquire_unique_packet_id(), topic, value);
+    void MqttClientService::sendValueToServer(std::string topic, std::string content) {
+            Client->async_publish(
+                    *Client->acquire_unique_packet_id(), // sync version only works thread safe context
+                    topic,
+                    content,
+                    async_mqtt::qos::at_least_once,
+                    [this](auto&&... args) {
+                        handlePublishResponse(
+                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
+                        );
+                    }
+            );
     }
 
-    void MqttClientService::setCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction) {
+    void MqttClientService::addCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction) {
         CallbackFuctionsPerTopic[topic] = callbackFunction;
+        std::vector<async_mqtt::topic_subopts> sub_entry;
+
+        for(auto element : CallbackFuctionsPerTopic) {
+            sub_entry.push_back({element.first, async_mqtt::qos::at_least_once});
+        }
+
         if(ClientStarted) {
+            Client->async_subscribe(
+                    *Client->acquire_unique_packet_id(),
+                    async_mqtt::force_move(sub_entry),
+                    [this](auto&&... args) {
+                        handleSubscribeResponse(
+                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
+                        );
+                    }
+                    );
 //        uint16_t packetId = Client->subscribe(topic, MQTT_NS::qos::at_least_once);
 //        PackedIdToTopicMapping[packetId] = topic;
         }
     }
 
     void MqttClientService::connectClientStartCommunication() {
+        std::cout << "Starting underlying handshake-" << std::endl;
+        auto next_layer = &Client->next_layer();
         async_mqtt::async_underlying_handshake(
-                Client->next_layer(),
-                Server, Port,
+                *next_layer,
+                Server,
+                Port,
                 [this](auto&&... args) {
                     handleUnderlyingHandshake(
                             std::forward<std::remove_reference_t<decltype(args)>>(args)...
                     );
                 }
         );
-//        Client->connect();
-//        IoContext.run();
+        ioContext.run();
     }
 
     void MqttClientService::handleUnderlyingHandshake(async_mqtt::error_code errorCode) {
@@ -56,7 +87,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         if(errorCode) return;
         Client->async_start(true,
                            std::uint16_t(0),
-                           "openDigitalTwin",
+                           "",
                            std::nullopt,
                            "", //Username
                            "", //Password
@@ -67,14 +98,15 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     void MqttClientService::handleStartResponse(async_mqtt::error_code ec,
-                                                std::optional<async_mqtt::client<async_mqtt::protocol_version::v5, async_mqtt::protocol::mqtt>::connack_packet> connack_opt) {
+                                                std::optional<client_t::connack_packet> connack_opt) {
         std::cout << "start:" << ec.message() << std::endl;
         if (ec) return;
         if (connack_opt) {
             std::cout << *connack_opt << std::endl;
             Client->async_publish(
-                    "topic1",
-                    "payload1",
+                    *Client->acquire_unique_packet_id(),
+                    "openDigitalTwin",
+                    DigitalTwinEntity().serialize(),
                     async_mqtt::qos::at_least_once,
                     [this](auto&&... args) {
                         handlePublishResponse(
@@ -82,28 +114,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                         );
                     }
             );
-//            Client.async_publish(
-//                    *Client.acquire_unique_packet_id(), // sync version only works thread safe context
-//                    "topic2",
-//                    "payload2",
-//                    async_mqtt::qos::at_least_once,
-//                    [this](auto&&... args) {
-//                        handle_publish_response(
-//                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
-//                        );
-//                    }
-//            );
-//            Client.async_publish(
-//                    *Client.acquire_unique_packet_id(), // sync version only works thread safe context
-//                    "topic3",
-//                    "payload3",
-//                    async_mqtt::qos::exactly_once,
-//                    [this](auto&&... args) {
-//                        handle_publish_response(
-//                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
-//                        );
-//                    }
-//            );
         }
     }
 
@@ -121,4 +131,42 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
             Client->async_disconnect(boost::asio::detached);
         }
     }
+
+    void MqttClientService::handleSubscribeResponse(async_mqtt::error_code ec, std::optional<client_t::suback_packet> suback_opt) {
+        std::cout << "subscribe:" << ec.message() << std::endl;
+        if (ec) {
+            //reconnect();
+            return;
+        }
+        if (suback_opt) {
+            std::cout << *suback_opt << std::endl;
+        }
+        Client->async_recv(
+                [this](auto&&... args) {
+                    handleReceive(
+                            std::forward<std::remove_reference_t<decltype(args)>>(args)...
+                    );
+                }
+        );
+    }
+
+    void MqttClientService::handleReceive(async_mqtt::error_code ec, async_mqtt::packet_variant pv) {
+        std::cout << "recv:" << ec.message() << std::endl;
+        if (ec) {
+//            reconnect();
+            return;
+        }
+        BOOST_ASSERT(pv);
+        std::cout << pv << std::endl;
+        // next receive
+        Client->async_recv(
+                [this](auto&&... args) {
+                    handleReceive(
+                            std::forward<std::remove_reference_t<decltype(args)>>(args)...
+                    );
+                }
+        );
+    }
+
+
 }

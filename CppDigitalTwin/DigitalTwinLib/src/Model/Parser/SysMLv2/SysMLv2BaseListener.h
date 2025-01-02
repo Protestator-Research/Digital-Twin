@@ -91,6 +91,9 @@ public:
   virtual void enterType_definition(SysMLv2Parser::Type_definitionContext * /*ctx*/) override { }
   virtual void exitType_definition(SysMLv2Parser::Type_definitionContext * /*ctx*/) override { }
 
+  virtual void enterSuper_class_definition(SysMLv2Parser::Super_class_definitionContext * /*ctx*/) override { }
+  virtual void exitSuper_class_definition(SysMLv2Parser::Super_class_definitionContext * /*ctx*/) override { }
+
   virtual void enterAbout(SysMLv2Parser::AboutContext * /*ctx*/) override { }
   virtual void exitAbout(SysMLv2Parser::AboutContext * /*ctx*/) override { }
 

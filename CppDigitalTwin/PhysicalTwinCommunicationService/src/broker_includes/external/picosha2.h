@@ -24,8 +24,10 @@ THE SOFTWARE.
 
 #ifndef PICOSHA2_H
 #define PICOSHA2_H
+#ifdef __linux__
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 // picosha2:20140213
+#endif
 
 #ifndef PICOSHA2_BUFFER_SIZE_FOR_INPUT_ITERATOR
 #define PICOSHA2_BUFFER_SIZE_FOR_INPUT_ITERATOR \

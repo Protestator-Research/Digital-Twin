@@ -112,7 +112,7 @@ namespace BACKEND_COMMUNICATION {
         std::string loginToBackendVersion2(std::string const& username, std::string const& passwod);
 
     private:
-        std::string ServerAddress = "http://localhost:8080/";
+        std::string ServerAddress = "http://164.92.207.122Ï:8080/";
         std::string ReturnedHeaderData;
         std::string Data;
         struct curl_slist *HeaderList = NULL;

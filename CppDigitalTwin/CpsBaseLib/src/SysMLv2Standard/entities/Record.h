@@ -62,7 +62,7 @@ namespace SysMLv2::Entities {
          * @param other The other Record object to check
          * @return True if the objects are identical.
          */
-        bool operator==(Record const &other);
+        bool operator==(Record const &other) const;
 
         /**
          * Returns the human identifier according to the SysMLv2 standard.

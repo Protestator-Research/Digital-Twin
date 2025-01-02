@@ -50,8 +50,9 @@ command_definition: HASHTAG COMMAND NAME ATTRIBUTE DELIMITER;
 connectTo: address CONNECT_TO address DELIMITER;
 
 type_definition: ':' address;
+super_class_definition: SUPERCLASS address;
 about: ABOUT address(','address)*;
-specilization: ':' address;
+specilization: (SUPERCLASS | ':') address;
 decriptor: LANGUAGE_DESCRIPTOR '"'NAME'"';
 namelist: name(',' name)*;
 name: NAME | '\''NAME+'\'';
@@ -63,6 +64,7 @@ delimiter_rule: (bracketed_content|DELIMITER);
 multiplicity: '[' (STAR | NUMBER) ']';
 unit: '[' NAME ']';
 definition_rule: DEFINITION NAME;
+
 
 DEPENDENCY: 'dependency';
 REPRESENTATION: 'rep';
@@ -103,6 +105,9 @@ HASHTAG: '#';
 COMMAND: 'command';
 VARIABLE: 'variable';
 CONNECT_TO: 'connectTo';
+INSTANCE: 'instance';
+INDIVIDUAL: 'individual';
+SUPERCLASS: ':>';
 
 
 NUMBER: [0-9]+;

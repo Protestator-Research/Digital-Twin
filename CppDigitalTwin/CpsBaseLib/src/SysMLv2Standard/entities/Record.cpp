@@ -52,7 +52,7 @@ namespace SysMLv2::Entities {
 
     }
 
-    bool Record::operator==(const Record &other) {
+    bool Record::operator==(const Record &other) const {
         if(Id != other.Id)
             return false;
         if(Name != other.Name)

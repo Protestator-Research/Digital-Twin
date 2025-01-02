@@ -25,10 +25,9 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
             std::thread serverThread = std::thread([&]{
                 MQTTBrokerService::runBroker(MqttPort,serverStarted);
             });
-            std::thread clientThread = std::thread([&]{
-                sleep(2);
-                ClientService->connectClientStartCommunication();
-            });
+
+            sleep(1);
+            ClientService->connectClientStartCommunication();
 
             serverThread.join();
         }
@@ -42,7 +41,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     void CommunicationService::addObservationCallbackForTopic(std::string topic, std::function<void(std::string)> callback) {
-        ClientService->setCallbackFunction(topic,callback);
+        ClientService->addCallbackFunction(topic,callback);
     }
 
     void CommunicationService::publishMQTTMessage(std::string topic, std::string content) {

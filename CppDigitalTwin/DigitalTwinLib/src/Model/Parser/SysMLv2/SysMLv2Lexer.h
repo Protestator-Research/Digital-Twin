@@ -21,7 +21,8 @@ public:
     ALIAS = 34, PRIVATE = 35, PROTECTED = 36, PUBLIC = 37, IMPORT = 38, 
     ABSTRACT = 39, VARIATION = 40, VARIANT = 41, STAR = 42, CALC = 43, IN = 44, 
     OUT = 45, RETURN = 46, HASHTAG = 47, COMMAND = 48, VARIABLE = 49, CONNECT_TO = 50, 
-    NUMBER = 51, NAME = 52, INT = 53, WS = 54
+    INSTANCE = 51, INDIVIDUAL = 52, SUPERCLASS = 53, NUMBER = 54, NAME = 55, 
+    INT = 56, WS = 57
   };
 
   explicit SysMLv2Lexer(antlr4::CharStream *input);
