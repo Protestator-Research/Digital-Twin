@@ -44,7 +44,7 @@ namespace DigitalTwin::Client::ViewModels {
                ? QAbstractItemModel::flags(index) : Qt::ItemFlags(Qt::NoItemFlags);
     }
 
-    QVariant ProjectTreeViewModel::headerData(int section, Qt::Orientation orientation, int role) const {
+    QVariant ProjectTreeViewModel::headerData(int, Qt::Orientation orientation, int role) const {
         return orientation == Qt::Horizontal && role == Qt::DisplayRole
                ? RootItem->data() : QVariant{};
     }
@@ -85,7 +85,7 @@ namespace DigitalTwin::Client::ViewModels {
         return parentItem->childCount();
     }
 
-    int ProjectTreeViewModel::columnCount(const QModelIndex &parent) const {
+    int ProjectTreeViewModel::columnCount(const QModelIndex &) const {
         return 1;
     }
 

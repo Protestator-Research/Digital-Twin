@@ -29,7 +29,7 @@ namespace DigitalTwin::Client {
                ? QAbstractItemModel::flags(index) : Qt::ItemFlags(Qt::NoItemFlags);
     }
 
-    QVariant VariableViewModel::headerData(int section, Qt::Orientation orientation, int role) const {
+    QVariant VariableViewModel::headerData(int , Qt::Orientation orientation, int role) const {
         return orientation == Qt::Horizontal && role == Qt::DisplayRole
                ? RootItem->data() : QVariant{};
     }
@@ -70,7 +70,7 @@ namespace DigitalTwin::Client {
         return parentItem->childCount();
     }
 
-    int VariableViewModel::columnCount(const QModelIndex &parent) const {
+    int VariableViewModel::columnCount(const QModelIndex &) const {
         return 1;
     }
 

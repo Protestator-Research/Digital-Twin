@@ -33,9 +33,11 @@ target_include_directories(CppBackendCommunication PUBLIC
                                 ../CpsBaseLib/src)
 
 if(MSVC)
-    target_compile_options(CppBackendCommunication PRIVATE /bigobj /W4 /WX-)
-else()
-    target_compile_options(CppBackendCommunication PRIVATE -Wall -Werror)
+    target_compile_options(CppBackendCommunication PRIVATE /W4 /WX- /bigobj)
+elseif (__linux__)
+    target_compile_options(CppBackendCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
+else ()
+    target_compile_options(CppBackendCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
 endif()
 
 install(TARGETS CppBackendCommunication DESTINATION "."

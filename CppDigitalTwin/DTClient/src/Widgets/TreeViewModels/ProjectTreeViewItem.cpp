@@ -9,14 +9,23 @@
 #include <algorithm>
 
 namespace DigitalTwin::Client::ViewModels {
-
-    ProjectTreeViewItem::ProjectTreeViewItem(SysMLv2::Entities::Project *project, ProjectTreeViewItem *parent) :
-    Parent(parent),
-    ProjectData(project){    }
+    ProjectTreeViewItem::ProjectTreeViewItem() :
+    ProjectData(nullptr),
+    DigitalTwinData(nullptr),
+    Parent(nullptr)
+    {     }
 
     ProjectTreeViewItem::ProjectTreeViewItem(SysMLv2::Entities::DigitalTwin *digitalTwin, ProjectTreeViewItem *parent) :
-    Parent(parent),
-    DigitalTwinData(digitalTwin){    }
+        ProjectData(nullptr),
+        DigitalTwinData(digitalTwin),
+        Parent(parent)
+    {    }
+
+    ProjectTreeViewItem::ProjectTreeViewItem(SysMLv2::Entities::Project *project, ProjectTreeViewItem *parent) :
+        ProjectData(project),
+        DigitalTwinData(nullptr),
+        Parent(parent)
+    {    }
 
     ProjectTreeViewItem *ProjectTreeViewItem::child(int row) {
         return row >= 0 && row < childCount() ? ChildItems.at(row) : nullptr;

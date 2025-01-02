@@ -67,9 +67,11 @@ install(TARGETS CPSBaseLib DESTINATION "src"
         LIBRARY DESTINATION lib)
 
 if(MSVC)
-    target_compile_options(CPSBaseLib PRIVATE /W4 /WX-)
-else()
-    target_compile_options(CPSBaseLib PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(CPSBaseLib PRIVATE /W4 /WX- /bigobj)
+elseif (__linux__)
+    target_compile_options(CPSBaseLib PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
+else ()
+    target_compile_options(CPSBaseLib PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
 endif()
 
 if(RUN_TESTS)

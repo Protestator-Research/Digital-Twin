@@ -55,8 +55,10 @@ install(TARGETS CppPhysicalTwinCommunication DESTINATION "."
 
 if(MSVC)
     target_compile_options(CppPhysicalTwinCommunication PRIVATE /W4 /WX- /bigobj)
-else()
-    target_compile_options(CppPhysicalTwinCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror)
+elseif (__linux__)
+    target_compile_options(CppPhysicalTwinCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
+else ()
+    target_compile_options(CppPhysicalTwinCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
 endif()
 
 if(RUN_TESTS)

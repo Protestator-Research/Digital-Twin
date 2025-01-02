@@ -8,7 +8,8 @@
 #include <QStandardPaths>
 
 namespace DigitalTwin::Client {
-    DigitalTwinClientSettings::DigitalTwinClientSettings(QObject *parent) :
+    DigitalTwinClientSettings::DigitalTwinClientSettings(QObject *) :
+
         Settings(new QSettings( QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)+"/config.ini", QSettings::IniFormat)) {
         initAfterSoftwareStart();
     }

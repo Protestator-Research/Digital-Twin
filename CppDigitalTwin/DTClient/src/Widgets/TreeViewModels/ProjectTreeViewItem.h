@@ -15,7 +15,7 @@ namespace SysMLv2::Entities{
 namespace DigitalTwin::Client::ViewModels {
     class ProjectTreeViewItem {
     public:
-        ProjectTreeViewItem() = default;
+        ProjectTreeViewItem();
         explicit ProjectTreeViewItem(SysMLv2::Entities::Project* project, ProjectTreeViewItem* parent = nullptr);
         explicit ProjectTreeViewItem(SysMLv2::Entities::DigitalTwin* digitalTwin, ProjectTreeViewItem* parent = nullptr);
 
@@ -35,9 +35,9 @@ namespace DigitalTwin::Client::ViewModels {
 
     private:
         std::vector<ProjectTreeViewItem*> ChildItems;
-        SysMLv2::Entities::Project* ProjectData = nullptr;
-        SysMLv2::Entities::DigitalTwin* DigitalTwinData = nullptr;
-        ProjectTreeViewItem *Parent = nullptr;
+        SysMLv2::Entities::Project* ProjectData;
+        SysMLv2::Entities::DigitalTwin* DigitalTwinData;
+        ProjectTreeViewItem *Parent;
     };
 }
 

@@ -47,8 +47,9 @@ namespace DigitalTwin::Client {
 
     }
 
-    void DigitalTwinTabWidget::onVariableClicked(const QModelIndex &index) {
-//        auto element = VariableModel->getItemFromIndex(index);
+    void DigitalTwinTabWidget::onVariableClicked(const QModelIndex &) {
+        // auto element = VariableModel->getItemFromIndex(index);
+        // (void*)element;
         auto variableWidget = new TabContentWidget(this);
         TabContents.push_back(variableWidget);
         ui->VariableStackedWidget->addWidget(variableWidget);
