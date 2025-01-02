@@ -5,7 +5,7 @@ project(CppPhysicalTwinCommunication CXX)
 find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(mqtt_cpp REQUIRED CONFIG)
-find_package(Threads::Threads REQUIRED)
+find_package(Threads REQUIRED)
 
 add_library(CppPhysicalTwinCommunication
         src/PTCommunicationService.cpp
