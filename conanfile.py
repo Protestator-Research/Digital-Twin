@@ -3,6 +3,7 @@ from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 from conan.tools.env import Environment
 from conan.tools.apple import XcodeDeps
 import os
+from sys import platform
 
 
 class CppDigitalTwinRecipe(ConanFile):
@@ -32,7 +33,8 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("libcurl/8.4.0")
         self.requires("nlohmann_json/3.11.3")
         self.requires("date/3.0.1")
-        self.requires("qt/6.7.1")
+        if platform != "darwin":
+            self.requires("qt/6.7.1")
         self.requires("md4c/0.4.8")
 
     def config_options(self):
@@ -60,8 +62,9 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["date/*"].shared = False
             self.options["antlr4-cppruntime/*"].shared = False
 
-        self.options["qt/*"].shared = True
-        self.options["qt/*"].qtcharts = True
+        if platform != "darwin":
+            self.options["qt/*"].shared = True
+            self.options["qt/*"].qtcharts = True
 
     
     def layout(self):
