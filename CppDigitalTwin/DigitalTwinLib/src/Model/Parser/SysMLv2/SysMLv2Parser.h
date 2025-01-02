@@ -21,7 +21,8 @@ public:
     ALIAS = 34, PRIVATE = 35, PROTECTED = 36, PUBLIC = 37, IMPORT = 38, 
     ABSTRACT = 39, VARIATION = 40, VARIANT = 41, STAR = 42, CALC = 43, IN = 44, 
     OUT = 45, RETURN = 46, HASHTAG = 47, COMMAND = 48, VARIABLE = 49, CONNECT_TO = 50, 
-    NUMBER = 51, NAME = 52, INT = 53, WS = 54
+    INSTANCE = 51, INDIVIDUAL = 52, SUPERCLASS = 53, NUMBER = 54, NAME = 55, 
+    INT = 56, WS = 57
   };
 
   enum {
@@ -31,10 +32,10 @@ public:
     RuleVisibility = 13, RuleImport_rule = 14, RuleAbstraction = 15, RuleVariation = 16, 
     RuleVariant = 17, RuleFunction = 18, RuleInput = 19, RuleOutput = 20, 
     RuleReturn = 21, RuleCommand_definition = 22, RuleConnectTo = 23, RuleType_definition = 24, 
-    RuleAbout = 25, RuleSpecilization = 26, RuleDecriptor = 27, RuleNamelist = 28, 
-    RuleName = 29, RuleAddress = 30, RuleBracketed_content = 31, RuleFuction_arguments = 32, 
-    RuleArgument = 33, RuleDelimiter_rule = 34, RuleMultiplicity = 35, RuleUnit = 36, 
-    RuleDefinition_rule = 37
+    RuleSuper_class_definition = 25, RuleAbout = 26, RuleSpecilization = 27, 
+    RuleDecriptor = 28, RuleNamelist = 29, RuleName = 30, RuleAddress = 31, 
+    RuleBracketed_content = 32, RuleFuction_arguments = 33, RuleArgument = 34, 
+    RuleDelimiter_rule = 35, RuleMultiplicity = 36, RuleUnit = 37, RuleDefinition_rule = 38
   };
 
   explicit SysMLv2Parser(antlr4::TokenStream *input);
@@ -79,6 +80,7 @@ public:
   class Command_definitionContext;
   class ConnectToContext;
   class Type_definitionContext;
+  class Super_class_definitionContext;
   class AboutContext;
   class SpecilizationContext;
   class DecriptorContext;
@@ -509,6 +511,20 @@ public:
 
   Type_definitionContext* type_definition();
 
+  class  Super_class_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Super_class_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *SUPERCLASS();
+    AddressContext *address();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Super_class_definitionContext* super_class_definition();
+
   class  AboutContext : public antlr4::ParserRuleContext {
   public:
     AboutContext(antlr4::ParserRuleContext *parent, size_t invokingState);
@@ -529,6 +545,7 @@ public:
     SpecilizationContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     AddressContext *address();
+    antlr4::tree::TerminalNode *SUPERCLASS();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;

@@ -89,6 +89,9 @@ public:
   virtual void enterType_definition(SysMLv2Parser::Type_definitionContext *ctx) = 0;
   virtual void exitType_definition(SysMLv2Parser::Type_definitionContext *ctx) = 0;
 
+  virtual void enterSuper_class_definition(SysMLv2Parser::Super_class_definitionContext *ctx) = 0;
+  virtual void exitSuper_class_definition(SysMLv2Parser::Super_class_definitionContext *ctx) = 0;
+
   virtual void enterAbout(SysMLv2Parser::AboutContext *ctx) = 0;
   virtual void exitAbout(SysMLv2Parser::AboutContext *ctx) = 0;
 
