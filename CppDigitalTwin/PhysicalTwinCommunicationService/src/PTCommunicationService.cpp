@@ -36,10 +36,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         }
     }
 
-    CommunicationService::CommunicationService(std::string , std::string ) {
-
-    }
-
     void CommunicationService::addObservationCallbackForTopic(std::string topic, std::function<void(std::string)> callback) {
         ClientService->addCallbackFunction(topic,callback);
     }

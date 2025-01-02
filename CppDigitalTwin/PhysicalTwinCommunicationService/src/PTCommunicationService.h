@@ -28,13 +28,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         explicit CommunicationService(std::string mqttPort);
 
         /**
-         * Generates a client instance of the MQTT Interface.
-         * @param address Address of the server.
-         * @param mqttPort Port of the Server
-         */
-        CommunicationService(std::string address, std::string mqttPort);
-
-        /**
          * Destructor
          */
         virtual  ~CommunicationService() = default;

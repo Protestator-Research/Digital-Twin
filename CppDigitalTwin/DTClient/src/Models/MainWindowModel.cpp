@@ -8,6 +8,7 @@
 #include <SysMLv2Standard/entities/Project.h>
 #include <SysMLv2Standard/entities/DigitalTwin.h>
 #include <DigitalTwinManager.h>
+#include <Services/MqttClientService.h>
 
 #include "MainWindowModel.h"
 #include "DigitalTwinClientSettings.h"
@@ -71,5 +72,9 @@ namespace DigitalTwin::Client {
             auto model = DigitalTwinManager->addDigitalTwinAndCreateMode(possibleDigitalTwin);
             MainWindow->addTabWidget(new DigitalTwinTabWidget(model,MainWindow),QString::fromStdString(possibleDigitalTwin->getName()));
         }
+    }
+
+    void MainWindowModel::connectToDigitalTwin() {
+
     }
 }

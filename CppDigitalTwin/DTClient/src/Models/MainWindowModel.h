@@ -33,6 +33,10 @@ namespace DigitalTwin {
     class DigitalTwinManager;
 }
 
+namespace PHYSICAL_TWIN_COMMUNICATION {
+    class MqttClientService;
+}
+
 namespace DigitalTwin::Client {
     /**
      *
@@ -45,6 +49,7 @@ namespace DigitalTwin::Client {
         virtual ~MainWindowModel() override;
 
         void connectToBackend();
+        void connectToDigitalTwin();
         [[nodiscard]] DigitalTwinClientSettings* clientSettings() const;
 
     public slots:
@@ -58,6 +63,7 @@ namespace DigitalTwin::Client {
         MainWindowStatus Status;
         ViewModels::ProjectTreeViewModel *ProjectViewModel;
         BACKEND_COMMUNICATION::CommunicationService *BackendCommunication = nullptr;
+        PHYSICAL_TWIN_COMMUNICATION::MqttClientService *ClientService = nullptr;
         std::map<boost::uuids::uuid,std::vector<SysMLv2::Entities::DigitalTwin*>> DigitalTwinMap;
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
         std::vector<SysMLv2::Entities::Project*> Projects;

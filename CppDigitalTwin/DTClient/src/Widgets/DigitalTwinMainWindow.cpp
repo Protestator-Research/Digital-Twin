@@ -70,6 +70,7 @@ namespace DigitalTwin::Client {
 
     void DigitalTwinMainWindow::connectToServer() {
         Model->connectToBackend();
+        Model->
     }
 
     void DigitalTwinMainWindow::setProjectTreeViewModel(QAbstractItemModel *model) {
