@@ -38,7 +38,6 @@ build_gcc13:
     paths:
       - .
 
-# run tests using the binary built before
 test_CPS_BaseLib:
   image: gcc:13
   stage: test
@@ -47,6 +46,39 @@ test_CPS_BaseLib:
     - conan install .. --build missing
     - conan build ..
     - conan test .. ./Release/CppDigitalTwin/CpsBaseLib/tests/CpsBaseLibTests
+  dependencies:
+    - build_gcc13
+
+test_PhysicalTwinCommunication:
+  image: gcc:13
+  stage: test
+  script:
+    - cd build
+    - conan install .. --build missing
+    - conan build ..
+    - conan test .. ./Release/CppDigitalTwin/CpsBaseLib/tests/PhysicalTwinCommunicationServiceLibTests
+  dependencies:
+    - build_gcc13
+
+test_BackendCommunicationLibTests:
+  image: gcc:13
+  stage: test
+  script:
+    - cd build
+    - conan install .. --build missing
+    - conan build ..
+    - conan test .. ./Release/CppDigitalTwin/CpsBaseLib/tests/BackendCommunicationLibTests
+  dependencies:
+    - build_gcc13
+
+test_DigitalTwinLibTests:
+  image: gcc:13
+  stage: test
+  script:
+    - cd build
+    - conan install .. --build missing
+    - conan build ..
+    - conan test .. ./Release/CppDigitalTwin/CpsBaseLib/tests/DigitalTwinLibTests
   dependencies:
     - build_gcc13
 #
