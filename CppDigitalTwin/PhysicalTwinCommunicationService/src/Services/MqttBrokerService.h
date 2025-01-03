@@ -16,10 +16,6 @@
 
 #include "../cpp_physical_twin_communication_global.h"
 
-//namespace as = boost::asio;
-
-//using con_t = MQTT_NS::server<>::endpoint_t;
-//using con_sp_t = std::shared_ptr<con_t>;
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
     /**

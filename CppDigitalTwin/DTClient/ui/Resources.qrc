@@ -4,6 +4,7 @@
         <file alias="Save">icons/disk.png</file>
         <file alias="Pause">icons/pause.png</file>
         <file alias="Play">icons/play.png</file>
+        <file alias="Open">icons/open.png</file>
         <file alias="Settings">icons/settings-sliders.png</file>
         <file alias="Download">icons/download.png</file>
         <file alias="Connect">icons/connectivity.png</file>

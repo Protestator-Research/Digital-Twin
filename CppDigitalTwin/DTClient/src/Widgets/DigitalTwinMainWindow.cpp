@@ -66,6 +66,9 @@ namespace DigitalTwin::Client {
 
         ui->actionConnect->setIcon(QIcon(":/icons/Connect"));
         toolBar->addAction(ui->actionConnect);
+
+        ui->actionOpen_SysMLv2_File->setIcon(QIcon(":/icons/Open"));
+        toolBar->addAction(ui->actionOpen_SysMLv2_File);
     }
 
     void DigitalTwinMainWindow::connectToServer() {
@@ -78,7 +81,7 @@ namespace DigitalTwin::Client {
     }
 
     void DigitalTwinMainWindow::openSysMLv2File() {
-        auto paths = QFileDialog::getOpenFileNames(this,tr("Open SysMLv2 Files"),QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), tr("SysMLv2 Files (*.sysml);;Markdown Files (*.md)"));
+        auto paths = QFileDialog::getOpenFileName(this,tr("Open SysMLv2 File"),QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), tr("SysMLv2 Files (*.sysml);;Markdown Files (*.md)"));
         if(!paths.isEmpty()) {
             
         }

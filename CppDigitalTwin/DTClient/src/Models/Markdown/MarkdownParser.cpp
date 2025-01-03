@@ -16,6 +16,6 @@ namespace DigitalTwin::Client {
         char* markdown = array.data();
         MD_PARSER* parser = new MD_PARSER();
         int result = md_parse(markdown, sizeof(markdown),parser,NULL);
-        (void)result;
+
     }
 }

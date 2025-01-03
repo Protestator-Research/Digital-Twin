@@ -95,6 +95,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                                handleStartResponse(std::forward<decltype(args)>(args)...);
                            }
                            );
+        ClientStarted=true;
     }
 
     void MqttClientService::handleStartResponse(async_mqtt::error_code ec,
@@ -105,7 +106,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
             std::cout << *connack_opt << std::endl;
             Client->async_publish(
                     *Client->acquire_unique_packet_id(),
-                    "openDigitalTwin",
+                    "connectToTwin",
                     DigitalTwinEntity().serialize(),
                     async_mqtt::qos::at_least_once,
                     [this](auto&&... args) {

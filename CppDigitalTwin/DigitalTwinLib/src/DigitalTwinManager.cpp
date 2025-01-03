@@ -6,13 +6,16 @@
 #include "Model/DigitalTwinModel.h"
 
 #include <BECommunicationService.h>
+#include <Services/MqttClientService.h>
 #include <SysMLv2Standard/entities/DigitalTwin.h>
 #include <SysMLv2Standard/entities/Element.h>
 
 namespace DigitalTwin {
 
-    DigitalTwinManager::DigitalTwinManager(BACKEND_COMMUNICATION::CommunicationService *communicationService) {
+    DigitalTwinManager::DigitalTwinManager(BACKEND_COMMUNICATION::CommunicationService *communicationService, PHYSICAL_TWIN_COMMUNICATION::MqttClientService* clientService, bool isClient) {
         BackendCommunicationService = communicationService;
+        ClientService = clientService;
+        IsClient = isClient;
     }
 
     DigitalTwinManager::~DigitalTwinManager() {
@@ -23,7 +26,10 @@ namespace DigitalTwin {
         auto digitalTwins = BackendCommunicationService->getAllDigitalTwinsForProjectWithId(projectId);
         for(auto digitalTwin : digitalTwins)
             if(digitalTwin->getId()==digitalTwinId) {
-                DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), new Model::DigitalTwinModel(digitalTwin, this)));
+                auto returnValue = new Model::DigitalTwinModel(digitalTwin, this);
+                DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), returnValue));
+                if(!IsClient)
+                    generateMQTTInterface(returnValue);
             }
     }
 
@@ -31,10 +37,18 @@ namespace DigitalTwin {
         return BackendCommunicationService->getAllElementsOfCommit(projectId,commitId);
     }
 
-    DigitalTwin::Model::DigitalTwinModel* DigitalTwinManager::addDigitalTwinAndCreateMode(SysMLv2::Entities::DigitalTwin *digitalTwin) {
+    DigitalTwin::Model::DigitalTwinModel* DigitalTwinManager::addDigitalTwinAndCreateModel(SysMLv2::Entities::DigitalTwin *digitalTwin) {
         Model::DigitalTwinModel* returnValue = new Model::DigitalTwinModel(digitalTwin,this);
         DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(),returnValue));
+
         return returnValue;
+    }
+
+    void DigitalTwinManager::generateMQTTInterface(Model::DigitalTwinModel* digitalTwin) {
+        std::string baseName = digitalTwin->digitalTwinName();
+        for(const auto &elementName : digitalTwin->getElementStrings()) {
+            ClientService->sendValueToServer(baseName + "/" + elementName, "testValue");
+        }
     }
 
 }

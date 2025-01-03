@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 project(CppDigitalTwinServer CXX)
 
 find_package(mqtt_cpp REQUIRED CONFIG)
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Charts)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Charts WebEngineCore)
 find_package(md4c REQUIRED)
 
 qt_standard_project_setup()
@@ -36,12 +36,17 @@ set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Widgets/TreeViewModels/VariableViewModel.h
         src/Widgets/TreeViewModels/VariableViewModel.cpp
         src/Widgets/TreeViewModels/VariableViewModelItem.h
-        src/Widgets/TreeViewModels/VariableViewModelItem.cpp)
+        src/Widgets/TreeViewModels/VariableViewModelItem.cpp
+        src/Widgets/UploadProjectFileToBackend.cpp
+        src/Widgets/UploadProjectFileToBackend.h
+        src/Models/Markdown/Document.cpp
+        src/Models/Markdown/Document.h)
 
 qt_wrap_ui(SOURCES ui/DigitalTwinTabWidget.ui
         ui/SettingsDialog.ui
         ui/DigitalTwinMainWindow.ui
-        ui/TabContentWidget.ui)
+        ui/TabContentWidget.ui
+        ui/UploadProjectFileToBackend.ui)
 
 add_executable(CppDigitalTwinClient ${SOURCES})
 
@@ -63,6 +68,7 @@ target_link_libraries(CppDigitalTwinClient PUBLIC
         Qt6::Gui
         Qt6::Charts
         Qt6::Core
+        Qt6::WebEngineCore
         mqtt_cpp::mqtt_cpp
         md4c::md4c)
 

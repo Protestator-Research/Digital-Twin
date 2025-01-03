@@ -38,7 +38,8 @@ namespace DigitalTwin::Client {
     void MainWindowModel::connectToBackend() {
         try {
             BackendCommunication=new BACKEND_COMMUNICATION::CommunicationService(Settings->getRESTServerAsString(),std::stoi(Settings->getRESTPortAsString()), Settings->getRESTFolderAsString());
-            DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunication);
+            ClientService = new PHYSICAL_TWIN_COMMUNICATION::MqttClientService(Settings->getMQTTServerAsString(), Settings->getMQTTPortAsString());
+            DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunication, ClientService);
             BackendCommunication->setUserForLoginInBackend(Settings->getRESTUserAsString(),Settings->getRESTPasswordAsString());
             Status = MainWindowStatus::CONNECTED;
 
@@ -50,6 +51,8 @@ namespace DigitalTwin::Client {
                 DigitalTwinMap.emplace(project->getId(),digitalTwins);
                 ProjectViewModel->setDigitalTwinForProjectWithId(project, digitalTwins);
             }
+
+
 
         }catch (std::exception &ex){
             qDebug()<<ex.what();
@@ -69,7 +72,7 @@ namespace DigitalTwin::Client {
         auto item = ProjectViewModel->getProjectTreeViewItemFromIndex(index);
         auto possibleDigitalTwin = item->getDigitalTwin();
         if(possibleDigitalTwin != nullptr){
-            auto model = DigitalTwinManager->addDigitalTwinAndCreateMode(possibleDigitalTwin);
+            auto model = DigitalTwinManager->addDigitalTwinAndCreateModel(possibleDigitalTwin);
             MainWindow->addTabWidget(new DigitalTwinTabWidget(model,MainWindow),QString::fromStdString(possibleDigitalTwin->getName()));
         }
     }

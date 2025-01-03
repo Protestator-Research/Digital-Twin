@@ -67,4 +67,19 @@ namespace DigitalTwin::Model {
 
         return returnValue;
     }
+
+    std::vector<std::string> DigitalTwinModel::getElementStrings() {
+        std::vector<std::string> elements;
+
+        for(const auto& element : ComponentMap)
+            elements.push_back(element.first);
+
+        for(const auto& element : PortMap)
+            elements.push_back(element.first);
+
+        for(const auto& element : VariableMap)
+            elements.push_back(element.first);
+
+        return elements;
+    }
 }

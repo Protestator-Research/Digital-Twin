@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <functional>
+#include <thread>
 #include "Services/MqttClientService.h"
 
 
@@ -30,17 +31,23 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         /**
          * Destructor
          */
-        virtual  ~CommunicationService() = default;
+        virtual  ~CommunicationService();
 
         void startThreads();
 
         void addObservationCallbackForTopic(std::string topic, std::function<void(std::string)> callback);
 
         void publishMQTTMessage(std::string topic, std::string content);
+
+        void joinThreads();
+
+        MqttClientService* getClientService();
+
     private:
+        std::thread ClientThread;
+        std::thread ServerThread;
 
-
-        std::unique_ptr<MqttClientService> ClientService;
+        MqttClientService* ClientService;
 
         uint16_t MqttPort;
     };
