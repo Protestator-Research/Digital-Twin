@@ -23,8 +23,8 @@ target_link_libraries(CppDigitalTwinServer
 
 if(MSVC)
     target_compile_options(CppDigitalTwinServer PRIVATE /W4 /WX- /bigobj)
-elseif (__linux__)
+elseif (UNIX AND NOT APPLE)
     target_compile_options(CppDigitalTwinServer PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
 else ()
-    target_compile_options(CppDigitalTwinServer PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
+    target_compile_options(CppDigitalTwinServer PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

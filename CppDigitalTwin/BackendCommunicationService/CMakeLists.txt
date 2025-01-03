@@ -34,10 +34,10 @@ target_include_directories(CppBackendCommunication PUBLIC
 
 if(MSVC)
     target_compile_options(CppBackendCommunication PRIVATE /W4 /WX- /bigobj)
-elseif (__linux__)
+elseif (UNIX AND NOT APPLE)
     target_compile_options(CppBackendCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
 else ()
-    target_compile_options(CppBackendCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
+    target_compile_options(CppBackendCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
 install(TARGETS CppBackendCommunication DESTINATION "."

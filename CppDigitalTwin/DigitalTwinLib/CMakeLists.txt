@@ -57,10 +57,10 @@ target_link_libraries(CppDigitalTwinLib
 
 if(MSVC)
     target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX- /bigobj)
-elseif (__linux__)
+elseif (UNIX AND NOT APPLE)
     target_compile_options(CppDigitalTwinLib PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
 else ()
-    target_compile_options(CppDigitalTwinLib PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
+    target_compile_options(CppDigitalTwinLib PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
 install(TARGETS CppDigitalTwinLib DESTINATION "."
