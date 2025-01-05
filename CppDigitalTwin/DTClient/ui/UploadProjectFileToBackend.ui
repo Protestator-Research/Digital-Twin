@@ -23,14 +23,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QWidget" name="ContentWidget" native="true">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-     </widget>
+     <widget class="QTextBrowser" name="textBrowser"/>
     </item>
    </layout>
   </widget>
@@ -40,7 +33,7 @@
      <x>0</x>
      <y>0</y>
      <width>1083</width>
-     <height>24</height>
+     <height>37</height>
     </rect>
    </property>
   </widget>

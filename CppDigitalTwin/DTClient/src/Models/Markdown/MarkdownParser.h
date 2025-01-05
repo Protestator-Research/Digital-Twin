@@ -7,14 +7,34 @@
 
 #include <QString>
 
+#include <vector>
+
+namespace SysMLv2::Entities {
+    class Element;
+}
+
 namespace DigitalTwin::Client {
     class MarkdownParser {
     public:
-        MarkdownParser() = delete;
+        struct token {
+            std::string rex;    // Regex to find the markdown token
+            int length1;        // Length of the first token ("**" = 2, "*" = 1)
+            int length2;        // Length of the last token (quotes only have at the beginning, newlines at the end, etc)
+            std::string tagOpen, tagClose;    // Equivalent tag
+        };
 
-        static void parseMarkdown(QString path);
+        MarkdownParser() = default;
+
+
+        void parseMarkdown(QString path);
+
+        std::vector<SysMLv2::Entities::Element*> getElementsOfProject();
+        QString getHTMLOfMarkdown();
 
     private:
+        std::string MarkdownString;
+        std::string HTMLString;
+        void parseInternally();
     };
 }
 
