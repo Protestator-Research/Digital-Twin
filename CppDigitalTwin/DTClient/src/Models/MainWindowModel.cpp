@@ -15,6 +15,8 @@
 #include "../Widgets/DigitalTwinMainWindow.h"
 #include "../Widgets/TreeViewModels/ProjectTreeViewModel.h"
 #include "../Widgets/DigitalTwinTabWidget/DigitalTwinTabWidget.h"
+#include "../Widgets/UploadProjectFileToBackend.h"
+#include "Markdown/MarkdownParser.h"
 
 
 namespace DigitalTwin::Client {
@@ -61,6 +63,21 @@ namespace DigitalTwin::Client {
 
     DigitalTwinClientSettings *MainWindowModel::clientSettings() const {
         return Settings;
+    }
+
+    void MainWindowModel::openMarkdownFile(QString filePath)
+    {
+        //if (!BackendCommunication)
+        //{
+            UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(MainWindow);
+            uploadFileDialog->setHTMLTextForView(filePath);
+            uploadFileDialog->show();
+        //}
+    }
+
+    bool MainWindowModel::isOnline()
+    {
+        return (BackendCommunication != nullptr);
     }
 
     void MainWindowModel::decorateTreeView() {

@@ -52,6 +52,10 @@ namespace DigitalTwin::Client {
         void connectToDigitalTwin();
         [[nodiscard]] DigitalTwinClientSettings* clientSettings() const;
 
+        void openMarkdownFile(QString filePath);
+
+        bool isOnline();
+
     public slots:
         void onTreeViewClicked(const QModelIndex& index);
 

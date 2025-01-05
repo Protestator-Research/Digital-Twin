@@ -20,7 +20,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     class CPPPHYSICALTWINCOMMUNICATION_EXPORT CommunicationService {
     public:
         /**
-         * Is Deleted
+         * Is deleted, since the communication service needs a specific port where to start the server.
          */
         CommunicationService() = delete;
         /**

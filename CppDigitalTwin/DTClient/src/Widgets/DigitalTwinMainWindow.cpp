@@ -11,6 +11,7 @@
 
 #include <QFileDialog>
 #include <QStandardPaths>
+#include <QMessageBox>
 
 namespace DigitalTwin::Client {
     DigitalTwinMainWindow::DigitalTwinMainWindow(QWidget *parent) :
@@ -81,9 +82,17 @@ namespace DigitalTwin::Client {
     }
 
     void DigitalTwinMainWindow::openSysMLv2File() {
-        auto paths = QFileDialog::getOpenFileName(this,tr("Open SysMLv2 File"),QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), tr("SysMLv2 Files (*.sysml);;Markdown Files (*.md)"));
-        if(!paths.isEmpty()) {
-            
+        //if (!Model->isOnline())
+        //{
+        //    QMessageBox error;
+        //    error.setText(tr("Please connect to the AGILA-Backend!"));
+        //    error.setIcon(QMessageBox::Icon::Critical);
+        //    error.exec();
+        //    return;
+        //}
+        const auto path = QFileDialog::getOpenFileName(this,tr("Open SysMLv2 File"),QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), tr("SysMLv2 Files (*.sysml);;Markdown Files (*.md)"));
+        if(!path.isEmpty()) {
+            Model->openMarkdownFile(path);
         }
     }
 

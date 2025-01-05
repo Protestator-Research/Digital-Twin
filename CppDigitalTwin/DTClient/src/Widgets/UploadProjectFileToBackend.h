@@ -6,6 +6,7 @@
 #define DIGITALTWIN_UPLOADPROJECTFILETOBACKEND_H
 
 #include <QMainWindow>
+#include "../Models/Markdown/MarkdownParser.h"
 
 namespace DigitalTwin::Client {
     namespace Ui {
@@ -15,12 +16,21 @@ namespace DigitalTwin::Client {
 
 namespace DigitalTwin::Client {
     class UploadProjectFileToBackend : public QMainWindow {
+        Q_OBJECT
     public:
         explicit UploadProjectFileToBackend(QWidget* parent = NULL);
-        ~UploadProjectFileToBackend();
+        ~UploadProjectFileToBackend() override;
+
+        void setHTMLTextForView(QString htmlText);
+
+    private slots:
+        void onTextEdited();
 
     private:
+        void makeConnections();
+
         Ui::UploadProjectFileToBackend* Ui;
+        MarkdownParser* Parser;
     };
 }
 

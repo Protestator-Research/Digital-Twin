@@ -14,7 +14,7 @@
 #include <utility>
 
 namespace DigitalTwin::Client {
-    void MarkdownParser::parseMarkdown(QString path) {
+    void MarkdownParser::parseMarkdownFile(QString path) {
         QFile file = QFile(path);
         file.open(QIODevice::ReadOnly);
         QByteArray array = file.readAll();
@@ -23,8 +23,19 @@ namespace DigitalTwin::Client {
         parseInternally();
     }
 
+    void MarkdownParser::parseMarkdown(QString markdown)
+    {
+        MarkdownString = markdown.toStdString();
+        parseInternally();
+    }
+
     QString MarkdownParser::getHTMLOfMarkdown() {
         return QString::fromStdString(HTMLString);
+    }
+
+    QString MarkdownParser::getMarkdownString()
+    {
+        return QString::fromStdString(MarkdownString);
     }
 
     std::vector<SysMLv2::Entities::Element *> MarkdownParser::getElementsOfProject() {
@@ -88,7 +99,7 @@ namespace DigitalTwin::Client {
 
             std::string finalLink = "<a href=\"" + link + "\">" + text + "</a>";
 
-            printf("Processing link: %s", finalLink.c_str());
+            //printf("Processing link: %s", finalLink.c_str());
             HTMLString.replace(match_begin, match.length(), finalLink);
         }
 
@@ -106,7 +117,7 @@ namespace DigitalTwin::Client {
         };
 
         for(token tok: tokens){
-            printf("Checking for %s\n", tok.tagOpen.c_str());
+            //printf("Checking for %s\n", tok.tagOpen.c_str());
             std::regex tmp(tok.rex);
 
             int match_end, match_begin;
@@ -120,7 +131,7 @@ namespace DigitalTwin::Client {
                 HTMLString.replace(match_begin,           tok.length1, tok.tagOpen);
             }
 
-            printf("Done checking %s\n", tok.tagOpen.c_str());
+            //printf("Done checking %s\n", tok.tagOpen.c_str());
         }
 
         ////////////////////////////// LINE BREAKS ///////////////////////////////////

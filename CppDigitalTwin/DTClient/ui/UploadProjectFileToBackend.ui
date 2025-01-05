@@ -6,24 +6,75 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1083</width>
-    <height>600</height>
+    <width>1100</width>
+    <height>597</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Upload To Backend</string>
+   <string>Project Editor [*]</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QCommandLinkButton" name="UploadButton">
-      <property name="text">
-       <string>Upload To Backend</string>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
       </property>
+      <widget class="QWidget" name="View">
+       <attribute name="title">
+        <string>Markdown View</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QTextBrowser" name="MarkdownViewer"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_2">
+       <attribute name="title">
+        <string>Markdown Editor</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QTextEdit" name="ProjektEditor"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab">
+       <attribute name="title">
+        <string>Digital Twin Editor</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>Digital Twin Name</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEdit"/>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Digital Twin Models</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QListView" name="listView"/>
+        </item>
+        <item>
+         <widget class="QCommandLinkButton" name="CreateDTButton">
+          <property name="text">
+           <string>Create Digital Twin</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </widget>
-    </item>
-    <item>
-     <widget class="QTextBrowser" name="textBrowser"/>
     </item>
    </layout>
   </widget>
@@ -32,12 +83,37 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1083</width>
-     <height>37</height>
+     <width>1100</width>
+     <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionUpload"/>
+    <addaction name="actionDownload"/>
+    <addaction name="separator"/>
+    <addaction name="actionCreate_new_Project"/>
+   </widget>
+   <addaction name="menuFile"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionUpload">
+   <property name="text">
+    <string>Upload</string>
+   </property>
+  </action>
+  <action name="actionDownload">
+   <property name="text">
+    <string>Download</string>
+   </property>
+  </action>
+  <action name="actionCreate_new_Project">
+   <property name="text">
+    <string>Create new Project</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

@@ -26,10 +26,12 @@ namespace DigitalTwin::Client {
         MarkdownParser() = default;
 
 
-        void parseMarkdown(QString path);
+        void parseMarkdownFile(QString path);
+        void parseMarkdown(QString markdown);
 
         std::vector<SysMLv2::Entities::Element*> getElementsOfProject();
         QString getHTMLOfMarkdown();
+        QString getMarkdownString();
 
     private:
         std::string MarkdownString;
