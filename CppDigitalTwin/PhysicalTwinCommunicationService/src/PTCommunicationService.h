@@ -9,6 +9,7 @@
 #include <functional>
 #include <thread>
 #include "Services/MqttClientService.h"
+#include "cpp_physical_twin_communication_global.h"
 
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
@@ -16,7 +17,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
      * @author Moritz Herzog
      * Creates the MQTT Communication Service for the Server or the Client.
      */
-    class CommunicationService {
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT CommunicationService {
     public:
         /**
          * Is Deleted

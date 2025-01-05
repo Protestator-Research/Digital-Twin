@@ -35,7 +35,7 @@ namespace DIGITAL_TWIN_SERVER {
     void DigitalTwinServerInstanceManager::runInstance() {
         PhysicalTwinCommunicationService->startThreads();
 
-        sleep(100);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         PhysicalTwinCommunicationService->addObservationCallbackForTopic("connectToTwin",[&](std::string value) {
             if(value.empty()) {

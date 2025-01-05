@@ -7,6 +7,7 @@
 #include "Services/MqttBrokerService.h"
 
 #include <thread>
+#include <chrono>
 
 #ifdef WIN32
 #include <windows.h>
@@ -28,7 +29,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
             });
 
             ClientThread = std::thread([&] {
-                sleep(1);
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 ClientService->connectClientStartCommunication();
             });
         }
