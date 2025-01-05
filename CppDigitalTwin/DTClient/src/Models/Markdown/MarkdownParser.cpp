@@ -55,7 +55,7 @@ namespace DigitalTwin::Client {
             int match_begin = match.position();
             int match_end   = match_begin + match.length();
 
-            printf("Processing match: %s", HTMLString.substr(match_begin, match.length()).c_str());
+            //printf("Processing match: %s", HTMLString.substr(match_begin, match.length()).c_str());
 
             int j;
             for(j = 0; HTMLString[j+match_begin]=='#'; j++){}     // So count the number of '#' in a row,
