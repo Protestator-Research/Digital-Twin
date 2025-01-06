@@ -34,7 +34,7 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("nlohmann_json/3.11.3")
         self.requires("date/3.0.1")
         if platform != "darwin":
-            self.requires("qt/6.7.1")
+            self.requires("qt/6.7.3")
         self.requires("md4c/0.4.8")
 
     def config_options(self):
