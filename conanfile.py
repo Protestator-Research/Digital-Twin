@@ -8,7 +8,7 @@ from sys import platform
 
 class CppDigitalTwinRecipe(ConanFile):
     name = "digitaltwin"
-    version = "2312"
+    version = "2501"
     package_type = "application"
 
     # Optional metadata

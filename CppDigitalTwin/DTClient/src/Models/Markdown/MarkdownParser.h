@@ -5,9 +5,14 @@
 #ifndef DIGITALTWIN_MARKDOWNPARSER_H
 #define DIGITALTWIN_MARKDOWNPARSER_H
 
-#include <QString>
+#include "Elements/IMarkdownElement.h"
+#include "CommonmarkParser/cmark.h"
 
+#include <QString>
 #include <vector>
+#include <memory>
+#include <map>
+#include <functional>
 
 namespace SysMLv2::Entities {
     class Element;
@@ -16,12 +21,6 @@ namespace SysMLv2::Entities {
 namespace DigitalTwin::Client {
     class MarkdownParser {
     public:
-        struct token {
-            std::string rex;    // Regex to find the markdown token
-            int length1;        // Length of the first token ("**" = 2, "*" = 1)
-            int length2;        // Length of the last token (quotes only have at the beginning, newlines at the end, etc)
-            std::string tagOpen, tagClose;    // Equivalent tag
-        };
 
         MarkdownParser() = default;
 
@@ -35,8 +34,10 @@ namespace DigitalTwin::Client {
 
     private:
         std::string MarkdownString;
-        std::string HTMLString;
+        cmark_node* MarkdownDocument;
+
         void parseInternally();
+        void parseString(size_t begin, size_t end, std::string regex);
     };
 }
 

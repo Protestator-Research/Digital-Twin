@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(CppDigitalTwinServer CXX)
+project(CppDigitalTwinServer CXX C)
 
 find_package(mqtt_cpp REQUIRED CONFIG)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Charts)
@@ -38,7 +38,62 @@ set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Widgets/TreeViewModels/VariableViewModelItem.h
         src/Widgets/TreeViewModels/VariableViewModelItem.cpp
         src/Widgets/UploadProjectFileToBackend.cpp
-        src/Widgets/UploadProjectFileToBackend.h)
+        src/Widgets/UploadProjectFileToBackend.h
+        src/Models/Markdown/Elements/IMarkdownElement.h
+        src/Models/Markdown/Elements/HeadersMarkdown.cpp
+        src/Models/Markdown/Elements/HeadersMarkdown.h
+        src/Models/Markdown/Elements/LinksMarkdown.cpp
+        src/Models/Markdown/Elements/LinksMarkdown.h
+        src/Models/Markdown/Elements/ImagesMarkdown.cpp
+        src/Models/Markdown/Elements/ImagesMarkdown.h
+        src/Models/Markdown/Elements/TocMarkdown.cpp
+        src/Models/Markdown/Elements/TocMarkdown.h
+        src/Models/Markdown/Elements/CodeMarkdown.cpp
+        src/Models/Markdown/Elements/CodeMarkdown.h
+        src/Models/Markdown/Elements/BoldMarkdown.cpp
+        src/Models/Markdown/Elements/BoldMarkdown.h
+        src/Models/Markdown/Elements/BoldMarkdown.cpp
+        src/Models/Markdown/Elements/BoldMarkdown.h
+        src/Models/Markdown/Elements/ItalicMarkdown.cpp
+        src/Models/Markdown/Elements/ItalicMarkdown.h
+        src/Models/Markdown/Elements/ParagraphMarkdown.cpp
+        src/Models/Markdown/Elements/ParagraphMarkdown.h
+        src/Models/Markdown/Elements/YaMlMarkdown.cpp
+        src/Models/Markdown/Elements/YaMlMarkdown.h
+        src/Models/Markdown/Elements/QuoteMarkdown.cpp
+        src/Models/Markdown/Elements/QuoteMarkdown.h
+        src/Models/Markdown/CommonmarkParser/blocks.c
+        src/Models/Markdown/CommonmarkParser/buffer.c
+        src/Models/Markdown/CommonmarkParser/buffer.h
+        src/Models/Markdown/CommonmarkParser/chunk.h
+        src/Models/Markdown/CommonmarkParser/cmark.c
+        src/Models/Markdown/CommonmarkParser/cmark.h
+        src/Models/Markdown/CommonmarkParser/cmark_ctype.c
+        src/Models/Markdown/CommonmarkParser/cmark_ctype.h
+        src/Models/Markdown/CommonmarkParser/commonmark.c
+        src/Models/Markdown/CommonmarkParser/houdini.h
+        src/Models/Markdown/CommonmarkParser/houdini_href_e.c
+        src/Models/Markdown/CommonmarkParser/houdini_html_e.c
+        src/Models/Markdown/CommonmarkParser/houdini_html_u.c
+        src/Models/Markdown/CommonmarkParser/html.c
+        src/Models/Markdown/CommonmarkParser/inlines.c
+        src/Models/Markdown/CommonmarkParser/inlines.h
+        src/Models/Markdown/CommonmarkParser/iterator.c
+        src/Models/Markdown/CommonmarkParser/iterator.h
+        src/Models/Markdown/CommonmarkParser/latex.c
+        src/Models/Markdown/CommonmarkParser/man.c
+        src/Models/Markdown/CommonmarkParser/node.c
+        src/Models/Markdown/CommonmarkParser/node.h
+        src/Models/Markdown/CommonmarkParser/parser.h
+        src/Models/Markdown/CommonmarkParser/references.c
+        src/Models/Markdown/CommonmarkParser/references.h
+        src/Models/Markdown/CommonmarkParser/render.c
+        src/Models/Markdown/CommonmarkParser/render.h
+        src/Models/Markdown/CommonmarkParser/scanners.c
+        src/Models/Markdown/CommonmarkParser/scanners.h
+        src/Models/Markdown/CommonmarkParser/utf8.c
+        src/Models/Markdown/CommonmarkParser/utf8.h
+        src/Models/Markdown/CommonmarkParser/xml.c)
 
 qt_wrap_ui(SOURCES ui/DigitalTwinTabWidget.ui
         ui/SettingsDialog.ui

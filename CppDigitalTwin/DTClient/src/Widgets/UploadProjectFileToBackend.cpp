@@ -41,4 +41,10 @@ namespace DigitalTwin::Client {
     {
         connect(Ui->ProjektEditor, SIGNAL(textChanged()), this, SLOT(onTextEdited()));
     }
+
+    void UploadProjectFileToBackend::setMarkdownOfOnlineProject(QString Markdown) {
+        Parser->parseMarkdown(Markdown);
+        Ui->MarkdownViewer->setHtml(Parser->getHTMLOfMarkdown());
+        this->setWindowModified(true);
+    }
 }

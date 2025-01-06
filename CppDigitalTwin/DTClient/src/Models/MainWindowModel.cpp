@@ -87,10 +87,18 @@ namespace DigitalTwin::Client {
 
     void MainWindowModel::onTreeViewClicked(const QModelIndex &index) {
         auto item = ProjectViewModel->getProjectTreeViewItemFromIndex(index);
+
         auto possibleDigitalTwin = item->getDigitalTwin();
         if(possibleDigitalTwin != nullptr){
             auto model = DigitalTwinManager->addDigitalTwinAndCreateModel(possibleDigitalTwin);
             MainWindow->addTabWidget(new DigitalTwinTabWidget(model,MainWindow),QString::fromStdString(possibleDigitalTwin->getName()));
+        } else if(item->getProject() != nullptr) {
+            auto project = item->getProject();
+            UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(MainWindow);
+            BackendCommunication->getAllBranchesForProjectWithID(project->getId());
+            //BackendCommunication->getAllElements(project->getDefaultBranch(),project->getId())
+            uploadFileDialog->setMarkdownOfOnlineProject(QString());
+            uploadFileDialog->show();
         }
     }
 

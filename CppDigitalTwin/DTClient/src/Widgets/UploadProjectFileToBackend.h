@@ -21,6 +21,7 @@ namespace DigitalTwin::Client {
         explicit UploadProjectFileToBackend(QWidget* parent = NULL);
         ~UploadProjectFileToBackend() override;
 
+        void setMarkdownOfOnlineProject(QString Markdown);
         void setHTMLTextForView(QString htmlText);
 
     private slots:

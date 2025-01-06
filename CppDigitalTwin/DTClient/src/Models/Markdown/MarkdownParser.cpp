@@ -4,14 +4,15 @@
 
 #include "MarkdownParser.h"
 
+
+#include "CommonmarkParser/cmark.h"
+
+#include <SysMLv2Standard/entities/Element.h>
 #include <QFile>
 #include <sstream>
-#include <string>       // Use strings
-#include <fstream>      // Create, write and read files
 #include <iostream>     // For the std::cin and std::cout. I don't like, but... oh well
 #include <regex>        // Unlocks REGEX POWAA
-#include <algorithm>    // It does one linear scan of the string and inplace replaces all the matching characters
-#include <utility>
+
 
 namespace DigitalTwin::Client {
     void MarkdownParser::parseMarkdownFile(QString path) {
@@ -30,7 +31,7 @@ namespace DigitalTwin::Client {
     }
 
     QString MarkdownParser::getHTMLOfMarkdown() {
-        return QString::fromStdString(HTMLString);
+        return QString(cmark_render_html(MarkdownDocument,0));
     }
 
     QString MarkdownParser::getMarkdownString()
@@ -39,107 +40,71 @@ namespace DigitalTwin::Client {
     }
 
     std::vector<SysMLv2::Entities::Element *> MarkdownParser::getElementsOfProject() {
-        return std::vector<SysMLv2::Entities::Element *>();
+        std::vector<SysMLv2::Entities::Element *> returnValue;
+        auto child = cmark_node_first_child(MarkdownDocument);
+        std::cout<<"Document Node Type: "<<cmark_node_get_type_string(MarkdownDocument)<<std::endl;
+        std::cout<<"First Child Node Type: "<<cmark_node_get_type_string(child)<<std::endl;
+        std::cout<< cmark_render_commonmark(child,0,0) <<std::endl;
+        do {
+            child = cmark_node_next(child);
+            switch (cmark_node_get_type(child)) {
+                case CMARK_NODE_NONE:
+                    break;
+                case CMARK_NODE_DOCUMENT:
+                    break;
+                case CMARK_NODE_BLOCK_QUOTE:
+                    break;
+                case CMARK_NODE_LIST:
+                    break;
+                case CMARK_NODE_ITEM:
+                    break;
+                case CMARK_NODE_CODE_BLOCK:
+//                    SysMLv2::Entities::Element* element = new SysMLv2::Entities::Element();
+                    break;
+                case CMARK_NODE_HTML_BLOCK:
+                    break;
+                case CMARK_NODE_CUSTOM_BLOCK:
+                    break;
+                case CMARK_NODE_PARAGRAPH:
+                    break;
+                case CMARK_NODE_HEADING:
+                    break;
+                case CMARK_NODE_THEMATIC_BREAK:
+                    break;
+                case CMARK_NODE_TEXT:
+                    break;
+                case CMARK_NODE_SOFTBREAK:
+                    break;
+                case CMARK_NODE_LINEBREAK:
+                    break;
+                case CMARK_NODE_CODE:
+                    break;
+                case CMARK_NODE_HTML_INLINE:
+                    break;
+                case CMARK_NODE_CUSTOM_INLINE:
+                    break;
+                case CMARK_NODE_EMPH:
+                    break;
+                case CMARK_NODE_STRONG:
+                    break;
+                case CMARK_NODE_LINK:
+                    break;
+                case CMARK_NODE_IMAGE:
+                    break;
+            }
+        }while(cmark_node_last_child(MarkdownDocument)!=child);
+        return returnValue;
     }
 
     void MarkdownParser::parseInternally() {
-        std::smatch match;  // Match object (stores match information)
-
-        HTMLString = MarkdownString;
-
-        ////////////////////////////// HEADERS //////////////////////////////////////
-        std::regex headers("#+[^\\r\\n]+(\\r|\\n|\\r\\n)"); // Regex for the headers
-
-        while (std::regex_search (HTMLString, match, headers)) {
-
-            int match_begin = match.position();
-            int match_end   = match_begin + match.length();
-
-            //printf("Processing match: %s", HTMLString.substr(match_begin, match.length()).c_str());
-
-            int j;
-            for(j = 0; HTMLString[j+match_begin]=='#'; j++){}     // So count the number of '#' in a row,
-
-
-            HTMLString.insert(match_end, "</h" + std::to_string(j) + "><hr/>");
-            HTMLString.replace(match_begin, j, "<h" + std::to_string(j) + ">");
-        }
-
-        //////////////////////////////// LINKS //////////////////////////////////////
-        std::regex links("\\[[^\\n\\r]*\\]\\([^\\n\\r]*\\)"); // Regex for the headers
-        std::regex linkHref("\\([^\\n\\r]*\\)");
-
-        std::smatch match2;  // Match object (stores match information)
-        while (std::regex_search (HTMLString, match, links)) {
-
-            int match_begin = match.position();
-            //int match_end   = match_begin + match.length();
-
-            std::string text = "";
-            std::string link = "";
-
-            int i, count;
-            for(i = match_begin+1, count = 1; count > 0; i++){
-                char c = HTMLString[i];
-
-                if(c == '[') count++;
-                else if(c == ']') count--;
-
-                if(count > 0) text += c;
-            }
-
-            for(i += 1, count = 1; count > 0; i++){
-                char c = HTMLString[i];
-
-                if(c == '(') count++;
-                else if(c == ')') count--;
-
-                if(count > 0) link += c;
-            }
-
-            std::string finalLink = "<a href=\"" + link + "\">" + text + "</a>";
-
-            //printf("Processing link: %s", finalLink.c_str());
-            HTMLString.replace(match_begin, match.length(), finalLink);
-        }
-
-        ////////////////////////// OTHER TOKENS ////////////////////////////////////
-        //token{"[^\\r\\n]+((\\r|\\n|\\r\\n)[^\\r\\n]+)*",0,2,  "p"}       // Paragraphs regex
-
-        std::list<token> tokens = {
-                token{"`[^`\\n]+`",                             1,1,  "<code>",         "</code>"},         // Code tag regex
-                token{"(\\*){2}[^(\\*){2}\\r\\n]+(\\*){2}",     2,2,  "<b>",            "</b>"},            // Bold tag regex    (**)
-                token{"(_){2}[^(_){2}\\r\\n]+(_){2}",           2,2,  "<b>",            "</b>"},            // Bold tag regex    (__)
-                token{"\\*[^\\*\\r\\n]+\\*",                    1,1,  "<i>",            "</i>"},            // Italic tag regex  (*)
-                token{"_[^\\*\\r\\n]+_",                        1,1,  "<i>",            "</i>"},            // Italic tag regex  (_)
-                token{"```[a-z]*\\n[\\s\\S]*?\\n```",           3,3,  "<pre><code>",    "</code></pre>"}    // Multiline code block
-                //token{"(^>.*?\n{2})",                           1,0,  "<quote>",        "</quote>"}         // Quote tag regex
-        };
-
-        for(token tok: tokens){
-            //printf("Checking for %s\n", tok.tagOpen.c_str());
-            std::regex tmp(tok.rex);
-
-            int match_end, match_begin;
-            while (std::regex_search (HTMLString, match, tmp)) {
-                match_begin = match.position();
-                match_end   = match_begin + match.length();
-
-                printf("Processing match: %s\n", HTMLString.substr(match_begin, match.length()).c_str());
-
-                HTMLString.replace(match_end-tok.length2, tok.length2, tok.tagClose);
-                HTMLString.replace(match_begin,           tok.length1, tok.tagOpen);
-            }
-
-            //printf("Done checking %s\n", tok.tagOpen.c_str());
-        }
-
-        ////////////////////////////// LINE BREAKS ///////////////////////////////////
-        for(size_t i = 0; i<HTMLString.length(); i++){
-            if(HTMLString[i] == '\n'){
-                HTMLString.insert(i, "<br/>");
-                i+=6;
-            }
-        }
+        MarkdownDocument = cmark_parse_document(MarkdownString.c_str(),MarkdownString.size(),0);
+        auto child = cmark_node_first_child(MarkdownDocument);
+        std::cout<<"Document Node Type: "<<cmark_node_get_type_string(MarkdownDocument)<<std::endl;
+        std::cout<<"First Child Node Type: "<<cmark_node_get_type_string(child)<<std::endl;
+        std::cout<< cmark_render_commonmark(child,0,0) <<std::endl;
+        do {
+            child = cmark_node_next(child);
+            std::cout<<"Child Node Type: "<<cmark_node_get_type_string(child)<<std::endl;
+        }while(cmark_node_last_child(MarkdownDocument)!=child);
     }
 }

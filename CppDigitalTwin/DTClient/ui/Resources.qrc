@@ -1,12 +1,12 @@
 <RCC>
     <qresource prefix="/icons">
-        <file alias="Connection">icons/database.png</file>
+        <file alias="Connection">icons/link.png</file>
         <file alias="Save">icons/disk.png</file>
         <file alias="Pause">icons/pause.png</file>
         <file alias="Play">icons/play.png</file>
         <file alias="Open">icons/open.png</file>
-        <file alias="Settings">icons/settings-sliders.png</file>
+        <file alias="Settings">icons/gear.png</file>
         <file alias="Download">icons/download.png</file>
-        <file alias="Connect">icons/connectivity.png</file>
+        <file alias="Connect">icons/link.png</file>
     </qresource>
 </RCC>

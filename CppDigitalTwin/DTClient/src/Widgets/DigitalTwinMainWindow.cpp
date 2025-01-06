@@ -90,7 +90,7 @@ namespace DigitalTwin::Client {
         //    error.exec();
         //    return;
         //}
-        const auto path = QFileDialog::getOpenFileName(this,tr("Open SysMLv2 File"),QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), tr("SysMLv2 Files (*.sysml);;Markdown Files (*.md)"));
+        const auto path = QFileDialog::getOpenFileName(this,tr("Open SysMLv2 File"),QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), tr("Markdown Files (*.md);;SysMLv2 Files (*.sysml)"));
         if(!path.isEmpty()) {
             Model->openMarkdownFile(path);
         }
