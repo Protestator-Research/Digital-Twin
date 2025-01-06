@@ -9,6 +9,7 @@
 #include <SysMLv2Standard/entities/DigitalTwin.h>
 #include <DigitalTwinManager.h>
 #include <Services/MqttClientService.h>
+#include <SysMLv2Standard/entities/Branch.h>
 
 #include "MainWindowModel.h"
 #include "DigitalTwinClientSettings.h"
@@ -17,6 +18,8 @@
 #include "../Widgets/DigitalTwinTabWidget/DigitalTwinTabWidget.h"
 #include "../Widgets/UploadProjectFileToBackend.h"
 #include "Markdown/MarkdownParser.h"
+#include "SysMLv2Standard/entities/Commit.h"
+#include "SysMLv2Standard/entities/Element.h"
 
 
 namespace DigitalTwin::Client {
@@ -67,12 +70,12 @@ namespace DigitalTwin::Client {
 
     void MainWindowModel::openMarkdownFile(QString filePath)
     {
-        //if (!BackendCommunication)
-        //{
+        if (!BackendCommunication)
+        {
             UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(MainWindow);
             uploadFileDialog->setHTMLTextForView(filePath);
             uploadFileDialog->show();
-        //}
+        }
     }
 
     bool MainWindowModel::isOnline()
@@ -95,9 +98,19 @@ namespace DigitalTwin::Client {
         } else if(item->getProject() != nullptr) {
             auto project = item->getProject();
             UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(MainWindow);
-            BackendCommunication->getAllBranchesForProjectWithID(project->getId());
-            //BackendCommunication->getAllElements(project->getDefaultBranch(),project->getId())
-            uploadFileDialog->setMarkdownOfOnlineProject(QString());
+            auto branches = BackendCommunication->getAllBranchesForProjectWithID(project->getId());
+            std::vector<SysMLv2::Entities::Element*> elements;
+
+            for (const auto& branch : branches)
+                if (branch->getName() == "Main")
+                    elements = BackendCommunication->getAllElements(branch->getHead()->getId(), project->getId());
+
+            QString markdownString = "";
+
+            for (const auto& element : elements)
+                markdownString += element->body();
+
+            uploadFileDialog->setMarkdownOfOnlineProject(markdownString);
             uploadFileDialog->show();
         }
     }

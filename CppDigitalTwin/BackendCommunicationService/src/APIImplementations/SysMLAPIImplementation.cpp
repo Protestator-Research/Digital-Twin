@@ -231,8 +231,7 @@ namespace BACKEND_COMMUNICATION {
     }
 
     std::vector<SysMLv2::Entities::IEntity *>
-    SysMLAPIImplementation::getAllElementsFromCommit(std::string projectId, std::string commitId,
-                                                     std::string barrierString) {
+    SysMLAPIImplementation::getAllElementsFromCommit(std::string projectId, std::string commitId, std::string barrierString) {
 
         std::vector<SysMLv2::Entities::IEntity*> returnValue;
         CURLcode ServerResult;
@@ -333,5 +332,35 @@ namespace BACKEND_COMMUNICATION {
 
         curl_easy_cleanup(serverConnection);
         return barrierString;
+    }
+
+    std::vector<SysMLv2::Entities::IEntity*> SysMLAPIImplementation::getAllBrachesFroProject(std::string const projectId, std::string barrierString)
+    {
+        std::vector<SysMLv2::Entities::IEntity*> returnValue;
+        CURLcode ServerResult;
+
+        std::string urlAppendix = "projects/" + projectId + "/branches";
+
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str(), "");
+
+        ServerResult = curl_easy_perform(serverConnection);
+
+        if (ServerResult == CURLE_OK) {
+            long httpResult;
+            curl_easy_getinfo(serverConnection, CURLINFO_RESPONSE_CODE, &httpResult);
+
+            if (tryToResolveHTTPError(httpResult, serverConnection) == INTERNAL_STATUS_CODE::SUCCESS) {
+                returnValue = SysMLv2::SysMLv2Deserializer::deserializeJsonArray(Data);
+            }
+
+        }
+        else {
+            throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
+                static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
+        }
+        curl_slist_free_all(HeaderList);
+        curl_easy_cleanup(serverConnection);
+
+        return returnValue;
     }
 }

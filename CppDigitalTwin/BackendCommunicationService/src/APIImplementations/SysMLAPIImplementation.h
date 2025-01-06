@@ -90,6 +90,13 @@ namespace BACKEND_COMMUNICATION {
          */
         std::string getVersionOfBackend();
 
+        /**
+         * Downloads all the Branches that belong to a specific project with a specific ID.
+         * @param projectId Displays the string of the Project UUID
+         * @return JSON of the all the Branches.
+         */
+        std::vector<SysMLv2::Entities::IEntity*> getAllBrachesFroProject(std::string const projectId, std::string barrierString);
+
     protected:
         CURL* setUpServerConnection(const char* urlAppendix, const char* barrierString, const char* postPayload) override;
 
@@ -111,8 +118,10 @@ namespace BACKEND_COMMUNICATION {
          */
         std::string loginToBackendVersion2(std::string const& username, std::string const& passwod);
 
+        
+
     private:
-        std::string ServerAddress = "http://164.92.207.122Ï:8080/";
+        std::string ServerAddress = "http://164.92.207.122:8080/";
         std::string ReturnedHeaderData;
         std::string Data;
         struct curl_slist *HeaderList = NULL;

@@ -20,17 +20,18 @@
 //---------------------------------------------------------
 
 namespace SysMLv2::Entities {
+    class Commit;
 
     /**
-     * Represents an abstract baseclass that is used for the SysMLv2 API
-     * @class Record
+     * Represents an Branch that is used for the SysMLv2 API
+     * @class Branch
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
     class CPSBASELIB_EXPORT Branch : public CommitReference{
     public:
         /**
-         *
+         * 
          * @param jsonStringOrName
          */
         Branch(std::string jsonStringOrName);
@@ -43,6 +44,16 @@ namespace SysMLv2::Entities {
         bool operator==(Branch& other);
 
         std::string serializeToJson() override;
+
+        /**
+         * Returns the Current head of the given Branch.
+         * @return A Commit
+         * @see SysMLv2::Entities::Commit
+         */
+        Commit* getHead();
+
+    private:
+        Commit* Head;
     };
 }
 

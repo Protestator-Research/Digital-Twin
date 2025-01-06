@@ -88,8 +88,15 @@ namespace BACKEND_COMMUNICATION {
         return !BarrierString.empty();
     }
 
-    std::vector<SysMLv2::Entities::Branch*> CommunicationService::getAllBranchesForProjectWithID(boost::uuids::uuid ) {
-        return std::vector<SysMLv2::Entities::Branch *>();
+    std::vector<SysMLv2::Entities::Branch*> CommunicationService::getAllBranchesForProjectWithID(boost::uuids::uuid projectId) {
+        auto elements = APIImplementation->getAllBrachesFroProject(boost::lexical_cast<std::string>(projectId), BarrierString);
+
+        std::vector<SysMLv2::Entities::Branch*> returnValue;
+
+        for (auto elem : elements)
+            returnValue.push_back(dynamic_cast<SysMLv2::Entities::Branch*>(elem));
+
+        return returnValue;
     }
 
     std::vector<SysMLv2::Entities::Element *>

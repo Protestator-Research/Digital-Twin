@@ -39,29 +39,6 @@ set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Widgets/TreeViewModels/VariableViewModelItem.cpp
         src/Widgets/UploadProjectFileToBackend.cpp
         src/Widgets/UploadProjectFileToBackend.h
-        src/Models/Markdown/Elements/IMarkdownElement.h
-        src/Models/Markdown/Elements/HeadersMarkdown.cpp
-        src/Models/Markdown/Elements/HeadersMarkdown.h
-        src/Models/Markdown/Elements/LinksMarkdown.cpp
-        src/Models/Markdown/Elements/LinksMarkdown.h
-        src/Models/Markdown/Elements/ImagesMarkdown.cpp
-        src/Models/Markdown/Elements/ImagesMarkdown.h
-        src/Models/Markdown/Elements/TocMarkdown.cpp
-        src/Models/Markdown/Elements/TocMarkdown.h
-        src/Models/Markdown/Elements/CodeMarkdown.cpp
-        src/Models/Markdown/Elements/CodeMarkdown.h
-        src/Models/Markdown/Elements/BoldMarkdown.cpp
-        src/Models/Markdown/Elements/BoldMarkdown.h
-        src/Models/Markdown/Elements/BoldMarkdown.cpp
-        src/Models/Markdown/Elements/BoldMarkdown.h
-        src/Models/Markdown/Elements/ItalicMarkdown.cpp
-        src/Models/Markdown/Elements/ItalicMarkdown.h
-        src/Models/Markdown/Elements/ParagraphMarkdown.cpp
-        src/Models/Markdown/Elements/ParagraphMarkdown.h
-        src/Models/Markdown/Elements/YaMlMarkdown.cpp
-        src/Models/Markdown/Elements/YaMlMarkdown.h
-        src/Models/Markdown/Elements/QuoteMarkdown.cpp
-        src/Models/Markdown/Elements/QuoteMarkdown.h
         src/Models/Markdown/CommonmarkParser/blocks.c
         src/Models/Markdown/CommonmarkParser/buffer.c
         src/Models/Markdown/CommonmarkParser/buffer.h

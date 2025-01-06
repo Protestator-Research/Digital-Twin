@@ -16,4 +16,9 @@ namespace SysMLv2::Entities {
     std::string Branch::serializeToJson() {
         return CommitReference::serializeToJson();
     }
+
+    Commit* Branch::getHead()
+    {
+        return Head;
+    }
 }
