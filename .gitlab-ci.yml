@@ -27,7 +27,7 @@ before_script:
 
 build_gcc13:
   stage: build
-  image: gcc:13
+  image: gcc:11
   script:
     - mkdir build && cd build
     - conan install .. --build missing
@@ -39,7 +39,7 @@ build_gcc13:
       - .
 
 test_CPS_BaseLib:
-  image: gcc:13
+  image: gcc:11
   stage: test
   script:
     - cd build
@@ -50,7 +50,7 @@ test_CPS_BaseLib:
     - build_gcc13
 
 test_PhysicalTwinCommunication:
-  image: gcc:13
+  image: gcc:11
   stage: test
   script:
     - cd build
@@ -61,7 +61,7 @@ test_PhysicalTwinCommunication:
     - build_gcc13
 
 test_BackendCommunicationLibTests:
-  image: gcc:13
+  image: gcc:11
   stage: test
   script:
     - cd build
@@ -72,7 +72,7 @@ test_BackendCommunicationLibTests:
     - build_gcc13
 
 test_DigitalTwinLibTests:
-  image: gcc:13
+  image: gcc:11
   stage: test
   script:
     - cd build

@@ -85,7 +85,7 @@ class CppDigitalTwinRecipe(ConanFile):
     def build_requirements(self):
         self.tool_requires("cmake/3.30.0")
         self.tool_requires("icu/74.2")
-        self.tool_requires("qt/6.7.1")
+        self.tool_requires("qt/6.7.3")
         self.test_requires("gtest/1.14.0")
 
     def test(self):
