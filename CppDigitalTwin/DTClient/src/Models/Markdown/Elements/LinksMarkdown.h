@@ -5,6 +5,8 @@
 #ifndef DIGITALTWIN_LINKSMARKDOWN_H
 #define DIGITALTWIN_LINKSMARKDOWN_H
 
+#include <vector>
+
 #include "IMarkdownElement.h"
 
 namespace DigitalTwin {

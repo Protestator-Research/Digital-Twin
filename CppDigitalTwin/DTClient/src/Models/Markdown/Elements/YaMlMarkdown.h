@@ -5,6 +5,8 @@
 #ifndef DIGITALTWIN_YAMLMARKDOWN_H
 #define DIGITALTWIN_YAMLMARKDOWN_H
 
+#include <vector>
+
 #include "IMarkdownElement.h"
 
 namespace DigitalTwin {

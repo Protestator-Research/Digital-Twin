@@ -7,6 +7,8 @@
 
 #include "IMarkdownElement.h"
 
+#include <vector>
+
 namespace DigitalTwin {
     namespace Client {
 

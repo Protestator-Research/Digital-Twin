@@ -6,6 +6,7 @@
 #define DIGITALTWIN_IMAGESMARKDOWN_H
 
 #include "IMarkdownElement.h"
+#include <vector>
 
 namespace DigitalTwin {
     namespace Client {

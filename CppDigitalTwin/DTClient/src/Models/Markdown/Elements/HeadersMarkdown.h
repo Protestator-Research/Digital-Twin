@@ -5,6 +5,8 @@
 #ifndef DIGITALTWIN_HEADERSMARKDOWN_H
 #define DIGITALTWIN_HEADERSMARKDOWN_H
 
+#include <vector>
+
 #include "IMarkdownElement.h"
 
 namespace DigitalTwin {
