@@ -77,6 +77,15 @@ namespace BACKEND_COMMUNICATION {
         std::vector<SysMLv2::Entities::Project*> getAllProjects();
 
         /**
+         * Creates online a project with the given Properties.
+         * @param projectName The name of the Project.
+         * @param projectDescription
+         * @param defaultBranchName
+         * @return
+         */
+        SysMLv2::Entities::Project* postProject(std::string projectName, std::string projectDescription, std::string defaultBranchName);
+
+        /**
          * Downloads the Digital Twin data with its ID and the project id.
          * @param digitalTwinId UUID ("@id") of the digital twin
          * @param projectId UUID ("@id") of the project.

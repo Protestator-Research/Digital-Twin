@@ -73,7 +73,9 @@ namespace SysMLv2::Entities {
 
         std::string valueString();
 
+        void setLanguage(std::string language);
         std::string language();
+        void setBody(std::string body);
         std::string body();
 
         bool isImplied();
@@ -87,6 +89,8 @@ namespace SysMLv2::Entities {
 
         std::vector<Identification*> source();
         std::vector<Identification*> target();
+
+        std::string getMarkdownString();
     protected:
 
     private:

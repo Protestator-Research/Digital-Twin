@@ -70,13 +70,16 @@ set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Models/Markdown/CommonmarkParser/scanners.h
         src/Models/Markdown/CommonmarkParser/utf8.c
         src/Models/Markdown/CommonmarkParser/utf8.h
-        src/Models/Markdown/CommonmarkParser/xml.c)
+        src/Models/Markdown/CommonmarkParser/xml.c
+        src/Widgets/Dialogs/CreateProjectDialog.cpp
+        src/Widgets/Dialogs/CreateProjectDialog.h)
 
 qt_wrap_ui(SOURCES ui/DigitalTwinTabWidget.ui
         ui/SettingsDialog.ui
         ui/DigitalTwinMainWindow.ui
         ui/TabContentWidget.ui
-        ui/UploadProjectFileToBackend.ui)
+        ui/UploadProjectFileToBackend.ui
+        ui/CreateProjectDialog.ui)
 
 add_executable(CppDigitalTwinClient ${SOURCES})
 

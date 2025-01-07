@@ -8,5 +8,6 @@
         <file alias="Settings">icons/gear.png</file>
         <file alias="Download">icons/download.png</file>
         <file alias="Connect">icons/link.png</file>
+        <file alias="Upload">icons/upload.png</file>
     </qresource>
 </RCC>

@@ -69,7 +69,7 @@ namespace DigitalTwin::Client {
     }
 
     void MainWindowModel::openMarkdownFile(QString filePath) {
-        UploadProjectFileToBackend *uploadFileDialog = new UploadProjectFileToBackend(MainWindow);
+        UploadProjectFileToBackend *uploadFileDialog = new UploadProjectFileToBackend(BackendCommunication, MainWindow);
         uploadFileDialog->setHTMLTextForView(filePath);
         uploadFileDialog->show();
     }
@@ -93,7 +93,7 @@ namespace DigitalTwin::Client {
             MainWindow->addTabWidget(new DigitalTwinTabWidget(model,MainWindow),QString::fromStdString(possibleDigitalTwin->getName()));
         } else if(item->getProject() != nullptr) {
             auto project = item->getProject();
-            UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(MainWindow);
+            UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(BackendCommunication, MainWindow);
             auto branches = BackendCommunication->getAllBranchesForProjectWithID(project->getId());
             std::vector<SysMLv2::Entities::Element*> elements;
 
@@ -101,12 +101,7 @@ namespace DigitalTwin::Client {
                 if (branch->getName() == "Main")
                     elements = BackendCommunication->getAllElements(branch->getHead()->getId(), project->getId());
 
-            QString markdownString = "";
-
-            for (const auto& element : elements)
-                markdownString += element->body();
-
-            uploadFileDialog->setMarkdownOfOnlineProject(markdownString);
+            uploadFileDialog->setElementsForView(elements);
             uploadFileDialog->show();
         }
     }

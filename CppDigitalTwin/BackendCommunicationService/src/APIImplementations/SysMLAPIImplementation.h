@@ -22,6 +22,7 @@
 //---------------------------------------------------------
 namespace SysMLv2::Entities {
     class IEntity;
+    class Project;
 }
 
 namespace BACKEND_COMMUNICATION {
@@ -56,6 +57,8 @@ namespace BACKEND_COMMUNICATION {
          * @return A list of all Projects.
          */
         std::vector<SysMLv2::Entities::IEntity*> getAllProjects(std::string barrierString);
+
+        SysMLv2::Entities::IEntity* postProject(SysMLv2::Entities::Project* project, std::string barrierString);
 
         /**
          * Downloads all digital twins from a project.

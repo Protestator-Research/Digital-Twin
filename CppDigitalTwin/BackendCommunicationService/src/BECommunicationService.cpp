@@ -109,4 +109,12 @@ namespace BACKEND_COMMUNICATION {
 
         return returnValue;
     }
+
+    SysMLv2::Entities::Project *
+    CommunicationService::postProject(std::string projectName, std::string projectDescription,
+                                      std::string defaultBranchName) {
+        SysMLv2::Entities::Project* project = new SysMLv2::Entities::Project(projectName,projectDescription, defaultBranchName);
+
+        return nullptr;
+    }
 }

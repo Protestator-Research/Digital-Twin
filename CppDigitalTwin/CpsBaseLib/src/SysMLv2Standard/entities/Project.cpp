@@ -100,4 +100,7 @@ namespace SysMLv2::Entities {
         return Record::serializeToJson();
         //return std::string();
     }
+
+    Project::Project(std::string projectName, std::string projectDescription, std::string branchName) : Record(projectName){
+    }
 }

@@ -36,8 +36,8 @@ namespace DigitalTwin::Client {
         std::string MarkdownString;
         cmark_node* MarkdownDocument;
 
+        SysMLv2::Entities::Element* createElement(std::string language, std::string body);
         void parseInternally();
-        void parseString(size_t begin, size_t end, std::string regex);
     };
 }
 

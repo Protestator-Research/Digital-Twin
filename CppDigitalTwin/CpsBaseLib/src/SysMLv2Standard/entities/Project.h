@@ -60,6 +60,8 @@ namespace SysMLv2::Entities {
          */
         explicit Project(std::string JsonString);
 
+        Project(std::string projectName, std::string projectDescription, std::string branchName);
+
         virtual ~Project();
 
         Branch* getDefaultBranch();

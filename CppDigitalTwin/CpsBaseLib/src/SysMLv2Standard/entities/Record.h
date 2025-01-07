@@ -140,6 +140,8 @@ namespace SysMLv2::Entities {
          * @see boost::uuids::uuid
          */
         boost::uuids::uuid Id;
+
+        bool IsForCreation = false;
     };
 }
 

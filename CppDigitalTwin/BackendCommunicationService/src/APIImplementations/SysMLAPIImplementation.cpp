@@ -15,6 +15,7 @@
 #include <nlohmann/json.hpp>
 #include <BaseFuctions/StringExtention.hpp>
 #include <SysMLv2Standard/SysMLv2Deserializer.h>
+#include <SysMLv2Standard/entities/Project.h>
 
 //---------------------------------------------------------
 // Internal Classes
@@ -362,5 +363,36 @@ namespace BACKEND_COMMUNICATION {
         curl_easy_cleanup(serverConnection);
 
         return returnValue;
+    }
+
+    SysMLv2::Entities::IEntity *
+    SysMLAPIImplementation::postProject(SysMLv2::Entities::Project *project, std::string barrierString) {
+        SysMLv2::Entities::IEntity* returnValue = nullptr;
+        CURLcode ServerResult;
+
+        std::string urlAppendix = "projects";
+
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str(), project->serializeToJson().c_str());
+
+        ServerResult = curl_easy_perform(serverConnection);
+
+        if (ServerResult == CURLE_OK) {
+            long httpResult;
+            curl_easy_getinfo(serverConnection, CURLINFO_RESPONSE_CODE, &httpResult);
+
+            if (tryToResolveHTTPError(httpResult, serverConnection) == INTERNAL_STATUS_CODE::SUCCESS) {
+                returnValue = SysMLv2::SysMLv2Deserializer::deserializeJsonString(Data);
+            }
+
+        }
+        else {
+            throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
+                    static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
+        }
+        curl_slist_free_all(HeaderList);
+        curl_easy_cleanup(serverConnection);
+
+        return returnValue;
+
     }
 }

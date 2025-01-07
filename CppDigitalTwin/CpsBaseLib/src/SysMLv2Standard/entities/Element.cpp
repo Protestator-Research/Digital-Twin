@@ -200,6 +200,14 @@ namespace SysMLv2 {
                 json[entity_value] = NULL;
         }
 
+        void Element::setBody(std::string body) {
+            Body = body;
+        }
+
+        void Element::setLanguage(std::string language) {
+            Language = language;
+        }
+
         void Element::setName(std::string name) {
             Name = name;
         }
@@ -306,6 +314,17 @@ namespace SysMLv2 {
 
         std::vector<Identification *> Element::target() {
             return Target;
+        }
+
+        std::string Element::getMarkdownString() {
+            if(body().empty()||(Language==""))
+                return "";
+
+            if(Language=="Markdown") {
+                return "\r\n" + body() + "\r\n";
+            } else {
+                return "\r\n```" + Language + "\r\n" + body() + "\r\n```\r\n";
+            }
         }
 
 
