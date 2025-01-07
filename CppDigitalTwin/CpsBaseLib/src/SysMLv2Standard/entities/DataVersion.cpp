@@ -4,11 +4,15 @@
 
 #include "DataVersion.h"
 #include "DataIdentity.h"
+#include "JSONEntities.h"
 #include "Data.h"
 
+#include <boost/uuid/random_generator.hpp>
+#include <nlohmann/json.hpp>
 
 namespace SysMLv2::Entities {
-    DataVersion::DataVersion(DataIdentity *identity, Data* payload) : Record(identity->getId()) {
+    DataVersion::DataVersion(DataIdentity *identity, Data* payload) : Record(boost::uuids::random_generator()()) {
+        Type = "DataVersion";
         Identity = identity;
         Payload = payload;
     }
@@ -34,5 +38,13 @@ namespace SysMLv2::Entities {
         return Payload->getId();
     }
 
+    std::string DataVersion::serializeToJson()
+    {
+        nlohmann::json json = nlohmann::json::parse(Record::serializeToJson());
 
+        json[JSON_IDENTITY_ENTITY] = nlohmann::json::parse(Identity->serializeToJson());
+        json[JSON_PAYLOAD_ENTITY] = nlohmann::json::parse(Payload->serializeToJson());
+
+	    return json.dump(JSON_INTENT);
+    }
 }

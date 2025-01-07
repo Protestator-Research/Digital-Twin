@@ -97,10 +97,22 @@ namespace SysMLv2::Entities {
     }
 
     std::string Project::serializeToJson() {
-        return Record::serializeToJson();
-        //return std::string();
+        nlohmann::json jsonDocument;
+        if (IsForCreation)
+        {
+            jsonDocument[JSON_NAME_ENTITY] = Name;
+            jsonDocument[JSON_DESCRIPTION_ENTITY] = Description;
+            jsonDocument["defaultBranchName"] = DefaultBranch->getName();
+        }else
+        {
+            return Record::serializeToJson();
+        }
+        return jsonDocument.dump(JSON_INTENT);
     }
 
     Project::Project(std::string projectName, std::string projectDescription, std::string branchName) : Record(projectName){
+        Description = projectDescription;
+        DefaultBranch = new Branch(branchName);
+        IsForCreation = true;
     }
 }

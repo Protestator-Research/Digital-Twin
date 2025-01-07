@@ -10,7 +10,10 @@
 
 namespace SysMLv2 {
     namespace Entities {
-        Element::Element() : Data() { }
+        Element::Element() : Data()
+        {
+            Type = "TextualRepresentation";
+        }
 
         Element::Element(std::string jsonString) : Data(jsonString) {
             nlohmann::json json = nlohmann::json::parse(jsonString);

@@ -46,6 +46,13 @@ namespace SysMLv2::Entities {
     const std::string JSON_OWNING_PROJECT = "owningProject";
     const std::string JSON_REFERENCE_COMMIT = "referencedCommit";
 
+    // Used for Data Identity
+    const std::string JSON_IDENTITY_ENTITY = "identity";
+    const std::string JSON_PAYLOAD_ENTITY = "payload";
+
+    // Used for Commit
+    const std::string JSON_CHANGE_ENTITY = "change";
+
     // Used for the element implementation of the Agila Backend
     const std::string JSON_SHORT_NAME_ENTITY = "shortName";
     const std::string JSON_DECLARED_NAME_ENTITY = "declaredName";
@@ -99,6 +106,9 @@ namespace SysMLv2::Entities {
     const std::string NAMESPACE_TYPE = "namespace";
     const std::string TYPE_TYPE = "type";
     const std::string DIGITAL_TWIN_TYPE = "digitaltwin";
+    const std::string DATA_TYPE = "data";
+    const std::string DATA_VERSION_TYPE = "dataversion";
+    const std::string PAYLOAD_TYPE = "payload";
 }
 
 

@@ -43,6 +43,8 @@ namespace SysMLv2::Entities {
         Data* getPayload();
         boost::uuids::uuid getId();
 
+        std::string serializeToJson();
+
     private:
         DataIdentity* Identity;
 

@@ -47,7 +47,7 @@ namespace SysMLv2::Entities {
         nlohmann::json json;
         json[JSON_ID_ENTITY] = boost::lexical_cast<std::string>(Id);
         json[JSON_TYPE_ENTITY] = Type;
-        return json.dump();
+        return json.dump(JSON_INTENT);
     }
 
 }

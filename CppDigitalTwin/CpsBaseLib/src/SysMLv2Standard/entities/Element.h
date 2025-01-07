@@ -33,7 +33,7 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @class Element
      */
-    class CPSBASELIB_EXPORT Element : public Data{
+    class CPSBASELIB_EXPORT Element : public Data {
     public:
         /**
          * C-Tor
@@ -49,18 +49,22 @@ namespace SysMLv2::Entities {
         /**
          * D-Tor
          */
-        virtual ~Element();
+        ~Element() override;
 
         std::string serializeToJson() override;
 
         void setName(std::string name);
         std::string name();
+
         void setShortName(std::string shortName);
         std::string shortName();
+
         void setDeclaredName(std::string declaredName);
         std::string declaredName();
+
         void setDeclaredShortName(std::string declaredShortName);
         std::string getDeclaredShortName();
+
         std::vector<Identification*> ownedElements();
         Identification* owner() const;
         Identification* owningMembership() const;

@@ -10,6 +10,7 @@
 // External Classes
 //---------------------------------------------------------
 #include <list>
+#include <vector>
 
 //---------------------------------------------------------
 // Internal Classes
@@ -48,7 +49,7 @@ namespace SysMLv2::Entities {
          * @param owningProject
          * @param previusCommits
          */
-        Commit(boost::uuids::uuid id, std::string name, std::string description, Project* owningProject, Commit** previusCommits = nullptr);
+        Commit(boost::uuids::uuid id, std::string name, std::string description, Project* owningProject, std::vector<Commit*> previusCommits = std::vector<Commit*>());
 
         /**
          *
@@ -57,7 +58,7 @@ namespace SysMLv2::Entities {
          * @param owningProject
          * @param previusCommits
          */
-        Commit(std::string name, std::string description, Project* owningProject, Commit** previusCommits = nullptr);
+        Commit(std::string name, std::string description, Project* owningProject, std::vector<Commit*> previusCommits = std::vector<Commit*>());
 
         /**
          * Constructor for Parsing an Commit from the REST API, according to the SysMLv2 Standard.
@@ -70,19 +71,20 @@ namespace SysMLv2::Entities {
          */
         virtual ~Commit();
 
-        void setChange(DataVersion* dataVersion);
-        DataVersion* getDataVersion();
+        void setChange(std::vector<DataVersion*> change);
+        void addChange(DataVersion* dataVersion);
+        std::vector<DataVersion*> getDataVersion();
 
-        [[nodiscard]] Commit** getPreviusCommits() const;
+        [[nodiscard]] std::vector<Commit*> getPreviusCommits() const;
 
         [[nodiscard]] Project* getOwningProject() const;
 
         std::string serializeToJSON();
 
     private:
-        Commit** PreviusCommits;
+        std::vector<Commit*> PreviusCommits;
         Project* OwningProject;
-        DataVersion* Change;
+        std::vector<DataVersion*> Change;
     };
 }
 

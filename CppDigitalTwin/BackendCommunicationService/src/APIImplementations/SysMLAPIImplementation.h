@@ -58,7 +58,23 @@ namespace BACKEND_COMMUNICATION {
          */
         std::vector<SysMLv2::Entities::IEntity*> getAllProjects(std::string barrierString);
 
+        /**
+         *
+         * @param project 
+         * @param barrierString 
+         * @return 
+         */
         SysMLv2::Entities::IEntity* postProject(SysMLv2::Entities::Project* project, std::string barrierString);
+
+        /**
+         * 
+         * @param projectId 
+         * @param commit 
+         * @param barrierString 
+         * @return 
+         */
+        SysMLv2::Entities::IEntity* postCommit(std::string projectId, SysMLv2::Entities::Commit* commit, std::string barrierString);
+
 
         /**
          * Downloads all digital twins from a project.

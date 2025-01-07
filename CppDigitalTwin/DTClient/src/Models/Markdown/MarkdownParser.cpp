@@ -51,7 +51,7 @@ namespace DigitalTwin::Client {
                 case CMARK_NODE_HTML_BLOCK:
                 case CMARK_NODE_CODE_BLOCK:
                 case CMARK_NODE_CODE:
-                    createElement(cmark_node_get_fence_info(child),cmark_node_get_literal(child));
+                    returnValue.push_back(createElement(cmark_node_get_fence_info(child),cmark_node_get_literal(child)));
                     break;
                 case CMARK_NODE_CUSTOM_BLOCK:
                 case CMARK_NODE_PARAGRAPH:
@@ -70,7 +70,7 @@ namespace DigitalTwin::Client {
                 case CMARK_NODE_BLOCK_QUOTE:
                 case CMARK_NODE_LIST:
                 case CMARK_NODE_ITEM:
-                    createElement("Markdown", cmark_render_commonmark(child,0,0));
+                    returnValue.push_back(createElement("Markdown", cmark_render_commonmark(child,0,0)));
                     break;
             }
             child = cmark_node_next(child);

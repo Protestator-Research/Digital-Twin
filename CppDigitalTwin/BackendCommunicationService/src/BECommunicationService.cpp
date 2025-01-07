@@ -81,6 +81,14 @@ namespace BACKEND_COMMUNICATION {
         return nullptr;
     }
 
+    SysMLv2::Entities::Commit* CommunicationService::postCommitWithId(boost::uuids::uuid projectId,
+	    SysMLv2::Entities::Commit* commit)
+    {
+        auto commi = APIImplementation->postCommit(boost::lexical_cast<std::string>(projectId), commit, BarrierString);
+
+        SysMLv2::Entities::Commit* returnValue = dynamic_cast<SysMLv2::Entities::Commit*>(commi);
+        return returnValue;
+    }
 
 
     bool CommunicationService::setUserForLoginInBackend(std::string username, std::string password) {
@@ -111,10 +119,9 @@ namespace BACKEND_COMMUNICATION {
     }
 
     SysMLv2::Entities::Project *
-    CommunicationService::postProject(std::string projectName, std::string projectDescription,
-                                      std::string defaultBranchName) {
+    CommunicationService::postProject(std::string projectName, std::string projectDescription, std::string defaultBranchName) {
         SysMLv2::Entities::Project* project = new SysMLv2::Entities::Project(projectName,projectDescription, defaultBranchName);
-
-        return nullptr;
+        project = dynamic_cast<SysMLv2::Entities::Project*>(APIImplementation->postProject(project, BarrierString));
+        return project;
     }
 }

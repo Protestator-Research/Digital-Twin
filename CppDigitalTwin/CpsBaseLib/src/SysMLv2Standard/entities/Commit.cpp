@@ -13,50 +13,73 @@
 // Internal Classes
 //---------------------------------------------------------
 #include "Commit.h"
+
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/detail/meta/std_fs.hpp>
+
 #include "Project.h"
 #include "DataVersion.h"
-
+#include "JSONEntities.h"
 
 
 namespace SysMLv2::Entities{
-    Commit::Commit(boost::uuids::uuid id, std::string name, std::string description, Project *owningProject,
-                   Commit **previusCommits) : Record(id,name,description){
+    Commit::Commit(boost::uuids::uuid id, std::string name, std::string description, Project *owningProject, std::vector<Commit*> previusCommits) : Record(id,name,description){
+        Type = "Commit";
         PreviusCommits = previusCommits;
         OwningProject = owningProject;
     }
 
-    Commit::Commit(std::string name, std::string description, Project *owningProject, Commit **previusCommits) :
+    Commit::Commit(std::string name, std::string description, Project *owningProject, std::vector<Commit*> previusCommits) :
             Record(boost::uuids::random_generator()(), name, description){
-        OwningProject = owningProject;
+        Type = "Commit";
+    	OwningProject = owningProject;
         PreviusCommits = previusCommits;
     }
 
     Commit::Commit(std::string jsonString) : Record(jsonString) {
-
+        Type = "Commit";
     }
 
     Commit::~Commit() {
-        delete Change;
+
+    }
+
+    void Commit::setChange(std::vector<DataVersion*> change)
+    {
+        Change = change;
     }
 
     Project* Commit::getOwningProject() const {
         return OwningProject;
     }
 
-    void Commit::setChange(DataVersion *dataVersion) {
-        Change = dataVersion;
+    void Commit::addChange(DataVersion *dataVersion) {
+        Change.push_back(dataVersion);
     }
 
-    DataVersion* Commit::getDataVersion() {
+    std::vector<DataVersion*> Commit::getDataVersion() {
         return Change;
     }
 
-    Commit** Commit::getPreviusCommits() const {
+    std::vector<Commit*> Commit::getPreviusCommits() const {
         return PreviusCommits;
     }
 
     std::string Commit::serializeToJSON() {
-        return std::string();
+        nlohmann::json json = nlohmann::json::parse(Record::serializeToJson());
+        json.erase(JSON_ID_ENTITY);
+        std::string jsonElements = "[";
+        for (int i = 0; i < Change.size(); i++) {
+            jsonElements += Change[i]->serializeToJson();
+
+            if (i != Change.size())
+                jsonElements += ",";
+        }
+        jsonElements += "]";
+
+        json[JSON_CHANGE_ENTITY] = nlohmann::json::parse(jsonElements);
+        return json.dump(JSON_INTENT);
     }
 
 }

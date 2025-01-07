@@ -28,7 +28,7 @@ namespace SysMLv2::Entities {
     }
 
     DataIdentity::DataIdentity(std::string jsonStringOrName) : Record(jsonStringOrName) {
-
+        Record::Type = "DataIdentity";
     }
 
     DataIdentity::~DataIdentity() {
@@ -51,6 +51,7 @@ namespace SysMLv2::Entities {
         nlohmann::json jsonGeneration;
 
         jsonGeneration[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
+        jsonGeneration[JSON_ID_ENTITY] = Type;
 
         return jsonGeneration.dump(JSON_INTENT);
     }

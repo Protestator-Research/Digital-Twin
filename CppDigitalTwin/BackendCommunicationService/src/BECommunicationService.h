@@ -117,6 +117,15 @@ namespace BACKEND_COMMUNICATION {
         SysMLv2::Entities::Commit* getCommitWithId(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
         /**
+         * 
+         * @param projectId 
+         * @param commit 
+         * @return 
+         */
+        SysMLv2::Entities::Commit* postCommitWithId(boost::uuids::uuid projectId, SysMLv2::Entities::Commit* commit);
+
+
+        /**
          * Downloads all the elements of a specific commit.
          * @param projectId UUID ("@id") of the project.
          * @param commitId UUID ("@id") of the commit.

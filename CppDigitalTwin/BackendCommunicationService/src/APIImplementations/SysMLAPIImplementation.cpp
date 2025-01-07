@@ -16,6 +16,7 @@
 #include <BaseFuctions/StringExtention.hpp>
 #include <SysMLv2Standard/SysMLv2Deserializer.h>
 #include <SysMLv2Standard/entities/Project.h>
+#include <SysMLv2Standard/entities/Commit.h>
 
 //---------------------------------------------------------
 // Internal Classes
@@ -394,5 +395,36 @@ namespace BACKEND_COMMUNICATION {
 
         return returnValue;
 
+    }
+
+    SysMLv2::Entities::IEntity* SysMLAPIImplementation::postCommit(std::string projectId,
+	    SysMLv2::Entities::Commit* commit, std::string barrierString)
+    {
+        SysMLv2::Entities::IEntity* returnValue = nullptr;
+        CURLcode ServerResult;
+
+        std::string urlAppendix = "projects/" + projectId + "/commits";
+
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str(), commit->serializeToJson().c_str());
+
+        ServerResult = curl_easy_perform(serverConnection);
+
+        if (ServerResult == CURLE_OK) {
+            long httpResult;
+            curl_easy_getinfo(serverConnection, CURLINFO_RESPONSE_CODE, &httpResult);
+
+            if (tryToResolveHTTPError(httpResult, serverConnection) == INTERNAL_STATUS_CODE::SUCCESS) {
+                returnValue = SysMLv2::SysMLv2Deserializer::deserializeJsonString(Data);
+            }
+
+        }
+        else {
+            throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
+                static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
+        }
+        curl_slist_free_all(HeaderList);
+        curl_easy_cleanup(serverConnection);
+
+        return returnValue;
     }
 }

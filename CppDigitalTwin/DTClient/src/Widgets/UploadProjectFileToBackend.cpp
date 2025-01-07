@@ -9,6 +9,13 @@
 #include <QToolBar>
 #include <QMessageBox>
 
+#include <SysMLv2Standard/entities/Commit.h>
+#include <SysMLv2Standard/entities/DataVersion.h>
+#include <boost/uuid/random_generator.hpp>
+
+#include "SysMLv2Standard/entities/DataIdentity.h"
+#include "SysMLv2Standard/entities/Project.h"
+
 namespace DigitalTwin::Client {
     UploadProjectFileToBackend::UploadProjectFileToBackend(BACKEND_COMMUNICATION::CommunicationService* service, QWidget *parent) :
             QMainWindow(parent),
@@ -102,8 +109,20 @@ namespace DigitalTwin::Client {
         CreateProjectDialog dialog(this);
         dialog.exec();
         if(dialog.result()==QDialog::DialogCode::Accepted) {
-            Parser->getElementsOfProject();
+            auto project = CommunicationService->postProject(dialog.getProjectName(), dialog.getProjectDecription(), "Main");
+            Elements = Parser->getElementsOfProject();
+            auto commit = new SysMLv2::Entities::Commit(dialog.getProjectName(), dialog.getProjectDecription(), project);
 
+            std::vector<SysMLv2::Entities::DataVersion*> dataVersions;
+            for (const auto& element : Elements)
+            {
+                auto dataVersion = new SysMLv2::Entities::DataVersion(new SysMLv2::Entities::DataIdentity(boost::uuids::random_generator()()), element);
+                dataVersions.push_back(dataVersion);
+            }
+
+            commit->setChange(dataVersions);
+
+            CommunicationService->postCommitWithId(project->getId(), commit);
         }
     }
 

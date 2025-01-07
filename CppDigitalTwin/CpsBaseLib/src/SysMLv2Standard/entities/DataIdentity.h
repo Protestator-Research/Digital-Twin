@@ -80,9 +80,6 @@ namespace SysMLv2::Entities {
         bool operator==(DataIdentity const &other);
 
     private:
-        /**
-         *
-         */
         std::vector<DataVersion*> Version;
     };
 }
