@@ -6,9 +6,7 @@
 #include "Commit.h"
 
 namespace SysMLv2::Entities {
-    CommitReference::CommitReference(std::string jsonStringOrName) : Record(jsonStringOrName) {
-
-    }
+    CommitReference::CommitReference(std::string jsonStringOrName) : Record(jsonStringOrName) { }
 
     bool CommitReference::operator==(CommitReference &other) {
         if(Record::operator==(other))
@@ -21,7 +19,6 @@ namespace SysMLv2::Entities {
     }
 
     std::string CommitReference::serializeToJson() {
-//        return Record::serializeToJson()
-        return std::string();
+        return Record::serializeToJson();
     }
 }

@@ -22,21 +22,30 @@ namespace SysMLv2::Entities {
     // Generally used
     const std::string JSON_ID_ENTITY = "@id";
     const std::string JSON_TYPE_ENTITY = "@type";
+
     // Used for Record and the Superclasses
     const std::string JSON_NAME_ENTITY = "name";
     const std::string JSON_ALIAS_ENTITY = "alias";
     const std::string JSON_DESCRIPTION_ENTITY = "description";
+
     // Used for Project
     const std::string JSON_DEFAULT_BRANCH_ENTITY = "defaultBranch";
     const std::string JSON_CREATION_ENTITY = "created";
     const std::string JSON_BRANCHES_LIST = "branches_list";
     const std::string JSON_COMMIT_LIST = "commits";
     const std::string JSON_HEAD_ID_LIST = "heads";
+
     // Used for Digital Twin
     const std::string JSON_CONNECTED_MODELS = "connectedModels";
     const std::string JSON_PARENT_PROJECT = "parentProject";
     const std::string JSON_BRANCH_ID = "branchId";
     const std::string JSON_COMMIT_ID = "commitId";
+
+    // Used for Branches
+    const std::string JSON_HEAD_ID = "head";
+    const std::string JSON_OWNING_PROJECT = "owningProject";
+    const std::string JSON_REFERENCE_COMMIT = "referencedCommit";
+
     // Used for the element implementation of the Agila Backend
     const std::string JSON_SHORT_NAME_ENTITY = "shortName";
     const std::string JSON_DECLARED_NAME_ENTITY = "declaredName";
@@ -62,7 +71,6 @@ namespace SysMLv2::Entities {
     const std::string JSON_TEXTUAL_REPRESENTATION_ENTITY = "textualRepresentation";
     const std::string JSON_ALIAS_ID_ENTITY = "aliasIds";
     const std::string JSON_ELEMENT_ID_ENTITY = "elementId";
-
 
     //Type Strings
     const std::string PROJECT_TYPE="project";

@@ -68,14 +68,10 @@ namespace DigitalTwin::Client {
         return Settings;
     }
 
-    void MainWindowModel::openMarkdownFile(QString filePath)
-    {
-        if (!BackendCommunication)
-        {
-            UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(MainWindow);
-            uploadFileDialog->setHTMLTextForView(filePath);
-            uploadFileDialog->show();
-        }
+    void MainWindowModel::openMarkdownFile(QString filePath) {
+        UploadProjectFileToBackend *uploadFileDialog = new UploadProjectFileToBackend(MainWindow);
+        uploadFileDialog->setHTMLTextForView(filePath);
+        uploadFileDialog->show();
     }
 
     bool MainWindowModel::isOnline()

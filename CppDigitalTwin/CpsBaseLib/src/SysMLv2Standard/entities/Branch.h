@@ -28,7 +28,7 @@ namespace SysMLv2::Entities {
      * @author Moritz Herzog <herzogm@rptu.de>
      * @version 1.0
      */
-    class CPSBASELIB_EXPORT Branch : public CommitReference{
+    class CPSBASELIB_EXPORT Branch : public CommitReference {
     public:
         /**
          * 

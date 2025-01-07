@@ -12,6 +12,7 @@
 #include <vector>
 #include <sstream>
 #include <date/date.h>
+#include <boost/uuid/string_generator.hpp>
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
@@ -48,7 +49,17 @@ namespace SysMLv2::Entities {
     }
 
     Project::Project(std::string JsonString) : Record(JsonString) {
+        try {
+            nlohmann::json parsedJson = nlohmann::json::parse(JsonString);
 
+            const auto branch = parsedJson[JSON_DEFAULT_BRANCH_ENTITY];
+            if(!branch.empty())
+                DefaultBranch = new Branch(branch.dump());
+
+        }
+        catch (...) {
+            Name = JsonString;
+        }
     }
 
     Project::~Project() {

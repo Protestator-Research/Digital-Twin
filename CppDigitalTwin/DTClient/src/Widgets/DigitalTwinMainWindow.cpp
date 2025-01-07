@@ -82,15 +82,17 @@ namespace DigitalTwin::Client {
     }
 
     void DigitalTwinMainWindow::openSysMLv2File() {
-        //if (!Model->isOnline())
-        //{
-        //    QMessageBox error;
-        //    error.setText(tr("Please connect to the AGILA-Backend!"));
-        //    error.setIcon(QMessageBox::Icon::Critical);
-        //    error.exec();
-        //    return;
-        //}
+        if (!Model->isOnline())
+        {
+            QMessageBox error;
+            error.setText(tr("Please connect to the AGILA-Backend!"));
+            error.setIcon(QMessageBox::Icon::Critical);
+            error.exec();
+            return;
+        }
+
         const auto path = QFileDialog::getOpenFileName(this,tr("Open SysMLv2 File"),QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), tr("Markdown Files (*.md);;SysMLv2 Files (*.sysml)"));
+
         if(!path.isEmpty()) {
             Model->openMarkdownFile(path);
         }

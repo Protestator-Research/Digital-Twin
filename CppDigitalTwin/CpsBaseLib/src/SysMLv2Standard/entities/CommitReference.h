@@ -32,6 +32,7 @@ namespace SysMLv2::Entities {
      */
     class CPSBASELIB_EXPORT CommitReference : public Record {
     public:
+
         /**
          *
          * @param jsonStringOrName
