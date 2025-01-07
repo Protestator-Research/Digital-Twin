@@ -163,6 +163,7 @@ namespace SysMLv2 {
             serializeNullString(json,Direction,JSON_DIRECTION_ENTITY);
             serializeNullString(json,ImportedMemberName,JSON_IMPORTED_MEMBER_NAME_ENTITY);
             serializeNullString(json,ImportedNamespace,JSON_IMPORTED_NAMESPACE_ENTITY);
+            
 
             serializeNullString(json,ValueStr,JSON_VALUE_STRING_ENTITY);
             serializeNullString(json,Language,JSON_LANGUAGE_ENTITY);

@@ -68,8 +68,9 @@ namespace SysMLv2::Entities {
          * Type of the element.
          */
         std::string Type;
-    private:
         boost::uuids::uuid Id;
+    private:
+        
     };
 }
 
