@@ -51,7 +51,7 @@ namespace SysMLv2::Entities {
         nlohmann::json jsonGeneration;
 
         jsonGeneration[JSON_ID_ENTITY] = boost::uuids::to_string(Id);
-        jsonGeneration[JSON_ID_ENTITY] = Type;
+        jsonGeneration[JSON_TYPE_ENTITY] = Type;
 
         return jsonGeneration.dump(JSON_INTENT);
     }

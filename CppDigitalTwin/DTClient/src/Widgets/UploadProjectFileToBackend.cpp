@@ -8,6 +8,7 @@
 
 #include <QToolBar>
 #include <QMessageBox>
+#include <iostream>
 
 #include <SysMLv2Standard/entities/Commit.h>
 #include <SysMLv2Standard/entities/DataVersion.h>

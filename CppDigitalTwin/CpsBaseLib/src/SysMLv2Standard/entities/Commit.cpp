@@ -9,6 +9,10 @@
 // External Classes
 //---------------------------------------------------------
 #include <boost/uuid/uuid_generators.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/uuid/uuid_serialize.hpp>
+#include <boost/uuid/uuid.hpp>
+
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
@@ -17,6 +21,8 @@
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <nlohmann/detail/meta/std_fs.hpp>
+#include <string>
+#include <boost/uuid/uuid_io.hpp>
 
 #include "Project.h"
 #include "DataVersion.h"
@@ -66,17 +72,18 @@ namespace SysMLv2::Entities{
         return PreviusCommits;
     }
 
-    std::string Commit::serializeToJSON() {
+    std::string Commit::serializeToJson() {
         nlohmann::json json = nlohmann::json::parse(Record::serializeToJson());
+
         json.erase(JSON_ID_ENTITY);
-        std::string jsonElements = "[";
-        for (int i = 0; i < Change.size(); i++) {
+        std::string jsonElements = "[\r\n";
+        for (size_t i = 0; i < Change.size(); i++) {
             jsonElements += Change[i]->serializeToJson();
 
-            if (i != Change.size())
-                jsonElements += ",";
+            if (i != (Change.size()-1))
+                jsonElements += ",\r\n";
         }
-        jsonElements += "]";
+        jsonElements += "]\r\n";
 
         json[JSON_CHANGE_ENTITY] = nlohmann::json::parse(jsonElements);
         return json.dump(JSON_INTENT);

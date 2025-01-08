@@ -18,6 +18,7 @@ namespace SysMLv2 {
         Element::Element(std::string jsonString) : Data(jsonString) {
             nlohmann::json json = nlohmann::json::parse(jsonString);
 
+
             if(!json[JSON_NAME_ENTITY].is_null())
                 Name = json[JSON_NAME_ENTITY];
 

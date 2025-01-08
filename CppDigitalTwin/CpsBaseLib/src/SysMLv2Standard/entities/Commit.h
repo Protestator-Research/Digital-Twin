@@ -79,7 +79,7 @@ namespace SysMLv2::Entities {
 
         [[nodiscard]] Project* getOwningProject() const;
 
-        std::string serializeToJSON();
+        std::string serializeToJson() override;
 
     private:
         std::vector<Commit*> PreviusCommits;

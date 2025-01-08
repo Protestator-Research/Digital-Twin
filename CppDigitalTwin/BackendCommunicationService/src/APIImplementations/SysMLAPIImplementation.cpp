@@ -404,8 +404,11 @@ namespace BACKEND_COMMUNICATION {
         CURLcode ServerResult;
 
         std::string urlAppendix = "projects/" + projectId + "/commits";
+        std::string jsonDump = commit->serializeToJson();
 
-        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str(), commit->serializeToJson().c_str());
+        std::cout<<"Commit Data: "<<std::endl<<jsonDump<<std::endl;
+
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str(), jsonDump.c_str());
 
         ServerResult = curl_easy_perform(serverConnection);
 
