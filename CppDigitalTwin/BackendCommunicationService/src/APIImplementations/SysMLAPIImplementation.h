@@ -23,6 +23,7 @@
 namespace SysMLv2::Entities {
     class IEntity;
     class Project;
+    class DigitalTwin;
 }
 
 namespace BACKEND_COMMUNICATION {
@@ -83,6 +84,15 @@ namespace BACKEND_COMMUNICATION {
          * @return A vector of all digital twins, returned as a vector of IEntitiy.
          */
         std::vector<SysMLv2::Entities::IEntity*> getAllDigitalTwinsForProject(std::string projectId, std::string barrierString);
+
+        /**
+         * 
+         * @param projectId 
+         * @param commit 
+         * @param barrierString 
+         * @return 
+         */
+        SysMLv2::Entities::IEntity* postDigitalTwin(std::string projectId, SysMLv2::Entities::DigitalTwin* commit, std::string barrierString);
 
         /**
          * Downloads and returns all elements of a commit from a specific project.

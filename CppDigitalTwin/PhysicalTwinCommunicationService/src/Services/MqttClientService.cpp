@@ -61,13 +61,10 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                         );
                     }
                     );
-//        uint16_t packetId = Client->subscribe(topic, MQTT_NS::qos::at_least_once);
-//        PackedIdToTopicMapping[packetId] = topic;
         }
     }
 
     void MqttClientService::connectClientStartCommunication() {
-        std::cout << "Starting underlying handshake-" << std::endl;
         auto next_layer = &Client->next_layer();
         async_mqtt::async_underlying_handshake(
                 *next_layer,
@@ -83,7 +80,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     void MqttClientService::handleUnderlyingHandshake(async_mqtt::error_code errorCode) {
-        std::cout << "underlying_handshake:" << errorCode.message() << std::endl;
         if(errorCode) return;
         Client->async_start(true,
                            std::uint16_t(0),
@@ -100,7 +96,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
     void MqttClientService::handleStartResponse(async_mqtt::error_code ec,
                                                 std::optional<client_t::connack_packet> connack_opt) {
-        std::cout << "start:" << ec.message() << std::endl;
         if (ec) return;
         if (connack_opt) {
             std::cout << *connack_opt << std::endl;
@@ -119,7 +114,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     void MqttClientService::handlePublishResponse(async_mqtt::error_code ec, client_t::pubres_type pubres) {
-        std::cout << "publish:" << ec.message() << std::endl;
         if (ec) return;
         if (pubres.puback_opt) {
             std::cout << *pubres.puback_opt << std::endl;
@@ -134,7 +128,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     void MqttClientService::handleSubscribeResponse(async_mqtt::error_code ec, std::optional<client_t::suback_packet> suback_opt) {
-        std::cout << "subscribe:" << ec.message() << std::endl;
         if (ec) {
             //reconnect();
             return;
@@ -152,7 +145,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     void MqttClientService::handleReceive(async_mqtt::error_code ec, async_mqtt::packet_variant pv) {
-        std::cout << "recv:" << ec.message() << std::endl;
         if (ec) {
 //            reconnect();
             return;

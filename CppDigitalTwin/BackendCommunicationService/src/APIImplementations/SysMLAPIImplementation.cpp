@@ -17,6 +17,7 @@
 #include <SysMLv2Standard/SysMLv2Deserializer.h>
 #include <SysMLv2Standard/entities/Project.h>
 #include <SysMLv2Standard/entities/Commit.h>
+#include <SysMLv2Standard/entities/DigitalTwin.h>
 
 //---------------------------------------------------------
 // Internal Classes
@@ -94,8 +95,6 @@ namespace BACKEND_COMMUNICATION {
         std::strcpy(completeServerAddress,serverAddress);
         std::strcat(completeServerAddress,urlAppendix);
 
-        std::cout<<"Asking for Element: "<<completeServerAddress<<std::endl;
-
         if(std::strcmp(barrierString, "")!=0)
             HeaderList = curl_slist_append(HeaderList, authorizationHeader);
 
@@ -138,6 +137,38 @@ namespace BACKEND_COMMUNICATION {
         } else {
             throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
                     static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
+        }
+        curl_slist_free_all(HeaderList);
+        curl_easy_cleanup(serverConnection);
+
+        return returnValue;
+    }
+
+    SysMLv2::Entities::IEntity* SysMLAPIImplementation::postDigitalTwin(std::string projectId,
+	    SysMLv2::Entities::DigitalTwin* digitalTwin, std::string barrierString)
+    {
+        SysMLv2::Entities::IEntity* returnValue = nullptr;
+        CURLcode ServerResult;
+
+        std::string urlAppendix = "projects/" + projectId + "/digital-twin";
+        std::string jsonDump = digitalTwin->serializeToJson();
+
+        auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str(), jsonDump.c_str());
+
+        ServerResult = curl_easy_perform(serverConnection);
+
+        if (ServerResult == CURLE_OK) {
+            long httpResult;
+            curl_easy_getinfo(serverConnection, CURLINFO_RESPONSE_CODE, &httpResult);
+
+            if (tryToResolveHTTPError(httpResult, serverConnection) == INTERNAL_STATUS_CODE::SUCCESS) {
+                returnValue = SysMLv2::SysMLv2Deserializer::deserializeJsonString(Data);
+            }
+
+        }
+        else {
+            throw BACKEND_COMMUNICATION::EXCEPTIONS::ConnectionError(
+                static_cast<BACKEND_COMMUNICATION::EXCEPTIONS::CONNECTION_ERROR_TYPE>(ServerResult));
         }
         curl_slist_free_all(HeaderList);
         curl_easy_cleanup(serverConnection);
@@ -405,8 +436,6 @@ namespace BACKEND_COMMUNICATION {
 
         std::string urlAppendix = "projects/" + projectId + "/commits";
         std::string jsonDump = commit->serializeToJson();
-
-        std::cout<<"Commit Data: "<<std::endl<<jsonDump<<std::endl;
 
         auto serverConnection = setUpServerConnection(urlAppendix.c_str(), barrierString.c_str(), jsonDump.c_str());
 

@@ -50,6 +50,14 @@ namespace SysMLv2::Entities {
         DigitalTwin(std::string jsonString);
 
         /**
+         * 
+         * @param name 
+         * @param connectedElements 
+         * @param commitId 
+         */
+        DigitalTwin(std::string name, std::vector<boost::uuids::uuid> connectedElements, boost::uuids::uuid commitId);
+
+        /**
          * Destructor.
          */
         ~DigitalTwin();
@@ -61,22 +69,19 @@ namespace SysMLv2::Entities {
          */
         bool operator==(DigitalTwin const &other);
 
-        DataIdentity* branchId() const;
+        boost::uuids::uuid commitId() const;
 
-        DataIdentity* commitId() const;
-
-        DataIdentity* parentProjectId() const;
+        boost::uuids::uuid parentProjectId() const;
 
         std::string serializeToJson() override;
 
-        std::vector<DataIdentity*> getConnectedModels();
+        std::vector<boost::uuids::uuid> getConnectedModels();
 
 
     private:
-        DataIdentity* ParentProjectId;
-        DataIdentity* BranchId = nullptr;
-        DataIdentity* CommitId;
-        std::vector<DataIdentity*> ConnectedModels;
+        boost::uuids::uuid ParentProjectId;
+        boost::uuids::uuid CommitId;
+        std::vector<boost::uuids::uuid> ConnectedModels;
 
     };
 }

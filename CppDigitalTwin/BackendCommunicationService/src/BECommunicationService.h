@@ -147,7 +147,7 @@ namespace BACKEND_COMMUNICATION {
          * @param digitalTwin
          * @return
          */
-        bool postDigitalTwin(SysMLv2::Entities::DigitalTwin* digitalTwin);
+        SysMLv2::Entities::DigitalTwin* postDigitalTwin(SysMLv2::Entities::DigitalTwin* digitalTwin, boost::uuids::uuid projectId);
 
     private:
         std::string REST_Protocol = "http://";

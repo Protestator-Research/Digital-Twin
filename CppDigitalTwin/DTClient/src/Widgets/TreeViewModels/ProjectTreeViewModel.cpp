@@ -115,7 +115,11 @@ namespace DigitalTwin::Client::ViewModels {
     }
 
     void ProjectTreeViewModel::clearAllElements() {
-        const size_t lastElement  = Projects.size()-1;
+        const int lastElement  = Projects.size()-1;
+
+        if (lastElement < 0)
+            return;
+
         beginRemoveRows(QModelIndex(), 0, lastElement);
         RootItem->clearChildItems();
         Projects.clear();

@@ -96,6 +96,15 @@ namespace BACKEND_COMMUNICATION {
         return !BarrierString.empty();
     }
 
+    SysMLv2::Entities::DigitalTwin* CommunicationService::postDigitalTwin(SysMLv2::Entities::DigitalTwin* digitalTwin,
+	    boost::uuids::uuid projectId)
+    {
+        auto digitalT = APIImplementation->postDigitalTwin(boost::lexical_cast<std::string>(projectId), digitalTwin, BarrierString);
+
+        SysMLv2::Entities::DigitalTwin* returnValue = dynamic_cast<SysMLv2::Entities::DigitalTwin*>(digitalT);
+        return returnValue;
+    }
+
     std::vector<SysMLv2::Entities::Branch*> CommunicationService::getAllBranchesForProjectWithID(boost::uuids::uuid projectId) {
         auto elements = APIImplementation->getAllBrachesFroProject(boost::lexical_cast<std::string>(projectId), BarrierString);
 

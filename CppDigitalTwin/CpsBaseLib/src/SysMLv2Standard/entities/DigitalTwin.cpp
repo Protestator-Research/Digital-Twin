@@ -3,12 +3,16 @@
 //
 
 #include "DigitalTwin.h"
+
+#include <boost/lexical_cast.hpp>
+
 #include "JSONEntities.h"
 #include "DataIdentity.h"
 
 #include <nlohmann/json.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 
 namespace SysMLv2::Entities {
@@ -19,54 +23,59 @@ namespace SysMLv2::Entities {
             auto connectedModels = parsedJson[JSON_CONNECTED_MODELS].get<std::vector<std::string>>();
             for(auto model : connectedModels) {
                 boost::uuids::uuid modelId = boost::uuids::string_generator()(model);
-                ConnectedModels.push_back(new DataIdentity(modelId));
+                ConnectedModels.push_back(modelId);
             }
 
-            ParentProjectId = new DataIdentity( boost::uuids::string_generator()(parsedJson[JSON_PARENT_PROJECT].get<std::string>()));
+            ParentProjectId = boost::uuids::string_generator()(parsedJson[JSON_PARENT_PROJECT].get<std::string>());
 
-            if(!parsedJson[JSON_BRANCH_ID].is_null())
-                BranchId=new DataIdentity(boost::uuids::string_generator()(parsedJson[JSON_BRANCH_ID].get<std::string>()));
 
-            CommitId = new DataIdentity(boost::uuids::string_generator()(parsedJson[JSON_COMMIT_ID].get<std::string>()));
+            CommitId = boost::uuids::string_generator()(parsedJson[JSON_COMMIT_ID].get<std::string>());
 
         }catch(...){}
     }
 
+    DigitalTwin::DigitalTwin(std::string name, std::vector<boost::uuids::uuid> connectedElements,
+	    boost::uuids::uuid commitId) : Record(boost::uuids::random_generator()(),name,"")
+    {
+        CommitId = commitId;
+        ConnectedModels = connectedElements;
+    }
+
     DigitalTwin::~DigitalTwin() {
-        for(auto elem : ConnectedModels)
-            delete elem;
-
         ConnectedModels.clear();
-
-        delete ParentProjectId;
-
-        if(BranchId != nullptr)
-            delete BranchId;
-
-        delete CommitId;
     }
 
     std::string DigitalTwin::serializeToJson() {
-        return Record::serializeToJson();
+        nlohmann::json json = nlohmann::json::parse(Record::serializeToJson());
+        json.erase(JSON_ID_ENTITY);
+        json.erase(JSON_TYPE_ENTITY);
+        json.erase(JSON_ALIAS_ENTITY);
+        json[JSON_COMMIT_ID] = boost::uuids::to_string(CommitId);
+        std::string connectedElementsString = "[\r\n";
+        for (int i = 0; i < ConnectedModels.size(); i++)
+        {
+            connectedElementsString += "\""+boost::uuids::to_string(ConnectedModels[i])+"\"";
+            if (i != ConnectedModels.size() - 1)
+                connectedElementsString += ",\r\n";
+        }
+        connectedElementsString += "\r\n]";
+        json["connectedElements"] = nlohmann::json::parse(connectedElementsString);
+        return json.dump(JSON_INTENT);
     }
 
     bool DigitalTwin::operator==(const DigitalTwin &other) {
         return Record::operator==(other);
     }
 
-    DataIdentity *DigitalTwin::branchId() const {
-        return BranchId;
-    }
-
-    DataIdentity *DigitalTwin::commitId() const {
+    boost::uuids::uuid DigitalTwin::commitId() const {
         return CommitId;
     }
 
-    DataIdentity *DigitalTwin::parentProjectId() const {
+    boost::uuids::uuid DigitalTwin::parentProjectId() const {
         return ParentProjectId;
     }
 
-    std::vector<DataIdentity *> DigitalTwin::getConnectedModels() {
+    std::vector<boost::uuids::uuid> DigitalTwin::getConnectedModels() {
         return ConnectedModels;
     }
 

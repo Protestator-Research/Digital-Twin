@@ -10,6 +10,8 @@
 #include "../Models/Markdown/MarkdownParser.h"
 #include <vector>
 #include <SysMLv2Standard/entities/Element.h>
+#include <SysMLv2Standard/entities/Commit.h>
+#include <SysMLv2Standard/entities/Project.h>
 #include <BECommunicationService.h>
 
 namespace DigitalTwin::Client {
@@ -31,7 +33,7 @@ namespace DigitalTwin::Client {
         explicit UploadProjectFileToBackend(BACKEND_COMMUNICATION::CommunicationService* service, QWidget* parent = NULL);
         ~UploadProjectFileToBackend() override;
 
-        void setElementsForView(std::vector<SysMLv2::Entities::Element*> elements);
+        void setElementsForView(std::vector<SysMLv2::Entities::Element*> elements, SysMLv2::Entities::Commit* commit, SysMLv2::Entities::Project* project);
         void setHTMLTextForView(QString htmlText);
 
     private slots:
@@ -52,6 +54,9 @@ namespace DigitalTwin::Client {
         MarkdownParser* Parser;
         QStandardItemModel* DTElementsModels;
         BACKEND_COMMUNICATION::CommunicationService* CommunicationService;
+
+        SysMLv2::Entities::Commit* Commit;
+        SysMLv2::Entities::Project* Project;
 
         UploadProjectFileToBackendStatus Status;
 

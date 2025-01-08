@@ -18,7 +18,6 @@
 
 namespace SysMLv2 {
     SysMLv2::Entities::IEntity *SysMLv2Deserializer::deserializeJsonString(std::string inputValue) {
-        std::cout<<"Deserializing Value: "<<std::endl<<inputValue<<std::endl;
 
         nlohmann::json json = nlohmann::json::parse(inputValue);
 
@@ -50,7 +49,6 @@ namespace SysMLv2 {
     }
 
     std::vector<SysMLv2::Entities::IEntity*> SysMLv2Deserializer::deserializeJsonArray(std::string inputValue) {
-        std::cout<<"Deserializing Array: "<<std::endl<<inputValue<<std::endl;
         nlohmann::json json = nlohmann::json::parse(inputValue);
         std::vector<nlohmann::json> arrayValues = json.get<std::vector<nlohmann::json>>();
         std::vector<SysMLv2::Entities::IEntity*> returnValues;

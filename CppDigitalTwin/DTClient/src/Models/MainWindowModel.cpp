@@ -93,12 +93,14 @@ namespace DigitalTwin::Client {
             UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(BackendCommunication, MainWindow);
             auto branches = BackendCommunication->getAllBranchesForProjectWithID(project->getId());
             std::vector<SysMLv2::Entities::Element*> elements;
-
+            SysMLv2::Entities::Commit* commit = nullptr;
             for (const auto& branch : branches)
-                if (branch->getName() == "Main")
+                if (branch->getName() == "Main") {
+                    commit = branch->getHead();
                     elements = BackendCommunication->getAllElements(branch->getHead()->getId(), project->getId());
+                }
 
-            uploadFileDialog->setElementsForView(elements);
+            uploadFileDialog->setElementsForView(elements,commit,project);
             uploadFileDialog->show();
         }
     }

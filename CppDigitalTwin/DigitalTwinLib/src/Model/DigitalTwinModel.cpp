@@ -29,11 +29,11 @@ namespace DigitalTwin::Model {
     }
 
     void DigitalTwinModel::generateDigitalTwinBackend() {
-        auto allElements = Manager->downloadDigitalTwinModel(DigitalTwin->parentProjectId()->getId(), DigitalTwin->commitId()->getId());
+        auto allElements = Manager->downloadDigitalTwinModel(DigitalTwin->parentProjectId(), DigitalTwin->commitId());
 
         for(const auto item : DigitalTwin->getConnectedModels())
             for(const auto elem : allElements)
-                if(item->getId()==elem->getId())
+                if(item==elem->getId())
                     DigitalTwinModelElements.push_back(elem);
 
         std::string completeModel;

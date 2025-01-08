@@ -29,7 +29,6 @@ namespace DigitalTwin::Parser {
     }
 
     std::vector<Model::IDigitalTwinElement*> Parser::parseSysMLv2(std::string& expression) {
-        std::cout << "Expression: "<< std::endl << expression << std::endl;
         antlr4::ANTLRInputStream input(expression);
         SysMLv2Lexer lexer(&input);
 
@@ -44,11 +43,8 @@ namespace DigitalTwin::Parser {
             startContext = parser.start();
         }
         catch (antlr4::ParseCancellationException &e) {
-            std::cout << e.what() << std::endl;
             return std::vector<Model::IDigitalTwinElement*>();
         }
-
-        std::cout << "Number of Parse Errors: "<<parser.getNumberOfSyntaxErrors() << std::endl;
 
         return generateComponentVector(startContext);
     }
@@ -65,9 +61,7 @@ namespace DigitalTwin::Parser {
         antlr4::tree::ParseTreeWalker walker;
         walker.walk(&listener,context);
 
-        std::cout << "Get Depth of ParseTree: " << context->depth() << std::endl;
         auto elements = context->elemements();
-        std::cout << "Number of Elements to be parsed: " << elements.size() << std::endl;
 
         for (const auto & element : elements) {
 

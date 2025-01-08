@@ -9,9 +9,7 @@
 
 #include <SysMLv2Standard/entities/Element.h>
 #include <QFile>
-#include <sstream>
-#include <iostream>     // For the std::cin and std::cout. I don't like, but... oh well
-#include <regex>        // Unlocks REGEX POWAA
+#include <regex>
 
 
 namespace DigitalTwin::Client {

@@ -82,7 +82,12 @@ namespace DigitalTwin::Client {
 
     void VariableViewModel::getUpdatesFromModel() {
         auto componentsVector = Model->getAllComponents();
-        beginInsertRows(QModelIndex(), 0, componentsVector.size()-1);
+
+        int value = componentsVector.size() - 1;
+        if (value < 0)
+            value = 0;
+
+        beginInsertRows(QModelIndex(), 0, value);
         for(const auto component : componentsVector){
             RootItem->appendComponent(dynamic_cast<DigitalTwin::Model::Component*>(component));
         }
