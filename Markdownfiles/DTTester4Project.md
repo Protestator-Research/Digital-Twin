@@ -110,6 +110,8 @@ part Load {
 
 # Complete System
 
+This models the complete System.
+
 ```SysML
 part EVCharger {
     part grid : Grid;

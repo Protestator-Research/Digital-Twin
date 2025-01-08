@@ -113,4 +113,13 @@ namespace DigitalTwin::Client::ViewModels {
         }
         return nullptr;
     }
+
+    void ProjectTreeViewModel::clearAllElements() {
+        const size_t lastElement  = Projects.size()-1;
+        beginRemoveRows(QModelIndex(), 0, lastElement);
+        RootItem->clearChildItems();
+        Projects.clear();
+        endRemoveRows();
+        removeRows(0, lastElement, index(0,0));
+    }
 }

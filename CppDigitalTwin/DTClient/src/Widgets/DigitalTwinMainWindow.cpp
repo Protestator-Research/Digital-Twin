@@ -40,6 +40,7 @@ namespace DigitalTwin::Client {
         connect(ui->ProjectTreeView, SIGNAL(clicked(const QModelIndex &)), Model, SLOT(onTreeViewClicked(const QModelIndex &)));
         connect(ui->actionOpen_SysMLv2_File, SIGNAL(triggered(bool)), this, SLOT(openSysMLv2File()));
         connect(ui->CentralTabWidget, SIGNAL(tabCloseRequested(int)), this, SLOT(onTabClosed(int)));
+        connect(ui->actionRefresh, SIGNAL(triggered(bool)),this,SLOT(refreshProjects()));
     }
 
     void DigitalTwinMainWindow::toggleButtonCheckBoxProjects(bool visibility) {
@@ -70,11 +71,13 @@ namespace DigitalTwin::Client {
 
         ui->actionOpen_SysMLv2_File->setIcon(QIcon(":/icons/Open"));
         toolBar->addAction(ui->actionOpen_SysMLv2_File);
+
+        ui->actionRefresh->setIcon(QIcon(":/icons/Refresh"));
+        toolBar->addAction(ui->actionRefresh);
     }
 
     void DigitalTwinMainWindow::connectToServer() {
         Model->connectToBackend();
-        // Model->
     }
 
     void DigitalTwinMainWindow::setProjectTreeViewModel(QAbstractItemModel *model) {
@@ -105,6 +108,10 @@ namespace DigitalTwin::Client {
     void DigitalTwinMainWindow::onTabClosed(int index) {
         //TODO Delete Digital Twin Model and close Connections
         ui->CentralTabWidget->removeTab(index);
+    }
+
+    void DigitalTwinMainWindow::refreshProjects() {
+        Model->refreshProjects();
     }
 
 } // DigitalTwin::Client

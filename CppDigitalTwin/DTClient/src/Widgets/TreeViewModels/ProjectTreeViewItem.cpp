@@ -88,4 +88,11 @@ namespace DigitalTwin::Client::ViewModels {
     SysMLv2::Entities::Project *ProjectTreeViewItem::getProject() const {
         return ProjectData;
     }
+
+    void ProjectTreeViewItem::clearChildItems() {
+        for(auto item : ChildItems)
+            delete item;
+
+        ChildItems.clear();
+    }
 }

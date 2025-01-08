@@ -35,6 +35,7 @@ namespace DigitalTwin::Client::ViewModels {
         void setDigitalTwinForProjectWithId(SysMLv2::Entities::Project* project, std::vector<SysMLv2::Entities::DigitalTwin*> twins);
         ProjectTreeViewItem* getProjectTreeViewItemFromIndex(const QModelIndex& index) const;
 
+        void clearAllElements();
     private:
         std::vector<SysMLv2::Entities::Project*> Projects;
         ProjectTreeViewItem* RootItem;

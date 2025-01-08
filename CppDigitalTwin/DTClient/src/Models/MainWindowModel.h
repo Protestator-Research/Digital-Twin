@@ -56,6 +56,8 @@ namespace DigitalTwin::Client {
 
         bool isOnline();
 
+        void refreshProjects();
+
     public slots:
         void onTreeViewClicked(const QModelIndex& index);
 

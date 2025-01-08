@@ -38,12 +38,14 @@ namespace DigitalTwin::Client {
         void onTextEdited();
         void onActionUploadClicked();
         void onActionDownloadClicked();
+        void onCreateDigitalTwinClicked();
 
     private:
         void makeConnections();
         void setMarkdownOfOnlineProject(QString Markdown);
         void setCodeElements();
         void createOnlineProject();
+        void redecorateWithStatusChange();
 
         std::vector<SysMLv2::Entities::Element *> Elements;
         Ui::UploadProjectFileToBackend* Ui;

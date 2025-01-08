@@ -42,9 +42,36 @@ namespace DigitalTwin::Client {
     std::vector<SysMLv2::Entities::Element *> MarkdownParser::getElementsOfProject() {
         std::vector<SysMLv2::Entities::Element *> returnValue;
         auto child = cmark_node_first_child(MarkdownDocument);
-//        std::cout<<"Document Node Type: "<<cmark_node_get_type_string(MarkdownDocument)<<std::endl;
-//        std::cout<<"First Child Node Type: "<<cmark_node_get_type_string(child)<<std::endl;
+        switch (cmark_node_get_type(child)) {
+            case CMARK_NODE_NONE:
+                break;
+            case CMARK_NODE_HTML_BLOCK:
+            case CMARK_NODE_CODE_BLOCK:
+            case CMARK_NODE_CODE:
+                returnValue.push_back(createElement(cmark_node_get_fence_info(child),cmark_node_get_literal(child)));
+                break;
+            case CMARK_NODE_CUSTOM_BLOCK:
+            case CMARK_NODE_PARAGRAPH:
+            case CMARK_NODE_HEADING:
+            case CMARK_NODE_THEMATIC_BREAK:
+            case CMARK_NODE_TEXT:
+            case CMARK_NODE_SOFTBREAK:
+            case CMARK_NODE_LINEBREAK:
+            case CMARK_NODE_HTML_INLINE:
+            case CMARK_NODE_CUSTOM_INLINE:
+            case CMARK_NODE_EMPH:
+            case CMARK_NODE_STRONG:
+            case CMARK_NODE_LINK:
+            case CMARK_NODE_IMAGE:
+            case CMARK_NODE_DOCUMENT:
+            case CMARK_NODE_BLOCK_QUOTE:
+            case CMARK_NODE_LIST:
+            case CMARK_NODE_ITEM:
+                returnValue.push_back(createElement("Markdown", cmark_render_commonmark(child,0,0)));
+                break;
+        }
         do {
+            child = cmark_node_next(child);
             switch (cmark_node_get_type(child)) {
                 case CMARK_NODE_NONE:
                     break;
@@ -73,7 +100,6 @@ namespace DigitalTwin::Client {
                     returnValue.push_back(createElement("Markdown", cmark_render_commonmark(child,0,0)));
                     break;
             }
-            child = cmark_node_next(child);
         }while(cmark_node_last_child(MarkdownDocument)!=child);
         return returnValue;
     }

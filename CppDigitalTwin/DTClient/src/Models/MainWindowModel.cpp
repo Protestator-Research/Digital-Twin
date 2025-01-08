@@ -48,16 +48,13 @@ namespace DigitalTwin::Client {
             BackendCommunication->setUserForLoginInBackend(Settings->getRESTUserAsString(),Settings->getRESTPasswordAsString());
             Status = MainWindowStatus::CONNECTED;
 
-            Projects = BackendCommunication->getAllProjects();
-            ProjectViewModel->setProjects(Projects);
+            refreshProjects();
 
             for(auto project : Projects) {
                 auto digitalTwins = BackendCommunication->getAllDigitalTwinsForProjectWithId(project->getId());
                 DigitalTwinMap.emplace(project->getId(),digitalTwins);
                 ProjectViewModel->setDigitalTwinForProjectWithId(project, digitalTwins);
             }
-
-
 
         }catch (std::exception &ex){
             qDebug()<<ex.what();
@@ -108,5 +105,11 @@ namespace DigitalTwin::Client {
 
     void MainWindowModel::connectToDigitalTwin() {
 
+    }
+
+    void MainWindowModel::refreshProjects() {
+        Projects = BackendCommunication->getAllProjects();
+        ProjectViewModel->clearAllElements();
+        ProjectViewModel->setProjects(Projects);
     }
 }

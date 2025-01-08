@@ -142,6 +142,13 @@ namespace BACKEND_COMMUNICATION {
          */
         bool setUserForLoginInBackend(std::string username, std::string password);
 
+        /**
+         *
+         * @param digitalTwin
+         * @return
+         */
+        bool postDigitalTwin(SysMLv2::Entities::DigitalTwin* digitalTwin);
+
     private:
         std::string REST_Protocol = "http://";
         std::string Entry_URI = "/agila-server/";

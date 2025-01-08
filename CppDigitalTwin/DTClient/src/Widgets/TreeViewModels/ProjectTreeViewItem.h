@@ -33,6 +33,8 @@ namespace DigitalTwin::Client::ViewModels {
         void appendDigitalTwin(SysMLv2::Entities::DigitalTwin* digitalTwin);
         SysMLv2::Entities::DigitalTwin* getDigitalTwin() const;
 
+        void clearChildItems();
+
     private:
         std::vector<ProjectTreeViewItem*> ChildItems;
         SysMLv2::Entities::Project* ProjectData;

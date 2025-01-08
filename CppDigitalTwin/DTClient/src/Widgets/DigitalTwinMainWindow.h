@@ -54,6 +54,7 @@ namespace DigitalTwin::Client {
          void showProjectDockWidget(bool visibility);
          void showSettingsDialog();
          void connectToServer();
+         void refreshProjects();
          void openSysMLv2File();
          void onTabClosed(int index);
     };

@@ -32,7 +32,7 @@ namespace DigitalTwin::Client {
         headerElements << tr("Code");
 
         DTElementsModels->setHorizontalHeaderLabels(headerElements);
-        Ui->listView->setModel(DTElementsModels);
+        Ui->DTModelListView->setModel(DTElementsModels);
         auto toolbar = new QToolBar(this);
         addToolBar(toolbar);
 
@@ -55,6 +55,7 @@ namespace DigitalTwin::Client {
         Ui->MarkdownViewer->setHtml(Parser->getHTMLOfMarkdown());
         Ui->ProjektEditor->setPlainText(Parser->getMarkdownString());
         this->setWindowModified(false);
+        redecorateWithStatusChange();
     }
 
     void UploadProjectFileToBackend::onTextEdited()
@@ -69,6 +70,7 @@ namespace DigitalTwin::Client {
         connect(Ui->ProjektEditor, SIGNAL(textChanged()), this, SLOT(onTextEdited()));
         connect(Ui->actionUpload, SIGNAL(triggered(bool)), this, SLOT(onActionUploadClicked()));
         connect(Ui->actionDownload, SIGNAL(triggered(bool)), this, SLOT(onActionDownloadClicked()));
+        connect(Ui->CreateDTButton, SIGNAL(clicked(bool)), this, SLOT(onCreateDigitalTwinClicked()));
     }
 
     void UploadProjectFileToBackend::setMarkdownOfOnlineProject(QString Markdown) {
@@ -81,17 +83,12 @@ namespace DigitalTwin::Client {
     void UploadProjectFileToBackend::setElementsForView(std::vector<SysMLv2::Entities::Element *> elements) {
         Status = UploadProjectFileToBackendStatus::OnlineProjectOpened;
         Elements = elements;
-        setCodeElements();
-        QString markdown;
-        for(const auto elem : elements){
-            markdown += QString::fromStdString(elem->getMarkdownString());
-        }
-        setMarkdownOfOnlineProject(markdown);
+        redecorateWithStatusChange();
     }
 
     void UploadProjectFileToBackend::setCodeElements() {
         for(const auto& elem : Elements) {
-            if(!elem->body().empty())
+            if(!elem->body().empty() && (elem->language()!="Markdown"))
                 DTElementsModels->appendRow( new QStandardItem(QString::fromStdString(elem->body())));
         }
     }
@@ -122,9 +119,48 @@ namespace DigitalTwin::Client {
             }
 
             commit->setChange(dataVersions);
-
             CommunicationService->postCommitWithId(project->getId(), commit);
+
+            Status=UploadProjectFileToBackendStatus::OnlineProjectOpened;
+            redecorateWithStatusChange();
+            this->setWindowModified(false);
         }
+    }
+
+    void UploadProjectFileToBackend::redecorateWithStatusChange() {
+        if(Status==UploadProjectFileToBackendStatus::OnlineProjectOpened) {
+            setCodeElements();
+            QString markdown;
+            for(const auto elem : Elements){
+                markdown += QString::fromStdString(elem->getMarkdownString());
+            }
+            setMarkdownOfOnlineProject(markdown);
+            Ui->actionDownload->setDisabled(false);
+            Ui->actionUpload->setDisabled(true);
+            Ui->DTTab->setDisabled(false);
+        }else {
+            Ui->actionUpload->setDisabled(false);
+            Ui->actionDownload->setDisabled(true);
+            Ui->DTTab->setDisabled(true);
+        }
+
+    }
+
+    void UploadProjectFileToBackend::onCreateDigitalTwinClicked() {
+        std::vector<SysMLv2::Entities::Element *> elements;
+        for(const auto& elem : Elements) {
+            if(!elem->body().empty() && (elem->language()!="Markdown"))
+                elements.push_back( elem);
+        }
+
+        std::vector<SysMLv2::Entities::Element *> selectedElements;
+
+        const auto selectedItems = Ui->DTModelListView->selectionModel()->selectedRows();
+        for(const auto & element : selectedItems) {
+            selectedElements.push_back(elements[element.row()]);
+        }
+
+
     }
 
 

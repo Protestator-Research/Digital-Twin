@@ -9,5 +9,6 @@
         <file alias="Download">icons/download.png</file>
         <file alias="Connect">icons/link.png</file>
         <file alias="Upload">icons/upload.png</file>
+        <file alias="Refresh">icons/refresh.png</file>
     </qresource>
 </RCC>
