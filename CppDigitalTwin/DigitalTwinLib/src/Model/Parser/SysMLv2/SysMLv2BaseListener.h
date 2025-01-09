@@ -19,6 +19,9 @@ public:
   virtual void enterStart(SysMLv2Parser::StartContext * /*ctx*/) override { }
   virtual void exitStart(SysMLv2Parser::StartContext * /*ctx*/) override { }
 
+  virtual void enterStartRule(SysMLv2Parser::StartRuleContext * /*ctx*/) override { }
+  virtual void exitStartRule(SysMLv2Parser::StartRuleContext * /*ctx*/) override { }
+
   virtual void enterElemements(SysMLv2Parser::ElemementsContext * /*ctx*/) override { }
   virtual void exitElemements(SysMLv2Parser::ElemementsContext * /*ctx*/) override { }
 

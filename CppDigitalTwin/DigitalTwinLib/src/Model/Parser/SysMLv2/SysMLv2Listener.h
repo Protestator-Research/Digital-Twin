@@ -17,6 +17,9 @@ public:
   virtual void enterStart(SysMLv2Parser::StartContext *ctx) = 0;
   virtual void exitStart(SysMLv2Parser::StartContext *ctx) = 0;
 
+  virtual void enterStartRule(SysMLv2Parser::StartRuleContext *ctx) = 0;
+  virtual void exitStartRule(SysMLv2Parser::StartRuleContext *ctx) = 0;
+
   virtual void enterElemements(SysMLv2Parser::ElemementsContext *ctx) = 0;
   virtual void exitElemements(SysMLv2Parser::ElemementsContext *ctx) = 0;
 

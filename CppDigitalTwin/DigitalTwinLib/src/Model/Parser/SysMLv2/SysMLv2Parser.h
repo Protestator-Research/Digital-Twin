@@ -26,16 +26,17 @@ public:
   };
 
   enum {
-    RuleStart = 0, RuleElemements = 1, RuleDependency = 2, RuleTextual_representaion = 3, 
-    RuleComment = 4, RulePart = 5, RulePort = 6, RuleAttribute = 7, RuleItem = 8, 
-    RulePackage = 9, RuleAssertion = 10, RuleActions = 11, RuleAlias = 12, 
-    RuleVisibility = 13, RuleImport_rule = 14, RuleAbstraction = 15, RuleVariation = 16, 
-    RuleVariant = 17, RuleFunction = 18, RuleInput = 19, RuleOutput = 20, 
-    RuleReturn = 21, RuleCommand_definition = 22, RuleConnectTo = 23, RuleType_definition = 24, 
-    RuleSuper_class_definition = 25, RuleAbout = 26, RuleSpecilization = 27, 
-    RuleDecriptor = 28, RuleNamelist = 29, RuleName = 30, RuleAddress = 31, 
-    RuleBracketed_content = 32, RuleFuction_arguments = 33, RuleArgument = 34, 
-    RuleDelimiter_rule = 35, RuleMultiplicity = 36, RuleUnit = 37, RuleDefinition_rule = 38
+    RuleStart = 0, RuleStartRule = 1, RuleElemements = 2, RuleDependency = 3, 
+    RuleTextual_representaion = 4, RuleComment = 5, RulePart = 6, RulePort = 7, 
+    RuleAttribute = 8, RuleItem = 9, RulePackage = 10, RuleAssertion = 11, 
+    RuleActions = 12, RuleAlias = 13, RuleVisibility = 14, RuleImport_rule = 15, 
+    RuleAbstraction = 16, RuleVariation = 17, RuleVariant = 18, RuleFunction = 19, 
+    RuleInput = 20, RuleOutput = 21, RuleReturn = 22, RuleCommand_definition = 23, 
+    RuleConnectTo = 24, RuleType_definition = 25, RuleSuper_class_definition = 26, 
+    RuleAbout = 27, RuleSpecilization = 28, RuleDecriptor = 29, RuleNamelist = 30, 
+    RuleName = 31, RuleAddress = 32, RuleBracketed_content = 33, RuleFuction_arguments = 34, 
+    RuleArgument = 35, RuleDelimiter_rule = 36, RuleMultiplicity = 37, RuleUnit = 38, 
+    RuleDefinition_rule = 39
   };
 
   explicit SysMLv2Parser(antlr4::TokenStream *input);
@@ -56,6 +57,7 @@ public:
 
 
   class StartContext;
+  class StartRuleContext;
   class ElemementsContext;
   class DependencyContext;
   class Textual_representaionContext;
@@ -99,6 +101,7 @@ public:
   public:
     StartContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *EOF();
     std::vector<ElemementsContext *> elemements();
     ElemementsContext* elemements(size_t i);
 
@@ -108,6 +111,19 @@ public:
   };
 
   StartContext* start();
+
+  class  StartRuleContext : public antlr4::ParserRuleContext {
+  public:
+    StartRuleContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    StartContext *start();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  StartRuleContext* startRule();
 
   class  ElemementsContext : public antlr4::ParserRuleContext {
   public:

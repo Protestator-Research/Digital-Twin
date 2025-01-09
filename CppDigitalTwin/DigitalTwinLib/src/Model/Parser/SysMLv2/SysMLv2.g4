@@ -1,6 +1,8 @@
 grammar SysMLv2;
 
-start: elemements*;
+start: elemements* EOF;
+
+startRule: start;
 
 elemements :  dependency |
        comment |
