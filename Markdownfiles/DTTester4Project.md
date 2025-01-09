@@ -103,7 +103,7 @@ The load that is used to display the bidirectinal system side.
 
 ```SysML
 part Load {
-    measurable dCVoltage : Volage;
+    measurable dCVoltage : Voltage;
     controllable offSwitch : Boolean;
 }
 ```
