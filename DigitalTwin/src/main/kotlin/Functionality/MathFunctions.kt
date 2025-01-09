@@ -1,5 +1,0 @@
-package Functionality
-
-fun integrate(){
-
-}

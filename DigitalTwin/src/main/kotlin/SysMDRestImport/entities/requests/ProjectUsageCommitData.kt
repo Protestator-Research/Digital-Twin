@@ -1,3 +1,0 @@
-package SysMDRestImport.entities.requests
-
-class ProjectUsageCommitData
