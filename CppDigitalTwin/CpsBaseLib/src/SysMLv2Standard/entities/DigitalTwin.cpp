@@ -52,7 +52,7 @@ namespace SysMLv2::Entities {
         json.erase(JSON_ALIAS_ENTITY);
         json[JSON_COMMIT_ID] = boost::uuids::to_string(CommitId);
         std::string connectedElementsString = "[\r\n";
-        for (int i = 0; i < ConnectedModels.size(); i++)
+        for (size_t i = 0; i < ConnectedModels.size(); i++)
         {
             connectedElementsString += "\""+boost::uuids::to_string(ConnectedModels[i])+"\"";
             if (i != ConnectedModels.size() - 1)
