@@ -48,7 +48,6 @@ namespace DigitalTwin::Model {
             if(dynamic_cast<Port*>(dtElement) != nullptr)
                 PortMap.insert(std::make_pair(dtElement->getName(), dtElement));
         }
-        std::cout<<"Finished"<<std::endl;
     }
 
     std::string DigitalTwinModel::digitalTwinName() {
