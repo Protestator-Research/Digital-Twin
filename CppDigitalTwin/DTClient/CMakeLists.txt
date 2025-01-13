@@ -72,7 +72,9 @@ set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Models/Markdown/CommonmarkParser/utf8.h
         src/Models/Markdown/CommonmarkParser/xml.c
         src/Widgets/Dialogs/CreateProjectDialog.cpp
-        src/Widgets/Dialogs/CreateProjectDialog.h)
+        src/Widgets/Dialogs/CreateProjectDialog.h
+        src/Models/MqttConnectionThread.cpp
+        src/Models/MqttConnectionThread.h)
 
 qt_wrap_ui(SOURCES ui/DigitalTwinTabWidget.ui
         ui/SettingsDialog.ui

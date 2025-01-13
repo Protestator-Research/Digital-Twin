@@ -43,7 +43,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
             );
     }
 
-    void MqttClientService::addCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction) {
+    void MqttClientService::addCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction, std::string valueForInit) {
         CallbackFuctionsPerTopic[topic] = callbackFunction;
         std::vector<async_mqtt::topic_subopts> sub_entry;
 
@@ -61,6 +61,18 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                         );
                     }
                     );
+
+            Client->async_publish(
+                    *Client->acquire_unique_packet_id(),
+                    topic,
+                    valueForInit,
+                    async_mqtt::qos::at_least_once,
+                    [this](auto&&... args) {
+                        handlePublishResponse(
+                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
+                        );
+                    }
+            );
         }
     }
 
@@ -99,17 +111,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         if (ec) return;
         if (connack_opt) {
             std::cout << *connack_opt << std::endl;
-            Client->async_publish(
-                    *Client->acquire_unique_packet_id(),
-                    "connectToTwin",
-                    DigitalTwinEntity().serialize(),
-                    async_mqtt::qos::at_least_once,
-                    [this](auto&&... args) {
-                        handlePublishResponse(
-                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
-                        );
-                    }
-            );
+
         }
     }
 
@@ -159,6 +161,27 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                     );
                 }
         );
+    }
+
+    void MqttClientService::addCallbackFunction(const std::string &topic, std::function<void(std::string)> callbackFunction) {
+        CallbackFuctionsPerTopic[topic] = callbackFunction;
+        std::vector<async_mqtt::topic_subopts> sub_entry;
+
+        for(auto element : CallbackFuctionsPerTopic) {
+            sub_entry.push_back({element.first, async_mqtt::qos::at_least_once});
+        }
+
+        if(ClientStarted) {
+            Client->async_subscribe(
+                    *Client->acquire_unique_packet_id(),
+                    async_mqtt::force_move(sub_entry),
+                    [this](auto&&... args) {
+                        handleSubscribeResponse(
+                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
+                        );
+                    }
+            );
+        }
     }
 
 

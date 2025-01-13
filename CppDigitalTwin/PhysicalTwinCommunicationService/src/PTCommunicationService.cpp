@@ -38,8 +38,8 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         }
     }
 
-    void CommunicationService::addObservationCallbackForTopic(std::string topic, std::function<void(std::string)> callback) {
-        ClientService->addCallbackFunction(topic,callback);
+    void CommunicationService::addObservationCallbackForTopic(std::string topic, std::function<void(std::string)> callback, std::string initValue) {
+        ClientService->addCallbackFunction(topic,callback, initValue);
     }
 
     void CommunicationService::publishMQTTMessage(std::string topic, std::string content) {

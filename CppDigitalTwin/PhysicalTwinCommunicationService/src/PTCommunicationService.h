@@ -36,7 +36,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
         void startThreads();
 
-        void addObservationCallbackForTopic(std::string topic, std::function<void(std::string)> callback);
+        void addObservationCallbackForTopic(std::string topic, std::function<void(std::string)> callback, std::string initValue);
 
         void publishMQTTMessage(std::string topic, std::string content);
 

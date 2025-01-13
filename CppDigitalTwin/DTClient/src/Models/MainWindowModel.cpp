@@ -20,6 +20,7 @@
 #include "Markdown/MarkdownParser.h"
 #include "SysMLv2Standard/entities/Commit.h"
 #include "SysMLv2Standard/entities/Element.h"
+#include "MqttConnectionThread.h"
 
 
 namespace DigitalTwin::Client {
@@ -38,23 +39,20 @@ namespace DigitalTwin::Client {
             delete BackendCommunication;
         if(DigitalTwinManager != nullptr)
             delete DigitalTwinManager;
+        if(ConnectionThread != nullptr)
+            delete ConnectionThread;
     }
 
     void MainWindowModel::connectToBackend() {
         try {
             BackendCommunication=new BACKEND_COMMUNICATION::CommunicationService(Settings->getRESTServerAsString(),std::stoi(Settings->getRESTPortAsString()), Settings->getRESTFolderAsString());
-            ClientService = new PHYSICAL_TWIN_COMMUNICATION::MqttClientService(Settings->getMQTTServerAsString(), Settings->getMQTTPortAsString());
-            DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunication, ClientService);
+            ConnectionThread = new MQTTConnectionThread(Settings->getMQTTServerAsString(), Settings->getMQTTPortAsString());
+            ConnectionThread->start();
+            DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunication, ConnectionThread->getClientService());
             BackendCommunication->setUserForLoginInBackend(Settings->getRESTUserAsString(),Settings->getRESTPasswordAsString());
             Status = MainWindowStatus::CONNECTED;
 
             refreshProjects();
-
-            for(auto project : Projects) {
-                auto digitalTwins = BackendCommunication->getAllDigitalTwinsForProjectWithId(project->getId());
-                DigitalTwinMap.emplace(project->getId(),digitalTwins);
-                ProjectViewModel->setDigitalTwinForProjectWithId(project, digitalTwins);
-            }
 
         }catch (std::exception &ex){
             qDebug()<<ex.what();
@@ -112,6 +110,12 @@ namespace DigitalTwin::Client {
     void MainWindowModel::refreshProjects() {
         Projects = BackendCommunication->getAllProjects();
         ProjectViewModel->clearAllElements();
+        DigitalTwinMap.clear();
         ProjectViewModel->setProjects(Projects);
+        for(const auto& project : Projects) {
+            auto digitalTwins = BackendCommunication->getAllDigitalTwinsForProjectWithId(project->getId());
+            ProjectViewModel->setDigitalTwinForProjectWithId(project, digitalTwins);
+            DigitalTwinMap.emplace(project->getId(),digitalTwins);
+        }
     }
 }

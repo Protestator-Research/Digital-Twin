@@ -45,7 +45,7 @@ namespace DIGITAL_TWIN_SERVER {
                 PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(value);
                 DigitalTwinManager->downloadDigitalTwin(entity.projectId(),entity.digitalTwinId());
             }
-        });
+        },PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity().serialize());
 
         BackendCommunicationService->setUserForLoginInBackend(ArgumentsMap[AGILA_USERNAME], ArgumentsMap[AGILA_PASSWORD]);
 

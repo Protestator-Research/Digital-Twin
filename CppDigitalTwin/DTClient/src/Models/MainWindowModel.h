@@ -14,7 +14,7 @@
 namespace DigitalTwin::Client{
     class DigitalTwinMainWindow;
     class DigitalTwinClientSettings;
-
+    class MQTTConnectionThread;
     namespace ViewModels {
         class ProjectTreeViewModel;
     }
@@ -69,7 +69,7 @@ namespace DigitalTwin::Client {
         MainWindowStatus Status;
         ViewModels::ProjectTreeViewModel *ProjectViewModel;
         BACKEND_COMMUNICATION::CommunicationService *BackendCommunication = nullptr;
-        PHYSICAL_TWIN_COMMUNICATION::MqttClientService *ClientService = nullptr;
+        MQTTConnectionThread* ConnectionThread = nullptr;
         std::map<boost::uuids::uuid,std::vector<SysMLv2::Entities::DigitalTwin*>> DigitalTwinMap;
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
         std::vector<SysMLv2::Entities::Project*> Projects;

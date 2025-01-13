@@ -22,14 +22,22 @@ using client_t = async_mqtt::client<async_mqtt::protocol_version::v3_1_1,async_m
 namespace PHYSICAL_TWIN_COMMUNICATION {
     class CPPPHYSICALTWINCOMMUNICATION_EXPORT MqttClientService {
     public:
-
+        /**
+         * Deleted, because this is not needed!
+         */
         MqttClientService() = delete;
+        /**
+         *
+         * @param server
+         * @param port
+         */
         MqttClientService(std::string server, std::string port);
 
         virtual ~MqttClientService();
 
         void sendValueToServer(std::string topic, std::string content);
         void addCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction);
+        void addCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction, std::string valueForInit);
 
         void connectClientStartCommunication();
 
