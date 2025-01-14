@@ -4,7 +4,8 @@
 
 #include "MqttClientService.h"
 
-#include "../entities/DigitalTwinEntity.h"
+#include "../MQTT/entities/DigitalTwinEntity.h"
+#include "../MQTT/Topics.h"
 
 #include <iostream>
 #include <async_mqtt/predefined_layer/ws.hpp>
@@ -19,10 +20,11 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
 
     MqttClientService::MqttClientService(std::string server, std::string port) :
-            Client(client_t::create(ioContext.get_executor()))
+        ioContext(boost::asio::io_context())
     {
         Server = server;
         Port = port;
+        Client = client_t::create(ioContext.get_executor());
     }
 
     MqttClientService::~MqttClientService() {
@@ -111,7 +113,17 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         if (ec) return;
         if (connack_opt) {
             std::cout << *connack_opt << std::endl;
-
+            Client->async_publish(
+                    *Client->acquire_unique_packet_id(),
+                    CONNECT_TO_TWIN,
+                    "value",
+                    async_mqtt::qos::at_least_once,
+                    [this](auto&&... args) {
+                        handlePublishResponse(
+                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
+                        );
+                    }
+            );
         }
     }
 

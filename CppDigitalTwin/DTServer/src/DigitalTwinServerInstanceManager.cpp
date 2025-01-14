@@ -5,7 +5,8 @@
 #include "DigitalTwinServerInstanceManager.h"
 #include <Model/DigitalTwinModel.h>
 #include <BaseFuctions/StringExtention.hpp>
-#include <entities/DigitalTwinEntity.h>
+#include <MQTT/entities/DigitalTwinEntity.h>
+#include <MQTT/Topics.h>
 #include <iostream>
 #include <utility>
 
@@ -37,10 +38,10 @@ namespace DIGITAL_TWIN_SERVER {
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        PhysicalTwinCommunicationService->addObservationCallbackForTopic("connectToTwin",[&](std::string value) {
+        PhysicalTwinCommunicationService->addObservationCallbackForTopic(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN,[&](std::string value) {
             if(value.empty()) {
                 PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity;
-                PhysicalTwinCommunicationService->publishMQTTMessage("connectToTwin",entity.serialize());
+                PhysicalTwinCommunicationService->publishMQTTMessage(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN,entity.serialize());
             } else {
                 PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(value);
                 DigitalTwinManager->downloadDigitalTwin(entity.projectId(),entity.digitalTwinId());

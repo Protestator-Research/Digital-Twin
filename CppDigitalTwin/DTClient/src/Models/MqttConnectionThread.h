@@ -23,6 +23,7 @@ namespace DigitalTwin::Client {
 
         void addObserverForTopic(const std::string& topic, std::function<void(std::string)> callbackFunction);
         PHYSICAL_TWIN_COMMUNICATION::MqttClientService* getClientService();
+        void sendValueToSever(const std::string& topic, std::string value);
     signals:
         void resultReady();
 

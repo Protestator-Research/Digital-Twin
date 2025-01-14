@@ -17,7 +17,6 @@ namespace DigitalTwin::Client {
     }
 
     void MQTTConnectionThread::run() {
-        QThread::run();
         ClientService->connectClientStartCommunication();
         emit resultReady();
     }
@@ -25,10 +24,13 @@ namespace DigitalTwin::Client {
     void MQTTConnectionThread::addObserverForTopic(const std::string &topic,
                                                    std::function<void(std::string)> callbackFunction) {
         ClientService->addCallbackFunction(topic,callbackFunction);
-
     }
 
     PHYSICAL_TWIN_COMMUNICATION::MqttClientService* MQTTConnectionThread::getClientService() {
         return ClientService;
+    }
+
+    void MQTTConnectionThread::sendValueToSever(const std::string &topic, std::string value) {
+        ClientService->sendValueToServer(topic,value);
     }
 }

@@ -9,7 +9,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <string>
 
-#include "../cpp_physical_twin_communication_global.h"
+#include "../../cpp_physical_twin_communication_global.h"
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
     class CPPPHYSICALTWINCOMMUNICATION_EXPORT DigitalTwinEntity {

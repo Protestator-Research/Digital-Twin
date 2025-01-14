@@ -9,6 +9,8 @@
 #include <Services/MqttClientService.h>
 #include <SysMLv2Standard/entities/DigitalTwin.h>
 #include <SysMLv2Standard/entities/Element.h>
+#include <MQTT/entities/DigitalTwinEntity.h>
+#include <MQTT/Topics.h>
 
 namespace DigitalTwin {
 
@@ -40,7 +42,8 @@ namespace DigitalTwin {
     DigitalTwin::Model::DigitalTwinModel* DigitalTwinManager::addDigitalTwinAndCreateModel(SysMLv2::Entities::DigitalTwin *digitalTwin) {
         Model::DigitalTwinModel* returnValue = new Model::DigitalTwinModel(digitalTwin,this);
         DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(),returnValue));
-
+        PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(digitalTwin->getId(), digitalTwin->parentProjectId());
+        ClientService->sendValueToServer(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN, entity.serialize());
         return returnValue;
     }
 

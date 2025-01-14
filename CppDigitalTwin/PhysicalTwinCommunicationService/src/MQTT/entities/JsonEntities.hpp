@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "../cpp_physical_twin_communication_global.h"
+#include "../../cpp_physical_twin_communication_global.h"
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
     const char* DIGITAL_TWIN_ID_ENTITY = "twinID";
