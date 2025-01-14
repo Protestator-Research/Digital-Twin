@@ -25,7 +25,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     public:
         MQTTBrokerService();
 
-        static void runBroker(uint16_t port, bool& serverStarted);
+        static void runBroker(uint16_t port);
     private:
 
     };

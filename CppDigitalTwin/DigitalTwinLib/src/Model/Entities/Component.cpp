@@ -81,4 +81,20 @@ namespace DigitalTwin::Model {
 
         return variables;
     }
+
+    std::vector<std::string> Component::getAllMQTTTopics() {
+        std::vector<std::string> returnValue;
+
+        for(const auto& comp : ComponentMap)
+            for(const auto& string : dynamic_cast<Component*>(comp.second)->getAllMQTTTopics())
+                returnValue.push_back(comp.first + "/" + string);
+
+        for(auto element : Controllables)
+            returnValue.push_back(element.first);
+
+        for(auto element : Measurables)
+            returnValue.push_back(element.first);
+
+        return returnValue;
+    }
 }

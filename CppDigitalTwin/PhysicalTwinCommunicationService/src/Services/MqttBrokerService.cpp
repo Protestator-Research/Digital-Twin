@@ -545,7 +545,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 ////        Server.close();
 //    }
 
-    void MQTTBrokerService::runBroker(uint16_t , bool&) {
+    void MQTTBrokerService::runBroker(uint16_t) {
         MQTTBrokerService();
     }
 

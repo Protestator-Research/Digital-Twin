@@ -12,6 +12,8 @@
 namespace PHYSICAL_TWIN_COMMUNICATION {
     const char* DIGITAL_TWIN_ID_ENTITY = "twinID";
     const char* PROJECT_ID_ENTITY = "projectID";
+    const char* VALUE_ENTITY = "value";
+    const char* TIME_POINT_ENTITY = "time_point";
 }
 
 #endif //DIGITALTWIN_JSONENTITIES_HPP

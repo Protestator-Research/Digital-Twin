@@ -42,7 +42,9 @@ add_library(CppPhysicalTwinCommunication
         src/broker_includes/tags.hpp
         src/broker_includes/topic_filter.hpp
         src/broker_includes/uuid.hpp
-        src/MQTT/Topics.h)
+        src/MQTT/Topics.h
+        src/MQTT/entities/ValueEntity.cpp
+        src/MQTT/entities/ValueEntity.h)
 
 target_link_libraries(CppPhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp

@@ -14,6 +14,7 @@ namespace BACKEND_COMMUNICATION::EXCEPTIONS {
         HTTPException() = delete;
         HTTPException(long httpErrorCode);
 
+        const char * what() const noexcept override;
     private:
         [[maybe_unused]] long HttpErrorCode;
     };

@@ -17,19 +17,17 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
     CommunicationService::CommunicationService(std::string mqttPort) {
         MqttPort=std::stoi(mqttPort);
+        ClientService = new MqttClientService("localhost",std::to_string(MqttPort));
     }
 
     void CommunicationService::startThreads() {
         try {
-            bool serverStarted = false;
-
-            ServerThread = std::thread([&]{
-                MQTTBrokerService::runBroker(MqttPort,serverStarted);
+            ServerThread = std::thread([this]{
+                MQTTBrokerService::runBroker(MqttPort);
             });
 
-            ClientThread = std::thread([&] {
+            ClientThread = std::thread([this] {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                ClientService = new MqttClientService("localhost",std::to_string(MqttPort));
                 ClientService->connectClientStartCommunication();
             });
         }
@@ -47,7 +45,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     void CommunicationService::joinThreads() {
-        ClientThread.join();
+        ServerThread.join();
     }
 
     CommunicationService::~CommunicationService() {

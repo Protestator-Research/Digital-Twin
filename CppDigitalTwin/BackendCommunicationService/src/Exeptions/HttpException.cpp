@@ -9,3 +9,7 @@ BACKEND_COMMUNICATION::EXCEPTIONS::HTTPException::HTTPException(long httpErrorCo
 {
 
 }
+
+const char *BACKEND_COMMUNICATION::EXCEPTIONS::HTTPException::what() const noexcept {
+    return exception::what();
+}

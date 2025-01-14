@@ -48,6 +48,8 @@ namespace DigitalTwin::Model {
         std::vector<Component*> getAllComponents();
         std::vector<Variable*> getAllVariables();
 
+        std::vector<std::string> getAllMQTTTopics();
+
     private:
         std::map<std::string, Component*> ComponentMap;
         std::map<std::string, Variable*> Controllables;

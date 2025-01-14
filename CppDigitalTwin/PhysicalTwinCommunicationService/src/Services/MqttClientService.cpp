@@ -113,17 +113,17 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         if (ec) return;
         if (connack_opt) {
             std::cout << *connack_opt << std::endl;
-            Client->async_publish(
-                    *Client->acquire_unique_packet_id(),
-                    CONNECT_TO_TWIN,
-                    "value",
-                    async_mqtt::qos::at_least_once,
-                    [this](auto&&... args) {
-                        handlePublishResponse(
-                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
-                        );
-                    }
-            );
+//            Client->async_publish(
+//                    *Client->acquire_unique_packet_id(),
+//                    CONNECT_TO_TWIN,
+//                    "value",
+//                    async_mqtt::qos::at_least_once,
+//                    [this](auto&&... args) {
+//                        handlePublishResponse(
+//                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
+//                        );
+//                    }
+//            );
         }
     }
 
@@ -164,7 +164,15 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
             return;
         }
         BOOST_ASSERT(pv);
-        std::cout << pv << std::endl;
+        auto value = pv.get<async_mqtt::v3_1_1::publish_packet>();
+        std::cout<<"Topic: "<<value.topic()<<std::endl;
+        std::cout<<"Value: "<<value.payload()<<std::endl;
+        try {
+            CallbackFuctionsPerTopic[value.topic()](value.payload());
+        } catch(std::exception ex) {
+            std::cout << ex.what() << std::endl;
+        }
+
         // next receive
         Client->async_recv(
                 [this](auto&&... args) {
