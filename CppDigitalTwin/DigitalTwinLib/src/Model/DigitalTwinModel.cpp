@@ -74,9 +74,6 @@ namespace DigitalTwin::Model {
             for(const auto& string : dynamic_cast<Component*>(element.second)->getAllMQTTTopics())
                 elements.push_back(element.first + "/" + string);
 
-//        for(const auto& element : PortMap)
-//            elements.push_back(element.first);
-
         for(const auto& element : VariableMap)
             elements.push_back(element.first);
 

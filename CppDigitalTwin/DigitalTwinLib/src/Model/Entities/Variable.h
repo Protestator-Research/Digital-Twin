@@ -29,6 +29,7 @@ namespace DigitalTwin::Model {
         void setNewValue(char value);
         void setNewValue(double value);
         void setNewValue(bool value);
+
     private:
         void updateLinkedVariables();
         void setVariableValueWithoutPropagation(void* value);
