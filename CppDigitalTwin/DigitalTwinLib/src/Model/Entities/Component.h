@@ -43,6 +43,7 @@ namespace DigitalTwin::Model {
         Variable* getControllable(std::string name);
         Variable* getMeasurable(std::string name);
         Variable* getAttribute(std::string name);
+        Variable* getVariable(std::string name);
         Component* getComponent(std::string name);
 
         std::vector<Component*> getAllComponents();

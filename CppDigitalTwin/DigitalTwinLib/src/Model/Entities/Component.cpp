@@ -2,6 +2,9 @@
 // Created by Moritz Herzog on 08.08.24.
 //
 
+#include <BaseFuctions/StringExtention.hpp>
+
+#include "../Exceptions/DigitalTwinAddressException.h"
 #include "Component.h"
 #include "Variable.h"
 
@@ -96,5 +99,24 @@ namespace DigitalTwin::Model {
             returnValue.push_back(element.first);
 
         return returnValue;
+    }
+
+    Variable *Component::getVariable(std::string name) {
+        const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '/');
+
+        if(splittedAdress.size()<1)
+            throw DigitalTwinAddressException();
+
+        if(splittedAdress.size()==1)
+            return dynamic_cast<Variable*>(ComponentMap[splittedAdress[0]]);
+
+        std::string addressWithHigherIndex="";
+        for(size_t i = 1; i<splittedAdress.size(); i++){
+            addressWithHigherIndex+=splittedAdress[i];
+            if(i<(splittedAdress.size()-1))
+                addressWithHigherIndex+="/";
+        }
+
+        return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getVariable(addressWithHigherIndex);
     }
 }

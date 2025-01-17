@@ -42,6 +42,8 @@ add_library(CppDigitalTwinLib
         src/Model/Entities/Port.h
         src/Model/Entities/Connection.cpp
         src/Model/Entities/Connection.h
+        src/Model/Exceptions/DigitalTwinAddressException.cpp
+        src/Model/Exceptions/DigitalTwinAddressException.h
 )
 
 target_include_directories(CppDigitalTwinLib PUBLIC

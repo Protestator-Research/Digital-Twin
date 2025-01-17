@@ -27,18 +27,36 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
          */
         MqttClientService() = delete;
         /**
-         *
-         * @param server
-         * @param port
+         * Constructor needed for the connection to a Server.
+         * @param server The Server URL or IP
+         * @param port The Port on the server, where the DT Server is running.
          */
         MqttClientService(std::string server, std::string port);
 
         virtual ~MqttClientService();
 
+        /**
+         * Sends the value for a given Topic to the server.
+         * @param topic MQTT Topic
+         * @param content Content that is sent.
+         */
         void sendValueToServer(std::string topic, std::string content);
+        /**
+         *
+         * @param topic
+         * @param callbackFunction
+         */
         void addCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction);
+        /**
+         *
+         * @param topic
+         * @param callbackFunction
+         * @param valueForInit
+         */
         void addCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction, std::string valueForInit);
-
+        /**
+         * Connects to a client and starts the communication.
+         */
         void connectClientStartCommunication();
 
     private:

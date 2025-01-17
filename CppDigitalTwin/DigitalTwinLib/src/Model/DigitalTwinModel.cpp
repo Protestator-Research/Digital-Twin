@@ -5,6 +5,7 @@
 #include <SysMLv2Standard/entities/DigitalTwin.h>
 #include <SysMLv2Standard/entities/DataIdentity.h>
 #include <SysMLv2Standard/entities/Element.h>
+#include <BaseFuctions/StringExtention.hpp>
 
 #include "DigitalTwinModel.h"
 #include "Entities/IDigitalTwinElement.h"
@@ -12,6 +13,7 @@
 #include "Entities/Connection.h"
 #include "Entities/Variable.h"
 #include "Entities/Port.h"
+#include "Exceptions/DigitalTwinAddressException.h"
 #include "../DigitalTwinManager.h"
 #include "Parser/Parser.h"
 
@@ -74,9 +76,41 @@ namespace DigitalTwin::Model {
             for(const auto& string : dynamic_cast<Component*>(element.second)->getAllMQTTTopics())
                 elements.push_back(element.first + "/" + string);
 
-        for(const auto& element : VariableMap)
-            elements.push_back(element.first);
-
         return elements;
+    }
+
+    Component *DigitalTwinModel::getComponentWithAddress(std::string address) {
+        const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
+
+        if(splittedAdress.size()<1)
+            throw DigitalTwinAddressException();
+
+        if(splittedAdress.size()==1)
+            return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]]);
+
+        std::string addressWithHigherIndex="";
+        for(size_t i = 1; i<splittedAdress.size(); i++){
+            addressWithHigherIndex+=splittedAdress[i];
+            if(i<(splittedAdress.size()-1))
+                addressWithHigherIndex+="/";
+        }
+
+        return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getComponent(addressWithHigherIndex);
+    }
+
+    Variable *DigitalTwinModel::getVariableWithAddress(std::string address) {
+        const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
+
+        if(splittedAdress.size()<2)
+            throw DigitalTwinAddressException();
+
+        std::string addressWithHigherIndex="";
+        for(size_t i = 1; i<splittedAdress.size(); i++){
+            addressWithHigherIndex+=splittedAdress[i];
+            if(i<(splittedAdress.size()-1))
+                addressWithHigherIndex+="/";
+        }
+
+        return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getVariable(addressWithHigherIndex);
     }
 }

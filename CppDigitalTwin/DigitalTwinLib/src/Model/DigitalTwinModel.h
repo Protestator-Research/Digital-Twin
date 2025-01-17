@@ -39,6 +39,8 @@ namespace DigitalTwin::Model {
 
         std::vector<IDigitalTwinElement*> getAllComponents() const;
 
+        Variable* getVariableWithAddress(std::string address);
+        Component* getComponentWithAddress(std::string address);
 
         std::vector<std::string> getElementStrings();
 
@@ -49,9 +51,7 @@ namespace DigitalTwin::Model {
         DigitalTwinManager* Manager;
         std::map<std::string, IDigitalTwinElement*> ComponentMap;
         std::map<std::string, IDigitalTwinElement*> PortMap;
-        std::map<std::string, IDigitalTwinElement*> VariableMap;
         std::function<void()> UpdateModelFunction;
-//        std::map<std::string, Variable*> VariableMap;
     };
 }
 
