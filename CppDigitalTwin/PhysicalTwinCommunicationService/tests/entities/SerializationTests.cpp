@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <entities/DigitalTwinEntity.h>
+#include <MQTT/entities/DigitalTwinEntity.h>
 #include <sstream>
 #include <iostream>
 
