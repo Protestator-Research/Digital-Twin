@@ -257,7 +257,6 @@ public:
     }
 
     // sync APIs (Thread unsafe without strand)
-
     std::optional<typename basic_packet_id_type<packet_id_bytes>::type> acquire_unique_packet_id() {
         return visit(
             [&](auto& ep) {

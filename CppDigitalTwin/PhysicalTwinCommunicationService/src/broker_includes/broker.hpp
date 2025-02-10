@@ -275,7 +275,7 @@ private:
         epsp_type epsp,
         std::string client_id,
         std::optional<std::string> noauth_username,
-        std::optional<std::string>, //password,
+        std::optional<std::string> password,
         std::optional<will> will,
         bool clean_start,
         std::uint16_t /*keep_alive*/,
@@ -288,15 +288,15 @@ private:
                 username = force_move(*paun_opt);
             }
         }
-//        else if (!noauth_username && !password) {
+        else if (!noauth_username && !password) {
             std::shared_lock<mutex> _g_sec{mtx_security_};
             username = security_.login_anonymous();
-//        }
-//        else if (noauth_username && password) {
-//            std::shared_lock<mutex> g_sec{mtx_security_};
-//            username = security_.login(*noauth_username, *password);
-//            TODO Authentication
-//        }
+        }
+        else if (noauth_username && password) {
+            std::shared_lock<mutex> g_sec{mtx_security_};
+            username = security_.login(*noauth_username, *password);
+            //TODO Authentication
+        }
 
         // If login fails, try the unauthenticated user
         if (!username) {
