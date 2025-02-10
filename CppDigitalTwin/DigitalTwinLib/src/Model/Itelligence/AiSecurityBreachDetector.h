@@ -1,0 +1,14 @@
+//
+// Created by Moritz Herzog on 31.01.25.
+//
+
+#ifndef DIGITALTWIN_AISECURITYBREACHDETECTOR_H
+#define DIGITALTWIN_AISECURITYBREACHDETECTOR_H
+
+
+class AISecurityBreachDetector {
+
+};
+
+
+#endif //DIGITALTWIN_AISECURITYBREACHDETECTOR_H

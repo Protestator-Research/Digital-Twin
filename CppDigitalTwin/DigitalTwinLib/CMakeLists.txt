@@ -44,6 +44,10 @@ add_library(CppDigitalTwinLib
         src/Model/Entities/Connection.h
         src/Model/Exceptions/DigitalTwinAddressException.cpp
         src/Model/Exceptions/DigitalTwinAddressException.h
+        src/Model/Itelligence/AiSecurityBreachDetector.cpp
+        src/Model/Itelligence/AiSecurityBreachDetector.h
+        src/Model/Itelligence/OutlierDetection.cpp
+        src/Model/Itelligence/OutlierDetection.h
 )
 
 target_include_directories(CppDigitalTwinLib PUBLIC
