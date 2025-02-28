@@ -13,7 +13,6 @@ namespace DigitalTwin::AIPack {
         virtual ~OutlierDetection();
 
     private:
-        std::vector<
     };
 }
 

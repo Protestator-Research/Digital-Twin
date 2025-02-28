@@ -40,7 +40,7 @@ namespace DigitalTwin {
                     std::cout<<"Generate MQTT Interface"<<std::endl;
                     generateMQTTInterface(returnValue);
                 }
-        } catch(BACKEND_COMMUNICATION::EXCEPTIONS::HTTPException ex) {
+        } catch(BACKEND_COMMUNICATION::EXCEPTIONS::HTTPException& ex) {
             std::cout << ex.what() <<std::endl;
         }
     }

@@ -165,11 +165,10 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         }
         BOOST_ASSERT(pv);
         auto value = pv.get<async_mqtt::v3_1_1::publish_packet>();
-        std::cout<<"Topic: "<<value.topic()<<std::endl;
-        std::cout<<"Value: "<<value.payload()<<std::endl;
+
         try {
             CallbackFuctionsPerTopic[value.topic()](value.payload());
-        } catch(std::exception ex) {
+        } catch(std::exception& ex) {
             std::cout << ex.what() << std::endl;
         }
 
@@ -203,6 +202,4 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
             );
         }
     }
-
-
 }

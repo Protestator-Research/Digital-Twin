@@ -36,7 +36,7 @@ class CppDigitalTwinRecipe(ConanFile):
         if platform != "darwin":
             self.requires("qt/6.7.3")
         self.requires("md4c/0.4.8")
-        self.requires("mlpack/4.4.0")
+        #self.requires("mlpack/4.4.0")
 
     def config_options(self):
         if self.settings.os == "Windows":

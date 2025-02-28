@@ -64,7 +64,7 @@ target_link_libraries(CppDigitalTwinLib
 if(MSVC)
     target_compile_options(CppDigitalTwinLib PRIVATE /W4 /WX- /bigobj)
 elseif (UNIX AND NOT APPLE)
-    target_compile_options(CppDigitalTwinLib PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
+    target_compile_options(CppDigitalTwinLib PRIVATE -Wall -Wextra -Wpedantic -Werror)
 else ()
     target_compile_options(CppDigitalTwinLib PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
