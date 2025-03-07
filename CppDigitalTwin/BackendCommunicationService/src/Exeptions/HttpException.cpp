@@ -13,3 +13,7 @@ BACKEND_COMMUNICATION::EXCEPTIONS::HTTPException::HTTPException(long httpErrorCo
 const char *BACKEND_COMMUNICATION::EXCEPTIONS::HTTPException::what() const noexcept {
     return exception::what();
 }
+
+long BACKEND_COMMUNICATION::EXCEPTIONS::HTTPException::httpErrorCode() {
+    return HttpErrorCode;
+}

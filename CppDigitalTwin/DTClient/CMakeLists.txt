@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(CppDigitalTwinServer CXX C)
-
 find_package(mqtt_cpp REQUIRED CONFIG)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Charts)
 find_package(md4c REQUIRED)
