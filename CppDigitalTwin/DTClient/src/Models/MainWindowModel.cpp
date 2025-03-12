@@ -5,11 +5,13 @@
 #include <QList>
 #include <BECommunicationService.h>
 #include <string>
-#include <SysMLv2Standard/entities/Project.h>
-#include <SysMLv2Standard/entities/DigitalTwin.h>
+#include <sysmlv2/entities/Project.h>
+#include "AGILABackendImplementation/DigitalTwin.h"
 #include <DigitalTwinManager.h>
 #include <Services/MqttClientService.h>
-#include <SysMLv2Standard/entities/Branch.h>
+#include <sysmlv2/entities/Branch.h>
+#include <sysmlv2/entities/Commit.h>
+#include <sysmlv2/entities/Element.h>
 
 #include "MainWindowModel.h"
 #include "DigitalTwinClientSettings.h"
@@ -18,8 +20,7 @@
 #include "../Widgets/DigitalTwinTabWidget/DigitalTwinTabWidget.h"
 #include "../Widgets/UploadProjectFileToBackend.h"
 #include "Markdown/MarkdownParser.h"
-#include "SysMLv2Standard/entities/Commit.h"
-#include "SysMLv2Standard/entities/Element.h"
+
 #include "MqttConnectionThread.h"
 
 

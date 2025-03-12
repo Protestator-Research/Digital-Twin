@@ -14,10 +14,10 @@
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 #include <BaseFuctions/StringExtention.hpp>
-#include <SysMLv2Standard/SysMLv2Deserializer.h>
-#include <SysMLv2Standard/entities/Project.h>
-#include <SysMLv2Standard/entities/Commit.h>
-#include <SysMLv2Standard/entities/DigitalTwin.h>
+#include <sysmlv2/serialization/SysMLv2Deserializer.h>
+#include <sysmlv2/entities/Project.h>
+#include <sysmlv2/entities/Commit.h>
+#include "AGILABackendImplementation/DigitalTwin.h"
 
 //---------------------------------------------------------
 // Internal Classes

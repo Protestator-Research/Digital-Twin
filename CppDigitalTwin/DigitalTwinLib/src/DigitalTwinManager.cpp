@@ -7,8 +7,8 @@
 
 #include <BECommunicationService.h>
 #include <Services/MqttClientService.h>
-#include <SysMLv2Standard/entities/DigitalTwin.h>
-#include <SysMLv2Standard/entities/Element.h>
+#include "AGILABackendImplementation/DigitalTwin.h"
+#include <sysmlv2/entities/Element.h>
 #include <MQTT/entities/DigitalTwinEntity.h>
 #include <Exeptions/HttpException.h>
 #include <MQTT/Topics.h>

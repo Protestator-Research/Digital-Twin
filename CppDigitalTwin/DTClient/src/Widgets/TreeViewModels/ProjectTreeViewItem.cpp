@@ -4,8 +4,8 @@
 
 #include "ProjectTreeViewItem.h"
 
-#include <SysMLv2Standard/entities/Project.h>
-#include <SysMLv2Standard/entities/DigitalTwin.h>
+#include <sysmlv2/entities/Project.h>
+#include "AGILABackendImplementation/DigitalTwin.h"
 #include <algorithm>
 
 namespace DigitalTwin::Client::ViewModels {

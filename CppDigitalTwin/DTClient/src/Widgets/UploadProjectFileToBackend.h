@@ -9,9 +9,9 @@
 #include <QStandardItemModel>
 #include "../Models/Markdown/MarkdownParser.h"
 #include <vector>
-#include <SysMLv2Standard/entities/Element.h>
-#include <SysMLv2Standard/entities/Commit.h>
-#include <SysMLv2Standard/entities/Project.h>
+#include <sysmlv2/entities/Element.h>
+#include <sysmlv2/entities/Commit.h>
+#include <sysmlv2/entities/Project.h>
 #include <BECommunicationService.h>
 
 namespace DigitalTwin::Client {

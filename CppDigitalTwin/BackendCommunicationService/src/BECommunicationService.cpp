@@ -9,12 +9,12 @@
 // External Classes
 //---------------------------------------------------------
 #include <utility>
-#include <SysMLv2Standard/entities/IEntity.h>
-#include <SysMLv2Standard/entities/Project.h>
-#include <SysMLv2Standard/entities/Commit.h>
-#include <SysMLv2Standard/entities/Branch.h>
-#include <SysMLv2Standard/entities/DigitalTwin.h>
-#include <SysMLv2Standard/entities/Element.h>
+#include <sysmlv2/entities/IEntity.h>
+#include <sysmlv2/entities/Project.h>
+#include <sysmlv2/entities/Commit.h>
+#include <sysmlv2/entities/Branch.h>
+#include "AGILABackendImplementation/DigitalTwin.h"
+#include <sysmlv2/entities/Element.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/lexical_cast.hpp>
 

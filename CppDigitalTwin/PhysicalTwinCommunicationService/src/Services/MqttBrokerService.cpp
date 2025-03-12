@@ -23,18 +23,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                     async_mqtt::role::server,
                     2,
                     async_mqtt::protocol::mqtt
-#if defined(ASYNC_MQTT_USE_WS)
-                    ,
-            async_mqttprotocol::ws
-#endif // defined(ASYNC_MQTT_USE_WS)
-#if defined(ASYNC_MQTT_USE_TLS)
-                    ,
-            async_mqttprotocol::mqtts
-#if defined(ASYNC_MQTT_USE_WS)
-            ,
-            async_mqttprotocol::wss
-#endif // defined(ASYNC_MQTT_USE_WS)
-#endif // defined(ASYNC_MQTT_USE_TLS)
             >;
 
             async_mqtt::broker<
@@ -45,43 +33,11 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
             size_t threads_per_ioc = 1;
 
-            if (threads_per_ioc == 0) {
-                threads_per_ioc = std::min(std::size_t(std::thread::hardware_concurrency()), std::size_t(4));
-                ASYNC_MQTT_LOG("mqtt_broker", info)
-                        << "threads_per_ioc set to auto decide (0). Automatically set to "
-                        << threads_per_ioc;
-            }
+            //ASYNC_MQTT_LOG("mqtt_broker", info)
+            //        << "iocs:" << num_of_iocs
+            //        << " threads_per_ioc:" << threads_per_ioc
+            //        << " total threads:" << num_of_iocs * threads_per_ioc;
 
-            ASYNC_MQTT_LOG("mqtt_broker", info)
-                    << "iocs:" << num_of_iocs
-                    << " threads_per_ioc:" << threads_per_ioc
-                    << " total threads:" << num_of_iocs * threads_per_ioc;
-
-//            auto set_auth =
-//                    [&] {
-//                        if (vm.count("auth_file")) {
-//                            std::string auth_file = vm["auth_file"].as<std::string>();
-//                            if (!auth_file.empty()) {
-//                                ASYNC_MQTT_LOG("mqtt_broker", info)
-//                                        << "auth_file:" << auth_file;
-//
-//                                std::ifstream input(auth_file);
-//
-//                                if (input) {
-//                                    async_mqttsecurity security;
-//                                    security.load_json(input);
-//                                    brk.set_security(async_mqttforce_move(security));
-//                                }
-//                                else {
-//                                    ASYNC_MQTT_LOG("mqtt_broker", warning)
-//                                            << "Authorization file '"
-//                                            << auth_file
-//                                            << "' not found,  broker doesn't use authorization file.";
-//                                }
-//                            }
-//                        }
-//                    };
-//            set_auth();
             boost::asio::io_context accept_ioc;
 
             int concurrency_hint = boost::numeric_cast<int>(threads_per_ioc);
@@ -94,7 +50,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
             for (std::size_t i = 0; i != num_of_iocs; ++i) {
                 con_iocs.emplace_back(std::make_shared<boost::asio::io_context>(concurrency_hint));
             }
-            BOOST_ASSERT(!con_iocs.empty());
+            //BOOST_ASSERT(!con_iocs.empty());
 
             std::vector<
                     boost::asio::executor_work_guard<
@@ -148,272 +104,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
             };
 
                 mqtt_async_accept();
-
-#if defined(ASYNC_MQTT_USE_WS)
-            // ws (MQTT on WebSocket)
-        std::optional<boost::asio::ip::tcp::endpoint> ws_endpoint;
-        std::optional<boost::asio::ip::tcp::acceptor> ws_ac;
-        std::function<void()> ws_async_accept;
-        if (vm.count("ws.port")) {
-            ws_endpoint.emplace(boost::asio::ip::tcp::v4(), vm["ws.port"].as<std::uint16_t>());
-            ws_ac.emplace(accept_ioc, *ws_endpoint);
-            ws_async_accept =
-                [&] {
-                    auto epsp =
-                        std::make_shared<
-                            async_mqtt::basic_endpoint<
-                                async_mqtt::role::server,
-                                2,
-                               async_mqtt::protocol::ws
-                            >
-                        >(
-                            async_mqtt::protocol_version::undetermined,
-                            boost::asio::make_strand(con_ioc_getter().get_executor())
-                        );
-                    epsp->set_bulk_write(vm["bulk_write"].as<bool>());
-                    epsp->set_bulk_read_buffer_size(vm["bulk_read_buf_size"].as<std::size_t>());
-                    auto& lowest_layer = epsp->lowest_layer();
-                    ws_ac->async_accept(
-                        lowest_layer,
-                        [&ws_async_accept, &apply_socket_opts, &lowest_layer, &brk, epsp]
-                        (boost::system::error_code const& ec) mutable {
-                            if (ec) {
-                                ASYNC_MQTT_LOG("mqtt_broker", error)
-                                    << "TCP accept error:" << ec.message();
-                            }
-                            else {
-                                apply_socket_opts(lowest_layer);
-                                auto& ws_layer = epsp->next_layer();
-                                ws_layer.async_accept(
-                                    [&brk, epsp]
-                                    (boost::system::error_code const& ec) mutable {
-                                        if (ec) {
-                                            ASYNC_MQTT_LOG("mqtt_broker", error)
-                                                << "WS accept error:" << ec.message();
-                                        }
-                                        else {
-                                            brk.handle_accept(epv_type{force_move(epsp)});
-                                        }
-                                    }
-                                );
-                            }
-                            ws_async_accept();
-                        }
-                    );
-                };
-
-            ws_async_accept();
-        }
-
-#endif // defined(ASYNC_MQTT_USE_WS)
-
-#if defined(ASYNC_MQTT_USE_TLS)
-            // mqtts (MQTT on TLS TCP)
-        std::optional<boost::asio::ip::tcp::endpoint> mqtts_endpoint;
-        std::optional<boost::asio::ip::tcp::acceptor> mqtts_ac;
-        std::function<void()> mqtts_async_accept;
-        std::optional<boost::asio::steady_timer> mqtts_timer;
-        mqtts_timer.emplace(accept_ioc);
-        auto mqtts_verify_field_obj =
-            std::unique_ptr<ASN1_OBJECT, decltype(&ASN1_OBJECT_free)>(
-                OBJ_txt2obj(vm["verify_field"].as<std::string>().c_str(), 0),
-                &ASN1_OBJECT_free
-            );
-        if (!mqtts_verify_field_obj) {
-            throw std::runtime_error(
-                "An invalid verify field was specified: " +
-                vm["verify_field"].as<std::string>()
-            );
-        }
-        if (vm.count("tls.port")) {
-            mqtts_endpoint.emplace(boost::asio::ip::tcp::v4(), vm["tls.port"].as<std::uint16_t>());
-            mqtts_ac.emplace(accept_ioc, *mqtts_endpoint);
-            mqtts_async_accept =
-                [&] {
-                    std::optional<std::string> verify_file;
-                    if (vm.count("verify_file")) {
-                        verify_file = vm["verify_file"].as<std::string>();
-                    }
-                    auto mqtts_ctx = init_ctx(
-                        vm["certificate"].as<std::string>(),
-                        vm["private_key"].as<std::string>(),
-                        verify_file
-                    );
-                    // shared_ptr for username
-                    auto username = std::make_shared<std::optional<std::string>>();
-                    mqtts_ctx->set_verify_mode(boost::asio::ssl::verify_peer);
-                    mqtts_ctx->set_verify_callback(
-                        [username, &vm] // copy capture socket shared_ptr
-                        (bool preverified, boost::asio::ssl::verify_context& ctx) {
-                            // user can set username in the callback
-                            return
-                                verify_certificate(
-                                    vm["verify_field"].as<std::string>(),
-                                    preverified,
-                                    ctx,
-                                    username
-                                );
-                        }
-                    );
-                    auto epsp =
-                        std::make_shared<
-                            async_mqtt::basic_endpoint<
-                                async_mqtt::role::server,
-                                2,
-                               async_mqtt::protocol::mqtts
-                            >
-                        >(
-                            async_mqtt::protocol_version::undetermined,
-                            boost::asio::make_strand(con_ioc_getter().get_executor()),
-                            *mqtts_ctx
-                        );
-                    epsp->set_bulk_write(vm["bulk_write"].as<bool>());
-                    epsp->set_bulk_read_buffer_size(vm["bulk_read_buf_size"].as<std::size_t>());
-                    auto& lowest_layer = epsp->lowest_layer();
-                    mqtts_ac->async_accept(
-                        lowest_layer,
-                        [&mqtts_async_accept, &apply_socket_opts, &lowest_layer, &brk, epsp, username, mqtts_ctx]
-                        (boost::system::error_code const& ec) mutable {
-                            if (ec) {
-                                ASYNC_MQTT_LOG("mqtt_broker", error)
-                                    << "TCP accept error:" << ec.message();
-                            }
-                            else {
-                                // TBD insert underlying timeout here
-                                apply_socket_opts(lowest_layer);
-                                epsp->next_layer().async_handshake(
-                                    boost::asio::ssl::stream_base::server,
-                                    [&brk, epsp, username, mqtts_ctx]
-                                    (boost::system::error_code const& ec) mutable {
-                                        if (ec) {
-                                            ASYNC_MQTT_LOG("mqtt_broker", error)
-                                                << "TLS handshake error:" << ec.message();
-                                        }
-                                        else {
-                                            brk.handle_accept(epv_type{force_move(epsp)}, *username);
-                                        }
-                                    }
-                                );
-                            }
-                            mqtts_async_accept();
-                        }
-                    );
-                };
-
-            mqtts_async_accept();
-        }
-
-#if defined(ASYNC_MQTT_USE_WS)
-        // wss (MQTT on WebScoket TLS TCP)
-        std::optional<boost::asio::ip::tcp::endpoint> wss_endpoint;
-        std::optional<boost::asio::ip::tcp::acceptor> wss_ac;
-        std::function<void()> wss_async_accept;
-        std::optional<boost::asio::steady_timer> wss_timer;
-        wss_timer.emplace(accept_ioc);
-        auto wss_verify_field_obj =
-            std::unique_ptr<ASN1_OBJECT, decltype(&ASN1_OBJECT_free)>(
-                OBJ_txt2obj(vm["verify_field"].as<std::string>().c_str(), 0),
-                &ASN1_OBJECT_free
-            );
-        if (!wss_verify_field_obj) {
-            throw std::runtime_error(
-                "An invalid verify field was specified: " +
-                vm["verify_field"].as<std::string>()
-            );
-        }
-        if (vm.count("wss.port")) {
-            wss_endpoint.emplace(boost::asio::ip::tcp::v4(), vm["wss.port"].as<std::uint16_t>());
-            wss_ac.emplace(accept_ioc, *wss_endpoint);
-            wss_async_accept =
-                [&] {
-                    std::optional<std::string> verify_file;
-                    if (vm.count("verify_file")) {
-                        verify_file = vm["verify_file"].as<std::string>();
-                    }
-                    auto wss_ctx = init_ctx(
-                        vm["certificate"].as<std::string>(),
-                        vm["private_key"].as<std::string>(),
-                        verify_file
-                    );
-                    // shared_ptr for username
-                    auto username = std::make_shared<std::optional<std::string>>();
-                    wss_ctx->set_verify_mode(boost::asio::ssl::verify_peer);
-                    wss_ctx->set_verify_callback(
-                        [username, &vm]
-                        (bool preverified, boost::asio::ssl::verify_context& ctx) {
-                            // user can set username in the callback
-                            return
-                                verify_certificate(
-                                    vm["verify_field"].as<std::string>(),
-                                    preverified,
-                                    ctx,
-                                    username
-                                );
-                        }
-                    );
-                    auto epsp =
-                        std::make_shared<
-                            async_mqtt::basic_endpoint<
-                                async_mqtt::role::server,
-                                2,
-                               async_mqtt::protocol::wss
-                            >
-                        >(
-                            async_mqtt::protocol_version::undetermined,
-                            boost::asio::make_strand(con_ioc_getter().get_executor()),
-                            *wss_ctx
-                        );
-                    epsp->set_bulk_write(vm["bulk_write"].as<bool>());
-                    epsp->set_bulk_read_buffer_size(vm["bulk_read_buf_size"].as<std::size_t>());
-                    auto& lowest_layer = epsp->lowest_layer();
-                    wss_ac->async_accept(
-                        lowest_layer,
-                        [&wss_async_accept, &apply_socket_opts, &lowest_layer, &brk, epsp, username, wss_ctx]
-                        (boost::system::error_code const& ec) mutable {
-                            if (ec) {
-                                ASYNC_MQTT_LOG("mqtt_broker", error)
-                                    << "TCP accept error:" << ec.message();
-                            }
-                            else {
-                                // TBD insert underlying timeout here
-                                apply_socket_opts(lowest_layer);
-                                epsp->next_layer().next_layer().async_handshake(
-                                    boost::asio::ssl::stream_base::server,
-                                    [&brk, epsp, username, wss_ctx]
-                                    (boost::system::error_code const& ec) mutable {
-                                        if (ec) {
-                                            ASYNC_MQTT_LOG("mqtt_broker", error)
-                                                << "TLS handshake error:" << ec.message();
-                                        }
-                                        else {
-                                            auto& ws_layer = epsp->next_layer();
-                                            ws_layer.binary(true);
-                                            ws_layer.async_accept(
-                                                [&brk, epsp, username]
-                                                (boost::system::error_code const& ec) mutable {
-                                                    if (ec) {
-                                                        ASYNC_MQTT_LOG("mqtt_broker", error)
-                                                            << "WS accept error:" << ec.message();
-                                                    }
-                                                    else {
-                                                        brk.handle_accept(epv_type{force_move(epsp)}, *username);
-                                                    }
-                                                }
-                                            );
-                                        }
-                                    }
-                                );
-                            }
-                            wss_async_accept();
-                        }
-                    );
-                };
-
-            wss_async_accept();
-        }
-
-#endif // defined(ASYNC_MQTT_USE_WS)
-#endif // defined(ASYNC_MQTT_USE_TLS)
 
             std::thread th_accept {
                     [&accept_ioc] {
@@ -532,18 +222,6 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
             ASYNC_MQTT_LOG("mqtt_broker", error) << e.what();
         }
     }
-
-//    void MQTTBrokerService::listen() {
-//        //Server.listen();
-//    }
-
-//    MQTT_NS::broker::broker_t &MQTTBrokerService::getBroker() const {
-//        return Broker;
-//    }
-
-//    void MQTTBrokerService::close() {
-////        Server.close();
-//    }
 
     void MQTTBrokerService::runBroker(uint16_t) {
         MQTTBrokerService();

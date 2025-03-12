@@ -10,10 +10,10 @@
 #include <QMessageBox>
 #include <iostream>
 
-#include <SysMLv2Standard/entities/DataVersion.h>
+#include <sysmlv2/entities/DataVersion.h>
 #include <boost/uuid/random_generator.hpp>
-#include <SysMLv2Standard/entities/DataIdentity.h>
-#include <SysMLv2Standard/entities/DigitalTwin.h>
+#include <sysmlv2/entities/DataIdentity.h>
+#include "AGILABackendImplementation/DigitalTwin.h"
 
 namespace DigitalTwin::Client {
     UploadProjectFileToBackend::UploadProjectFileToBackend(BACKEND_COMMUNICATION::CommunicationService* service, QWidget *parent) :

@@ -2,9 +2,9 @@
 // Created by Moritz Herzog on 23.05.24.
 //
 
-#include <SysMLv2Standard/entities/DigitalTwin.h>
-#include <SysMLv2Standard/entities/DataIdentity.h>
-#include <SysMLv2Standard/entities/Element.h>
+#include "AGILABackendImplementation/DigitalTwin.h"
+#include <sysmlv2/entities/DataIdentity.h>
+#include <sysmlv2/entities/Element.h>
 #include <BaseFuctions/StringExtention.hpp>
 
 #include "DigitalTwinModel.h"

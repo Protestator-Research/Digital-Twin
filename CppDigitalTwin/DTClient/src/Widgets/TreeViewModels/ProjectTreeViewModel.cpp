@@ -4,7 +4,7 @@
 
 #include "ProjectTreeViewModel.h"
 
-#include <SysMLv2Standard/entities/Project.h>
+#include <sysmlv2/entities/Project.h>
 #include <QVariant>
 
 namespace DigitalTwin::Client::ViewModels {

@@ -6,8 +6,8 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "JSONEntities.h"
-#include "DataIdentity.h"
+#include <sysmlv2/entities/DataIdentity.h>
+#include <sysmlv2/entities/JSONEntities.h>
 
 #include <nlohmann/json.hpp>
 #include <boost/uuid/uuid.hpp>

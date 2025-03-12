@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 find_package(mqtt_cpp REQUIRED CONFIG)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Charts)
 find_package(md4c REQUIRED)
+find_package(cpp-sysmlv2-lib REQUIRED)
 
 qt_standard_project_setup()
 
@@ -102,7 +103,8 @@ target_link_libraries(CppDigitalTwinClient PUBLIC
         Qt6::Charts
         Qt6::Core
         mqtt_cpp::mqtt_cpp
-        md4c::md4c)
+        md4c::md4c
+        cpp-sysmlv2-lib::cpp-sysmlv2-lib)
 
 if (!UNIX)
 set_target_properties(CppDigitalTwinClient PROPERTIES

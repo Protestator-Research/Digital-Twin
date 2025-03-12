@@ -12,13 +12,13 @@
 //---------------------------------------------------------
 #include <string>
 #include <boost/uuid/uuid.hpp>
+#include <sysmlv2/entities/Record.h>
 #include <vector>
 
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
-#include "Record.h"
-#include "../../cps_base_global.h"
+#include "../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
 //---------------------------------------------------------
@@ -47,7 +47,7 @@ namespace SysMLv2::Entities {
          * Constructor that is used to parse the digital twin data or to set only the name of the DT.
          * @param jsonString The given string.
          */
-        DigitalTwin(std::string jsonString);
+        explicit DigitalTwin(std::string jsonString);
 
         /**
          * 
@@ -60,7 +60,7 @@ namespace SysMLv2::Entities {
         /**
          * Destructor.
          */
-        ~DigitalTwin();
+        ~DigitalTwin() override;
 
         /**
          * Checks the Equality of the digital twin.
