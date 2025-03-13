@@ -17,8 +17,14 @@ public:
   virtual void enterStart(KerMLParser::StartContext *ctx) = 0;
   virtual void exitStart(KerMLParser::StartContext *ctx) = 0;
 
-  virtual void enterIntenalCodeComment(KerMLParser::IntenalCodeCommentContext *ctx) = 0;
-  virtual void exitIntenalCodeComment(KerMLParser::IntenalCodeCommentContext *ctx) = 0;
+  virtual void enterStartRule(KerMLParser::StartRuleContext *ctx) = 0;
+  virtual void exitStartRule(KerMLParser::StartRuleContext *ctx) = 0;
+
+  virtual void enterElements(KerMLParser::ElementsContext *ctx) = 0;
+  virtual void exitElements(KerMLParser::ElementsContext *ctx) = 0;
+
+  virtual void enterElement(KerMLParser::ElementContext *ctx) = 0;
+  virtual void exitElement(KerMLParser::ElementContext *ctx) = 0;
 
   virtual void enterComment(KerMLParser::CommentContext *ctx) = 0;
   virtual void exitComment(KerMLParser::CommentContext *ctx) = 0;

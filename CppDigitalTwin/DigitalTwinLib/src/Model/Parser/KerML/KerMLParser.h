@@ -14,21 +14,22 @@ public:
   enum {
     T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
     T__7 = 8, T__8 = 9, T__9 = 10, T__10 = 11, T__11 = 12, Classifier = 13, 
-    DELIMITER = 14, Feature = 15, Namespace = 16, Commet = 17, CommentStart = 18, 
-    CommentEnd = 19, CommentWord = 20, Dependency = 21, DocumentationKeyword = 22, 
-    Private = 23, PROTECTED = 24, Public = 25, From = 26, FOR = 27, To = 28, 
-    Class = 29, Datatype = 30, ALIAS = 31, PACKAGE = 32, IMPORT = 33, STAR = 34, 
-    NAMESPACE_DELIMITER = 35, SPECIALIZES_KEYWORD = 36, TYPE_KEYWORD = 37, 
-    SUBTYPE_KEYWORD = 38, NUMBER = 39, NAME = 40, INT = 41, WS = 42
+    DELIMITER = 14, Feature = 15, Namespace = 16, COMMENT_START = 17, COMMENT_END = 18, 
+    COMMENT_WORD = 19, Dependency = 20, DocumentationKeyword = 21, Private = 22, 
+    PROTECTED = 23, Public = 24, From = 25, FOR = 26, To = 27, Class = 28, 
+    Datatype = 29, ALIAS = 30, PACKAGE = 31, IMPORT = 32, STAR = 33, NAMESPACE_DELIMITER = 34, 
+    SPECIALIZES_KEYWORD = 35, TYPE_KEYWORD = 36, SUBTYPE_KEYWORD = 37, LINE_COMMENT = 38, 
+    NUMBER = 39, NAME = 40, INT = 41, WS = 42
   };
 
   enum {
-    RuleStart = 0, RuleIntenalCodeComment = 1, RuleComment = 2, RuleFeature = 3, 
-    RuleClassifier = 4, RuleNamespace = 5, RuleDependency = 6, RuleDocumentation = 7, 
-    RuleVisibility = 8, RuleClass = 9, RuleDatatype = 10, RuleSpecialization = 11, 
-    RuleAlias = 12, RulePackage = 13, RuleImportRule = 14, RuleImportAddress = 15, 
-    RuleBracketed_content = 16, RuleDelimiter_rule = 17, RuleAbstract = 18, 
-    RuleType = 19, RuleSubtype = 20, RuleInstanceNumbers = 21, RuleCommentText = 22
+    RuleStart = 0, RuleStartRule = 1, RuleElements = 2, RuleElement = 3, 
+    RuleComment = 4, RuleFeature = 5, RuleClassifier = 6, RuleNamespace = 7, 
+    RuleDependency = 8, RuleDocumentation = 9, RuleVisibility = 10, RuleClass = 11, 
+    RuleDatatype = 12, RuleSpecialization = 13, RuleAlias = 14, RulePackage = 15, 
+    RuleImportRule = 16, RuleImportAddress = 17, RuleBracketed_content = 18, 
+    RuleDelimiter_rule = 19, RuleAbstract = 20, RuleType = 21, RuleSubtype = 22, 
+    RuleInstanceNumbers = 23, RuleCommentText = 24
   };
 
   explicit KerMLParser(antlr4::TokenStream *input);
@@ -49,7 +50,9 @@ public:
 
 
   class StartContext;
-  class IntenalCodeCommentContext;
+  class StartRuleContext;
+  class ElementsContext;
+  class ElementContext;
   class CommentContext;
   class FeatureContext;
   class ClassifierContext;
@@ -76,10 +79,50 @@ public:
   public:
     StartContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
+    ElementsContext *elements();
+    antlr4::tree::TerminalNode *EOF();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  StartContext* start();
+
+  class  StartRuleContext : public antlr4::ParserRuleContext {
+  public:
+    StartRuleContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    StartContext *start();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  StartRuleContext* startRule();
+
+  class  ElementsContext : public antlr4::ParserRuleContext {
+  public:
+    ElementsContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<ElementContext *> element();
+    ElementContext* element(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  ElementsContext* elements();
+
+  class  ElementContext : public antlr4::ParserRuleContext {
+  public:
+    ElementContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
     NamespaceContext *namespace_();
     ClassifierContext *classifier();
     FeatureContext *feature();
-    IntenalCodeCommentContext *intenalCodeComment();
     DependencyContext *dependency();
     CommentContext *comment();
     DocumentationContext *documentation();
@@ -90,42 +133,26 @@ public:
     ImportRuleContext *importRule();
     TypeContext *type();
     AbstractContext *abstract();
-    std::vector<StartContext *> start();
-    StartContext* start(size_t i);
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
    
   };
 
-  StartContext* start();
-  StartContext* start(int precedence);
-  class  IntenalCodeCommentContext : public antlr4::ParserRuleContext {
-  public:
-    IntenalCodeCommentContext(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    antlr4::tree::TerminalNode *Commet();
-    CommentTextContext *commentText();
-    antlr4::tree::TerminalNode *CommentStart();
-    antlr4::tree::TerminalNode *CommentEnd();
-
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
-   
-  };
-
-  IntenalCodeCommentContext* intenalCodeComment();
+  ElementContext* element();
 
   class  CommentContext : public antlr4::ParserRuleContext {
   public:
     CommentContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    antlr4::tree::TerminalNode *CommentWord();
+    antlr4::tree::TerminalNode *COMMENT_WORD();
     std::vector<antlr4::tree::TerminalNode *> NAME();
     antlr4::tree::TerminalNode* NAME(size_t i);
-    antlr4::tree::TerminalNode *CommentStart();
+    antlr4::tree::TerminalNode *COMMENT_START();
     CommentTextContext *commentText();
-    antlr4::tree::TerminalNode *CommentEnd();
+    antlr4::tree::TerminalNode *COMMENT_END();
+    DependencyContext *dependency();
+    antlr4::tree::TerminalNode *LINE_COMMENT();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -204,9 +231,9 @@ public:
     DocumentationContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *DocumentationKeyword();
-    antlr4::tree::TerminalNode *CommentStart();
+    antlr4::tree::TerminalNode *COMMENT_START();
     CommentTextContext *commentText();
-    antlr4::tree::TerminalNode *CommentEnd();
+    antlr4::tree::TerminalNode *COMMENT_END();
     antlr4::tree::TerminalNode *NAME();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -221,7 +248,7 @@ public:
     VisibilityContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *Private();
-    StartContext *start();
+    ElementContext *element();
     antlr4::tree::TerminalNode *Public();
     antlr4::tree::TerminalNode *PROTECTED();
 
@@ -349,7 +376,7 @@ public:
   public:
     Bracketed_contentContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    StartContext *start();
+    ElementsContext *elements();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -376,7 +403,7 @@ public:
   public:
     AbstractContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    StartContext *start();
+    ElementContext *element();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -449,8 +476,8 @@ public:
     antlr4::tree::TerminalNode* Feature(size_t i);
     std::vector<antlr4::tree::TerminalNode *> Namespace();
     antlr4::tree::TerminalNode* Namespace(size_t i);
-    std::vector<antlr4::tree::TerminalNode *> CommentWord();
-    antlr4::tree::TerminalNode* CommentWord(size_t i);
+    std::vector<antlr4::tree::TerminalNode *> COMMENT_WORD();
+    antlr4::tree::TerminalNode* COMMENT_WORD(size_t i);
     std::vector<antlr4::tree::TerminalNode *> Dependency();
     antlr4::tree::TerminalNode* Dependency(size_t i);
     std::vector<antlr4::tree::TerminalNode *> DocumentationKeyword();
@@ -479,10 +506,6 @@ public:
 
   CommentTextContext* commentText();
 
-
-  bool sempred(antlr4::RuleContext *_localctx, size_t ruleIndex, size_t predicateIndex) override;
-
-  bool startSempred(StartContext *_localctx, size_t predicateIndex);
 
   // By default the static state used to implement the parser is lazily initialized during the first
   // call to the constructor. You can call this function if you wish to initialize the static state

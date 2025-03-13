@@ -1,10 +1,10 @@
 grammar SysMLv2;
 
-start: elemements* EOF;
+start: elements* EOF;
 
 startRule: start;
 
-elemements :  dependency |
+elements :  dependency |
        comment |
        part |
        port |
@@ -59,7 +59,7 @@ decriptor: LANGUAGE_DESCRIPTOR '"'NAME'"';
 namelist: name(',' name)*;
 name: NAME | '\''NAME+'\'';
 address: NAME('::'(NAME | STAR STAR?))*;
-bracketed_content: '{' elemements* '}';
+bracketed_content: '{' elements* '}';
 fuction_arguments: '(' argument?(',' argument*) ')';
 argument: NAME type_definition;
 delimiter_rule: (bracketed_content|DELIMITER);

@@ -14,12 +14,12 @@ public:
   enum {
     T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
     T__7 = 8, T__8 = 9, T__9 = 10, T__10 = 11, T__11 = 12, Classifier = 13, 
-    DELIMITER = 14, Feature = 15, Namespace = 16, Commet = 17, CommentStart = 18, 
-    CommentEnd = 19, CommentWord = 20, Dependency = 21, DocumentationKeyword = 22, 
-    Private = 23, PROTECTED = 24, Public = 25, From = 26, FOR = 27, To = 28, 
-    Class = 29, Datatype = 30, ALIAS = 31, PACKAGE = 32, IMPORT = 33, STAR = 34, 
-    NAMESPACE_DELIMITER = 35, SPECIALIZES_KEYWORD = 36, TYPE_KEYWORD = 37, 
-    SUBTYPE_KEYWORD = 38, NUMBER = 39, NAME = 40, INT = 41, WS = 42
+    DELIMITER = 14, Feature = 15, Namespace = 16, COMMENT_START = 17, COMMENT_END = 18, 
+    COMMENT_WORD = 19, Dependency = 20, DocumentationKeyword = 21, Private = 22, 
+    PROTECTED = 23, Public = 24, From = 25, FOR = 26, To = 27, Class = 28, 
+    Datatype = 29, ALIAS = 30, PACKAGE = 31, IMPORT = 32, STAR = 33, NAMESPACE_DELIMITER = 34, 
+    SPECIALIZES_KEYWORD = 35, TYPE_KEYWORD = 36, SUBTYPE_KEYWORD = 37, LINE_COMMENT = 38, 
+    NUMBER = 39, NAME = 40, INT = 41, WS = 42
   };
 
   explicit KerMLLexer(antlr4::CharStream *input);

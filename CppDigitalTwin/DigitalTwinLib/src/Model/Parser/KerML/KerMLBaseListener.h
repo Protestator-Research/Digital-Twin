@@ -19,8 +19,14 @@ public:
   virtual void enterStart(KerMLParser::StartContext * /*ctx*/) override { }
   virtual void exitStart(KerMLParser::StartContext * /*ctx*/) override { }
 
-  virtual void enterIntenalCodeComment(KerMLParser::IntenalCodeCommentContext * /*ctx*/) override { }
-  virtual void exitIntenalCodeComment(KerMLParser::IntenalCodeCommentContext * /*ctx*/) override { }
+  virtual void enterStartRule(KerMLParser::StartRuleContext * /*ctx*/) override { }
+  virtual void exitStartRule(KerMLParser::StartRuleContext * /*ctx*/) override { }
+
+  virtual void enterElements(KerMLParser::ElementsContext * /*ctx*/) override { }
+  virtual void exitElements(KerMLParser::ElementsContext * /*ctx*/) override { }
+
+  virtual void enterElement(KerMLParser::ElementContext * /*ctx*/) override { }
+  virtual void exitElement(KerMLParser::ElementContext * /*ctx*/) override { }
 
   virtual void enterComment(KerMLParser::CommentContext * /*ctx*/) override { }
   virtual void exitComment(KerMLParser::CommentContext * /*ctx*/) override { }
