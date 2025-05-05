@@ -72,7 +72,7 @@ namespace DigitalTwin::Client {
         MQTTConnectionThread* ConnectionThread = nullptr;
         std::map<boost::uuids::uuid,std::vector<SysMLv2::Entities::DigitalTwin*>> DigitalTwinMap;
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
-        std::vector<SysMLv2::Entities::Project*> Projects;
+        std::vector<std::shared_ptr<SysMLv2::Entities::Project>> Projects;
     };
 }
 

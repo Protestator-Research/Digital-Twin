@@ -7,7 +7,7 @@
 
 #include "CommonmarkParser/cmark.h"
 
-#include <sysmlv2/entities/Element.h>
+#include <sysmlv2/rest/entities/Element.h>
 #include <QFile>
 #include <regex>
 

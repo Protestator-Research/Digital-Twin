@@ -10,10 +10,11 @@
 #include <QMessageBox>
 #include <iostream>
 
-#include <sysmlv2/entities/DataVersion.h>
+#include <sysmlv2/rest/entities/DataVersion.h>
 #include <boost/uuid/random_generator.hpp>
-#include <sysmlv2/entities/DataIdentity.h>
-#include "AGILABackendImplementation/DigitalTwin.h"
+#include <sysmlv2/rest/entities/DataIdentity.h>
+#include <sysmlv2/rest/entities/Commit.h>
+//#include "AGILABackendImplementation/DigitalTwin.h"
 
 namespace DigitalTwin::Client {
     UploadProjectFileToBackend::UploadProjectFileToBackend(BACKEND_COMMUNICATION::CommunicationService* service, QWidget *parent) :
@@ -78,7 +79,7 @@ namespace DigitalTwin::Client {
         this->setWindowModified(false);
     }
 
-    void UploadProjectFileToBackend::setElementsForView(std::vector<SysMLv2::Entities::Element *> elements, SysMLv2::Entities::Commit* commit, SysMLv2::Entities::Project* project) {
+    void UploadProjectFileToBackend::setElementsForView(std::vector<std::shared_ptr<SysMLv2::Entities::Element>> elements, std::shared_ptr<SysMLv2::Entities::Commit> commit, std::shared_ptr<SysMLv2::Entities::Project> project) {
         Status = UploadProjectFileToBackendStatus::OnlineProjectOpened;
         Elements = elements;
         Commit = commit;
@@ -108,15 +109,15 @@ namespace DigitalTwin::Client {
         dialog.exec();
         if(dialog.result()==QDialog::DialogCode::Accepted) {
             Project = CommunicationService->postProject(dialog.getProjectName(), dialog.getProjectDecription(), "Main");
-            Elements = Parser->getElementsOfProject();
-            Commit = new SysMLv2::Entities::Commit(dialog.getProjectName(), dialog.getProjectDecription(), Project);
+//            Elements = Parser->getElementsOfProject();
+            Commit = std::make_shared<SysMLv2::Entities::Commit>(dialog.getProjectName(), dialog.getProjectDecription(), Project);
 
-            std::vector<SysMLv2::Entities::DataVersion*> dataVersions;
-            for (const auto& element : Elements)
-            {
-                auto dataVersion = new SysMLv2::Entities::DataVersion(new SysMLv2::Entities::DataIdentity(boost::uuids::random_generator()()), element);
-                dataVersions.push_back(dataVersion);
-            }
+            std::vector<std::shared_ptr<SysMLv2::Entities::DataVersion>> dataVersions;
+//            for (const auto& element : Elements)
+//            {
+//                auto dataVersion = std::make_shared<SysMLv2::Entities::DataVersion>(new SysMLv2::Entities::DataIdentity(boost::uuids::random_generator()()), element);
+//                dataVersions.push_back(dataVersion);
+//            }
 
             Commit->setChange(dataVersions);
             CommunicationService->postCommitWithId(Project->getId(), Commit);
@@ -131,7 +132,7 @@ namespace DigitalTwin::Client {
         if(Status==UploadProjectFileToBackendStatus::OnlineProjectOpened) {
             setCodeElements();
             QString markdown;
-            for(const auto elem : Elements){
+            for(const auto& elem : Elements){
                 markdown += QString::fromStdString(elem->getMarkdownString());
             }
             setMarkdownOfOnlineProject(markdown);
@@ -147,7 +148,7 @@ namespace DigitalTwin::Client {
     }
 
     void UploadProjectFileToBackend::onCreateDigitalTwinClicked() {
-        std::vector<SysMLv2::Entities::Element *> elements;
+        std::vector<std::shared_ptr<SysMLv2::Entities::Element>> elements;
         for(const auto& elem : Elements) {
             if (!elem->body().empty() && (elem->language() != "Markdown") && (elem->language() != "YaML") && (elem->getType() == "TextualRepresentation"))
                 elements.push_back( elem);
@@ -160,9 +161,9 @@ namespace DigitalTwin::Client {
             selectedElements.push_back(elements[element.row()]->getId());
         }
 
-        SysMLv2::Entities::DigitalTwin* digitalTwin = new SysMLv2::Entities::DigitalTwin(Ui->DTNameLineEdit->text().toStdString(), selectedElements, Commit->getId());
+//        SysMLv2::Entities::DigitalTwin* digitalTwin = new SysMLv2::Entities::DigitalTwin(Ui->DTNameLineEdit->text().toStdString(), selectedElements, Commit->getId());
 
-        CommunicationService->postDigitalTwin(digitalTwin, Project->getId());
+//        CommunicationService->postDigitalTwin(digitalTwin, Project->getId());
     }
 
 

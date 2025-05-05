@@ -16,7 +16,7 @@ namespace DigitalTwin::Client::ViewModels {
     class ProjectTreeViewItem {
     public:
         ProjectTreeViewItem();
-        explicit ProjectTreeViewItem(SysMLv2::Entities::Project* project, ProjectTreeViewItem* parent = nullptr);
+        explicit ProjectTreeViewItem(std::shared_ptr<SysMLv2::Entities::Project> project, ProjectTreeViewItem* parent = nullptr);
         explicit ProjectTreeViewItem(SysMLv2::Entities::DigitalTwin* digitalTwin, ProjectTreeViewItem* parent = nullptr);
 
         ~ProjectTreeViewItem();
@@ -28,8 +28,8 @@ namespace DigitalTwin::Client::ViewModels {
         int row();
         ProjectTreeViewItem* parentItem();
 
-        void appendProject(SysMLv2::Entities::Project* project);
-        SysMLv2::Entities::Project* getProject() const;
+        void appendProject(std::shared_ptr<SysMLv2::Entities::Project> project);
+        std::shared_ptr<SysMLv2::Entities::Project> getProject() const;
         void appendDigitalTwin(SysMLv2::Entities::DigitalTwin* digitalTwin);
         SysMLv2::Entities::DigitalTwin* getDigitalTwin() const;
 
@@ -37,7 +37,7 @@ namespace DigitalTwin::Client::ViewModels {
 
     private:
         std::vector<ProjectTreeViewItem*> ChildItems;
-        SysMLv2::Entities::Project* ProjectData;
+        std::shared_ptr<SysMLv2::Entities::Project> ProjectData;
         SysMLv2::Entities::DigitalTwin* DigitalTwinData;
         ProjectTreeViewItem *Parent;
     };

@@ -1,3 +1,4 @@
+```YaML
 ---
 usage: SI, ScalarValues
 name: DTTester4Project
@@ -5,6 +6,7 @@ description: DTTester4Project
 title: DTTester4Project
 maintainer: Moritz Herzog
 ---
+```
 
 [toc]
 

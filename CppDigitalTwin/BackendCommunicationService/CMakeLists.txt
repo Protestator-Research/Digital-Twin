@@ -5,28 +5,18 @@ project(CppBackendCommunication CXX)
 find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(Boost REQUIRED CONFIG)
+find_package(sysmllib REQUIRED)
 
 add_library(CppBackendCommunication
         src/BECommunicationService.h
         src/BECommunicationService.cpp
-        src/APIImplementations/SysMLAPIImplementation.cpp
-        src/APIImplementations/SysMLAPIImplementation.h
-        src/Exeptions/ConnectionError.cpp
-        src/Exeptions/ConnectionError.h
-        src/Exeptions/NotEnoughMemoryError.cpp
-        src/Exeptions/NotEnoughMemoryError.h
-        src/APIImplementations/Standards/HttpReturnCodes.h
-        src/APIImplementations/StatusCode.h
-        src/Exeptions/HttpException.cpp
-        src/Exeptions/HttpException.h
-        src/APIImplementations/Interfaces/IAPIInterface.cpp
-        src/APIImplementations/Interfaces/IAPIInterface.h
         src/cpp_backend_communication_global.h)
 
 target_link_libraries(CppBackendCommunication
         CURL::libcurl
         nlohmann_json::nlohmann_json
         boost::boost
+        sysmllib::sysmllib
         CPSBaseLib)
 
 target_include_directories(CppBackendCommunication PUBLIC

@@ -4,7 +4,7 @@
 
 #include "ProjectTreeViewModel.h"
 
-#include <sysmlv2/entities/Project.h>
+#include <sysmlv2/rest/entities/Project.h>
 #include <QVariant>
 
 namespace DigitalTwin::Client::ViewModels {
@@ -17,7 +17,7 @@ namespace DigitalTwin::Client::ViewModels {
         delete RootItem;
     }
 
-    void ProjectTreeViewModel::setProjects(std::vector<SysMLv2::Entities::Project *> projects) {
+    void ProjectTreeViewModel::setProjects(std::vector<std::shared_ptr<SysMLv2::Entities::Project>> projects) {
         if(projects.empty())
             return;
 

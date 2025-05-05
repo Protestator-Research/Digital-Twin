@@ -36,7 +36,7 @@ class CppDigitalTwinRecipe(ConanFile):
         if platform != "darwin":
             self.requires("qt/6.7.3")
         self.requires("md4c/0.4.8")
-        self.requires("cpp-sysmlv2-lib/1.0-beta-3-wip")
+        self.requires("sysmllib/1.0-beta-3-wip")
         #self.requires("mlpack/4.4.0")
 
     def config_options(self):
@@ -55,7 +55,7 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["nlohmann_json/*"].shared = True
             self.options["date/*"].shared = True
             self.options["antlr4-cppruntime/*"].shared = True
-            self.options["cpp-sysmlv2-lib/*"].shared=True
+            self.options["sysmllib/*"].shared=True
         else:
             self.options["boost/*"].shared = False
             self.options["gtest/*"].shared = False
@@ -64,7 +64,7 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["nlohmann_json/*"].shared = False
             self.options["date/*"].shared = False
             self.options["antlr4-cppruntime/*"].shared = False
-            self.options["cpp-sysmlv2-lib/*"].shared=False
+            self.options["sysmllib/*"].shared=False
 
         if platform != "darwin":
             self.options["qt/*"].shared = True

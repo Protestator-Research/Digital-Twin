@@ -1,0 +1,3 @@
+[submodule "CppDigitalTwin/DTClient/resources"]
+	path = CppDigitalTwin/DTClient/resources
+	url = git@github.com:Protestator-Research/resources.git

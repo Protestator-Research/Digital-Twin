@@ -5,25 +5,20 @@ project(CPSBaseLib CXX C)
 find_package(nlohmann_json REQUIRED)
 find_package(Boost REQUIRED)
 find_package(date REQUIRED)
-find_package(cpp-sysmlv2-lib REQUIRED)
-find_package(cpp-sysmlv2-lib REQUIRED)
+find_package(sysmllib REQUIRED)
 
 add_library(CPSBaseLib
         src/BaseFuctions/StringExtention.hpp
         src/BaseFuctions/StringExtention.cpp
         src/BaseFuctions/ListExtentions.cc
         src/BaseFuctions/ListExtentions.h
-        src/AGILABackendImplementation/DigitalTwin.cpp
-        src/AGILABackendImplementation/DigitalTwin.h
-        src/AGILABackendImplementation/Authentication.cpp
-        src/AGILABackendImplementation/Authentication.h
         src/cps_base_global.h)
 
 target_link_libraries(CPSBaseLib
                         boost::boost
                         nlohmann_json::nlohmann_json
                         date::date
-                        cpp-sysmlv2-lib::cpp-sysmlv2-lib)
+                        sysmllib::sysmllib)
 
 install(TARGETS CPSBaseLib DESTINATION "src"
         RUNTIME DESTINATION bin

@@ -7,10 +7,10 @@
 
 #include <BECommunicationService.h>
 #include <Services/MqttClientService.h>
-#include "AGILABackendImplementation/DigitalTwin.h"
-#include <sysmlv2/entities/Element.h>
+//#include "AGILABackendImplementation/DigitalTwin.h"
+#include <sysmlv2/rest/entities/Element.h>
 #include <MQTT/entities/DigitalTwinEntity.h>
-#include <Exeptions/HttpException.h>
+#include <sysmlv2service/online/HttpException.h>
 #include <MQTT/Topics.h>
 #include <iostream>
 
@@ -26,35 +26,36 @@ namespace DigitalTwin {
 
     }
 
-    void DigitalTwinManager::downloadDigitalTwin(boost::uuids::uuid projectId, boost::uuids::uuid digitalTwinId) {
+    void DigitalTwinManager::downloadDigitalTwin(boost::uuids::uuid projectId, boost::uuids::uuid) {
         try {
             auto digitalTwins = BackendCommunicationService->getAllDigitalTwinsForProjectWithId(projectId);
 
             std::cout<<"Number of Downloaded DTs from Backend for Project: "<<digitalTwins.size()<<std::endl;
 
-            for (auto digitalTwin: digitalTwins)
-                if (digitalTwin->getId() == digitalTwinId) {
-                    std::cout<<"Found DT: "<<digitalTwin->getName() << std::endl;
-                    auto returnValue = new Model::DigitalTwinModel(digitalTwin, this);
-                    DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), returnValue));
-                    std::cout<<"Generate MQTT Interface"<<std::endl;
-                    generateMQTTInterface(returnValue);
-                }
-        } catch(BACKEND_COMMUNICATION::EXCEPTIONS::HTTPException& ex) {
+//            for (auto digitalTwin: digitalTwins)
+//                if (digitalTwin->getId() == digitalTwinId) {
+//                    std::cout<<"Found DT: "<<digitalTwin->getName() << std::endl;
+//                    auto returnValue = new Model::DigitalTwinModel(digitalTwin, this);
+//                    DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), returnValue));
+//                    std::cout<<"Generate MQTT Interface"<<std::endl;
+//                    generateMQTTInterface(returnValue);
+//                }
+        } catch(SysMLv2::API::EXCEPTIONS::HTTPException& ex) {
             std::cout << ex.what() <<std::endl;
         }
     }
 
-    std::vector<SysMLv2::Entities::Element *> DigitalTwinManager::downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
+    std::vector<std::shared_ptr<SysMLv2::Entities::Element>> DigitalTwinManager::downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
         return BackendCommunicationService->getAllElementsOfCommit(projectId,commitId);
     }
 
-    DigitalTwin::Model::DigitalTwinModel* DigitalTwinManager::addDigitalTwinAndCreateModel(SysMLv2::Entities::DigitalTwin *digitalTwin) {
-        Model::DigitalTwinModel* returnValue = new Model::DigitalTwinModel(digitalTwin,this);
-        DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(),returnValue));
-        PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(digitalTwin->getId(), digitalTwin->parentProjectId());
-        ClientService->sendValueToServer(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN, entity.serialize());
-        return returnValue;
+    DigitalTwin::Model::DigitalTwinModel* DigitalTwinManager::addDigitalTwinAndCreateModel(SysMLv2::Entities::DigitalTwin *) {
+//        Model::DigitalTwinModel* returnValue = new Model::DigitalTwinModel(digitalTwin,this);
+//        DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(),returnValue));
+//        PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(digitalTwin->getId(), digitalTwin->parentProjectId());
+//        ClientService->sendValueToServer(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN, entity.serialize());
+//        return returnValue;
+        return nullptr;
     }
 
     void DigitalTwinManager::generateMQTTInterface(Model::DigitalTwinModel* digitalTwin) {

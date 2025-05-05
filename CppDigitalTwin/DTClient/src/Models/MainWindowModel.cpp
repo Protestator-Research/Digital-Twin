@@ -5,13 +5,13 @@
 #include <QList>
 #include <BECommunicationService.h>
 #include <string>
-#include <sysmlv2/entities/Project.h>
-#include "AGILABackendImplementation/DigitalTwin.h"
+#include <sysmlv2/rest/entities/Project.h>
+//#include "AGILABackendImplementation/DigitalTwin.h"
 #include <DigitalTwinManager.h>
 #include <Services/MqttClientService.h>
-#include <sysmlv2/entities/Branch.h>
-#include <sysmlv2/entities/Commit.h>
-#include <sysmlv2/entities/Element.h>
+#include <sysmlv2/rest/entities/Branch.h>
+#include <sysmlv2/rest/entities/Commit.h>
+#include <sysmlv2/rest/entities/Element.h>
 
 #include "MainWindowModel.h"
 #include "DigitalTwinClientSettings.h"
@@ -85,22 +85,22 @@ namespace DigitalTwin::Client {
 
         auto possibleDigitalTwin = item->getDigitalTwin();
         if(possibleDigitalTwin != nullptr){
-            auto model = DigitalTwinManager->addDigitalTwinAndCreateModel(possibleDigitalTwin);
-            MainWindow->addTabWidget(new DigitalTwinTabWidget(model,MainWindow),QString::fromStdString(possibleDigitalTwin->getName()));
+//            auto model = DigitalTwinManager->addDigitalTwinAndCreateModel(possibleDigitalTwin);
+//            MainWindow->addTabWidget(new DigitalTwinTabWidget(model,MainWindow),QString::fromStdString(possibleDigitalTwin->getName()));
         } else if(item->getProject() != nullptr) {
-            auto project = item->getProject();
-            UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(BackendCommunication, MainWindow);
-            auto branches = BackendCommunication->getAllBranchesForProjectWithID(project->getId());
-            std::vector<SysMLv2::Entities::Element*> elements;
-            SysMLv2::Entities::Commit* commit = nullptr;
-            for (const auto& branch : branches)
-                if (branch->getName() == "Main") {
-                    commit = branch->getHead();
-                    elements = BackendCommunication->getAllElements(branch->getHead()->getId(), project->getId());
-                }
-
-            uploadFileDialog->setElementsForView(elements,commit,project);
-            uploadFileDialog->show();
+//            auto project = item->getProject();
+//            UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(BackendCommunication, MainWindow);
+//            auto branches = BackendCommunication->getAllBranchesForProjectWithID(project->getId());
+//            std::vector<std::shared_ptr<SysMLv2::Entities::Element>> elements;
+//            std::shared_ptr<SysMLv2::Entities::Commit> commit = nullptr;
+//            for (const auto& branch : branches)
+//                if (branch->getName() == "Main") {
+//                    commit = branch->getHead();
+//                    elements = BackendCommunication->getAllElements(branch->getHead()->getId(), project->getId());
+//                }
+//
+//            uploadFileDialog->setElementsForView(elements,commit,project);
+//            uploadFileDialog->show();
         }
     }
 
@@ -115,8 +115,8 @@ namespace DigitalTwin::Client {
         ProjectViewModel->setProjects(Projects);
         for(const auto& project : Projects) {
             auto digitalTwins = BackendCommunication->getAllDigitalTwinsForProjectWithId(project->getId());
-            ProjectViewModel->setDigitalTwinForProjectWithId(project, digitalTwins);
-            DigitalTwinMap.emplace(project->getId(),digitalTwins);
+//            ProjectViewModel->setDigitalTwinForProjectWithId(project, digitalTwins);
+//            DigitalTwinMap.emplace(project->getId(),digitalTwins);
         }
     }
 }

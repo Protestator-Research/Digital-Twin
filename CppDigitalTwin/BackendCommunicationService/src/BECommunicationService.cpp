@@ -9,20 +9,19 @@
 // External Classes
 //---------------------------------------------------------
 #include <utility>
-#include <sysmlv2/entities/IEntity.h>
-#include <sysmlv2/entities/Project.h>
-#include <sysmlv2/entities/Commit.h>
-#include <sysmlv2/entities/Branch.h>
-#include "AGILABackendImplementation/DigitalTwin.h"
-#include <sysmlv2/entities/Element.h>
+#include <sysmlv2/rest/entities/IEntity.h>
+#include <sysmlv2/rest/entities/Project.h>
+#include <sysmlv2/rest/entities/Commit.h>
+#include <sysmlv2/rest/entities/Branch.h>
+#include <sysmlv2/rest/entities/Element.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/lexical_cast.hpp>
+#include <sysmlv2service/online/SysMLAPIImplementation.h>
 
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
 #include "BECommunicationService.h"
-#include "APIImplementations/SysMLAPIImplementation.h"
 
 
 namespace BACKEND_COMMUNICATION {
@@ -34,7 +33,7 @@ namespace BACKEND_COMMUNICATION {
         if(Port==443)
             REST_Protocol="https://";
 
-        APIImplementation = new SysMLAPIImplementation(REST_Protocol + ServerAddress + ":" + std::to_string(Port) + Entry_URI);
+        APIImplementation = new SysMLv2::API::SysMLAPIImplementation(REST_Protocol + ServerAddress + ":" + std::to_string(Port) + Entry_URI);
     }
 
     CommunicationService::CommunicationService(std::string serverAddress, std::string serverFolder) {
@@ -42,51 +41,51 @@ namespace BACKEND_COMMUNICATION {
         Entry_URI = std::move(serverFolder);
     }
 
-    std::vector<SysMLv2::Entities::Element*> CommunicationService::getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId) {
+    std::vector<std::shared_ptr<SysMLv2::Entities::Element>> CommunicationService::getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId) {
         auto entities = APIImplementation->getAllElementsFromCommit(boost::lexical_cast<std::string>(projectId),boost::lexical_cast<std::string>(commitId), BarrierString);
-        std::vector<SysMLv2::Entities::Element*> elements;
+        std::vector<std::shared_ptr<SysMLv2::Entities::Element>> elements;
 
         for(auto entitiy : entities)
-            elements.push_back(dynamic_cast<SysMLv2::Entities::Element*>(entitiy));
+            elements.push_back(dynamic_pointer_cast<SysMLv2::Entities::Element>(entitiy));
 
         return elements;
     }
 
-    std::vector<SysMLv2::Entities::Project*> CommunicationService::getAllProjects() {
+    std::vector<std::shared_ptr<SysMLv2::Entities::Project>> CommunicationService::getAllProjects() {
         auto projects = APIImplementation->getAllProjects(BarrierString);
-        std::vector<SysMLv2::Entities::Project*> returnValue;
+        std::vector<std::shared_ptr<SysMLv2::Entities::Project>> returnValue;
 
         for(auto oldProject : projects)
-            returnValue.push_back(dynamic_cast<SysMLv2::Entities::Project*>(oldProject));
+            returnValue.push_back(dynamic_pointer_cast<SysMLv2::Entities::Project>(oldProject));
 
         return returnValue;
     }
 
-    SysMLv2::Entities::DigitalTwin* CommunicationService::getDigitalTwinWithID(boost::uuids::uuid , boost::uuids::uuid ) {
-        return new SysMLv2::Entities::DigitalTwin("null");
-    }
-
-    std::vector<SysMLv2::Entities::DigitalTwin*> CommunicationService::getAllDigitalTwinsForProjectWithId(boost::uuids::uuid projectId) {
-        auto twins = APIImplementation->getAllDigitalTwinsForProject(boost::lexical_cast<std::string>(projectId),BarrierString);
-        std::vector<SysMLv2::Entities::DigitalTwin*> returnValue;
-
-        for(auto oldTwin : twins)
-            returnValue.push_back(dynamic_cast<SysMLv2::Entities::DigitalTwin*>(oldTwin));
-
-        return returnValue;
-    }
-
-
-    SysMLv2::Entities::Commit* CommunicationService::getCommitWithId(boost::uuids::uuid , boost::uuids::uuid ) {
+    std::shared_ptr<SysMLv2::Entities::DigitalTwin> CommunicationService::getDigitalTwinWithID(boost::uuids::uuid , boost::uuids::uuid ) {
         return nullptr;
     }
 
-    SysMLv2::Entities::Commit* CommunicationService::postCommitWithId(boost::uuids::uuid projectId,
-	    SysMLv2::Entities::Commit* commit)
+    std::vector<std::shared_ptr<SysMLv2::Entities::DigitalTwin>> CommunicationService::getAllDigitalTwinsForProjectWithId(boost::uuids::uuid ) {
+//        auto twins = APIImplementation->getAllDigitalTwinsForProject(boost::lexical_cast<std::string>(projectId),BarrierString);
+        std::vector<std::shared_ptr<SysMLv2::Entities::DigitalTwin>> returnValue;
+
+//        for(auto oldTwin : twins)
+//            returnValue.push_back(dynamic_cast<SysMLv2::Entities::DigitalTwin*>(oldTwin));
+
+        return returnValue;
+    }
+
+
+    std::shared_ptr<SysMLv2::Entities::Commit> CommunicationService::getCommitWithId(boost::uuids::uuid , boost::uuids::uuid ) {
+        return nullptr;
+    }
+
+    std::shared_ptr<SysMLv2::Entities::Commit> CommunicationService::postCommitWithId(boost::uuids::uuid projectId,
+                                                                                      std::shared_ptr<SysMLv2::Entities::Commit> commit)
     {
         auto commi = APIImplementation->postCommit(boost::lexical_cast<std::string>(projectId), commit, BarrierString);
 
-        SysMLv2::Entities::Commit* returnValue = dynamic_cast<SysMLv2::Entities::Commit*>(commi);
+        std::shared_ptr<SysMLv2::Entities::Commit> returnValue = dynamic_pointer_cast<SysMLv2::Entities::Commit>(commi);
         return returnValue;
     }
 
@@ -96,41 +95,41 @@ namespace BACKEND_COMMUNICATION {
         return !BarrierString.empty();
     }
 
-    SysMLv2::Entities::DigitalTwin* CommunicationService::postDigitalTwin(SysMLv2::Entities::DigitalTwin* digitalTwin,
-	    boost::uuids::uuid projectId)
+    std::shared_ptr<SysMLv2::Entities::DigitalTwin> CommunicationService::postDigitalTwin(std::shared_ptr<SysMLv2::Entities::DigitalTwin> ,
+	    boost::uuids::uuid )
     {
-        auto digitalT = APIImplementation->postDigitalTwin(boost::lexical_cast<std::string>(projectId), digitalTwin, BarrierString);
+//        auto digitalT = APIImplementation->postDigitalTwin(boost::lexical_cast<std::string>(projectId), digitalTwin, BarrierString);
 
-        SysMLv2::Entities::DigitalTwin* returnValue = dynamic_cast<SysMLv2::Entities::DigitalTwin*>(digitalT);
+        std::shared_ptr<SysMLv2::Entities::DigitalTwin> returnValue = nullptr;
         return returnValue;
     }
 
-    std::vector<SysMLv2::Entities::Branch*> CommunicationService::getAllBranchesForProjectWithID(boost::uuids::uuid projectId) {
-        auto elements = APIImplementation->getAllBrachesFroProject(boost::lexical_cast<std::string>(projectId), BarrierString);
+    std::vector<std::shared_ptr<SysMLv2::Entities::Branch>> CommunicationService::getAllBranchesForProjectWithID(boost::uuids::uuid projectId) {
+        auto elements = APIImplementation->getAllBranchesFroProject(boost::lexical_cast<std::string>(projectId), BarrierString);
 
-        std::vector<SysMLv2::Entities::Branch*> returnValue;
+        std::vector<std::shared_ptr<SysMLv2::Entities::Branch>> returnValue;
 
         for (auto elem : elements)
-            returnValue.push_back(dynamic_cast<SysMLv2::Entities::Branch*>(elem));
+            returnValue.push_back(dynamic_pointer_cast<SysMLv2::Entities::Branch>(elem));
 
         return returnValue;
     }
 
-    std::vector<SysMLv2::Entities::Element *>
+    std::vector<std::shared_ptr<SysMLv2::Entities::Element >>
     CommunicationService::getAllElementsOfCommit(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
         auto elements = APIImplementation->getAllElementsFromCommit(boost::lexical_cast<std::string>(projectId),boost::lexical_cast<std::string>(commitId), BarrierString);
-        std::vector<SysMLv2::Entities::Element*> returnValue;
+        std::vector<std::shared_ptr<SysMLv2::Entities::Element>> returnValue;
 
         for(auto elem : elements)
-            returnValue.push_back(dynamic_cast<SysMLv2::Entities::Element*>(elem));
+            returnValue.push_back(dynamic_pointer_cast<SysMLv2::Entities::Element>(elem));
 
         return returnValue;
     }
 
-    SysMLv2::Entities::Project *
+    std::shared_ptr<SysMLv2::Entities::Project>
     CommunicationService::postProject(std::string projectName, std::string projectDescription, std::string defaultBranchName) {
-        SysMLv2::Entities::Project* project = new SysMLv2::Entities::Project(projectName,projectDescription, defaultBranchName);
-        project = dynamic_cast<SysMLv2::Entities::Project*>(APIImplementation->postProject(project, BarrierString));
+        std::shared_ptr<SysMLv2::Entities::Project> project = std::make_shared<SysMLv2::Entities::Project>(projectName,projectDescription, defaultBranchName);
+        project = dynamic_pointer_cast<SysMLv2::Entities::Project>(APIImplementation->postProject(project, BarrierString));
         return project;
     }
 

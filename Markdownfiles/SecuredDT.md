@@ -1,3 +1,4 @@
+```YaML
 ---
 usage: SI, ScalarValues
 name: DTTester4Airbag
@@ -5,6 +6,7 @@ description: DTTester4Airbag
 title: DTTester4Airbag
 maintainer: Moritz Herzog
 ---
+```
 
 [toc]
 

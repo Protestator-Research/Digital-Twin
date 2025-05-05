@@ -43,7 +43,7 @@ namespace DigitalTwin {
 
         DigitalTwin::Model::DigitalTwinModel* addDigitalTwinAndCreateModel(SysMLv2::Entities::DigitalTwin* digitalTwin);
 
-        std::vector<SysMLv2::Entities::Element*> downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
+        std::vector<std::shared_ptr<SysMLv2::Entities::Element>> downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
     private:
         void generateMQTTInterface(Model::DigitalTwinModel* digitalTwin);

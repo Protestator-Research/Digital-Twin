@@ -4,9 +4,10 @@
 
 #include "ProjectTreeViewItem.h"
 
-#include <sysmlv2/entities/Project.h>
-#include "AGILABackendImplementation/DigitalTwin.h"
+#include <sysmlv2/rest/entities/Project.h>
+//#include "AGILABackendImplementation/DigitalTwin.h"
 #include <algorithm>
+#include <memory>
 
 namespace DigitalTwin::Client::ViewModels {
     ProjectTreeViewItem::ProjectTreeViewItem() :
@@ -21,7 +22,7 @@ namespace DigitalTwin::Client::ViewModels {
         Parent(parent)
     {    }
 
-    ProjectTreeViewItem::ProjectTreeViewItem(SysMLv2::Entities::Project *project, ProjectTreeViewItem *parent) :
+    ProjectTreeViewItem::ProjectTreeViewItem(std::shared_ptr<SysMLv2::Entities::Project> project, ProjectTreeViewItem *parent) :
         ProjectData(project),
         DigitalTwinData(nullptr),
         Parent(parent)
@@ -43,13 +44,14 @@ namespace DigitalTwin::Client::ViewModels {
         if(ProjectData != nullptr)
             return QVariant(QString::fromStdString(ProjectData->getName()));
         if(DigitalTwinData != nullptr)
-            return QVariant(QString::fromStdString(DigitalTwinData->getName()));
+            return QVariant(QString::fromStdString("DigitalTwinData->getName()"));
         return QVariant("Projects");
     }
 
     int ProjectTreeViewItem::row() {
         if (Parent == nullptr)
             return 0;
+
         const auto it = std::find_if(Parent->ChildItems.cbegin(), Parent->ChildItems.cend(),
                                      [this](ProjectTreeViewItem *treeItem) {
                                          return treeItem == this;
@@ -66,7 +68,7 @@ namespace DigitalTwin::Client::ViewModels {
         return Parent;
     }
 
-    void ProjectTreeViewItem::appendProject(SysMLv2::Entities::Project *project) {
+    void ProjectTreeViewItem::appendProject(std::shared_ptr<SysMLv2::Entities::Project> project) {
         ChildItems.push_back(new ProjectTreeViewItem(project,this));
     }
 
@@ -85,7 +87,7 @@ namespace DigitalTwin::Client::ViewModels {
         return DigitalTwinData;
     }
 
-    SysMLv2::Entities::Project *ProjectTreeViewItem::getProject() const {
+    std::shared_ptr<SysMLv2::Entities::Project> ProjectTreeViewItem::getProject() const {
         return ProjectData;
     }
 

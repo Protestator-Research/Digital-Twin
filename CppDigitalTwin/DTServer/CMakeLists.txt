@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 project(CppDigitalTwinServer CXX)
 
 find_package(mqtt_cpp REQUIRED CONFIG)
+find_package(sysmllib REQUIRED)
 
 add_executable(CppDigitalTwinServer
         src/main.cpp
@@ -19,6 +20,7 @@ target_link_libraries(CppDigitalTwinServer
         CppDigitalTwinLib
         CppPhysicalTwinCommunication
         CPSBaseLib
+        sysmllib::sysmllib
         mqtt_cpp::mqtt_cpp)
 
 

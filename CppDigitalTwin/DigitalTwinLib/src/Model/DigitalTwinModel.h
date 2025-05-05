@@ -46,9 +46,9 @@ namespace DigitalTwin::Model {
 
         void setUpdateModelFunction(std::function<void()> updateModel);
     private:
-        SysMLv2::Entities::DigitalTwin* DigitalTwin;
+//        SysMLv2::Entities::DigitalTwin* DigitalTwin;
         std::vector<SysMLv2::Entities::Element*> DigitalTwinModelElements;
-        DigitalTwinManager* Manager;
+        [[maybe_unused]] DigitalTwinManager* Manager;
         std::map<std::string, IDigitalTwinElement*> ComponentMap;
         std::map<std::string, IDigitalTwinElement*> PortMap;
         std::function<void()> UpdateModelFunction;
