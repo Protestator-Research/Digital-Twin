@@ -18,7 +18,7 @@ set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Widgets/Dialogs/SettingsDialog.h
         src/Models/DigitalTwinClientSettings.cpp
         src/Models/DigitalTwinClientSettings.h
-        ui/Resources.qrc
+        resources/Resources.qrc
         src/Models/MainWindowStatus.h
         src/Models/MainWindowModel.cpp
         src/Models/MainWindowModel.h

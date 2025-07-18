@@ -63,16 +63,16 @@ namespace DigitalTwin::Client {
     void DigitalTwinMainWindow::decorateView() {
         addToolBar(toolBar);
 
-        ui->actionConnect_to_Remotes->setIcon(QIcon(":/icons/Settings"));
+        ui->actionConnect_to_Remotes->setIcon(QIcon(":/icons/userinterface/Settings"));
         toolBar->addAction(ui->actionConnect_to_Remotes);
 
-        ui->actionConnect->setIcon(QIcon(":/icons/Connect"));
+        ui->actionConnect->setIcon(QIcon(":/icons/userinterface/Connection"));
         toolBar->addAction(ui->actionConnect);
 
-        ui->actionOpen_SysMLv2_File->setIcon(QIcon(":/icons/Open"));
+        ui->actionOpen_SysMLv2_File->setIcon(QIcon(":/icons/userinterface/Open"));
         toolBar->addAction(ui->actionOpen_SysMLv2_File);
 
-        ui->actionRefresh->setIcon(QIcon(":/icons/Refresh"));
+        ui->actionRefresh->setIcon(QIcon(":/icons/cloud_computing/Refresh"));
         toolBar->addAction(ui->actionRefresh);
     }
 

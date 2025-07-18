@@ -27,7 +27,7 @@ class CppDigitalTwinRecipe(ConanFile):
     exports_sources = "CMakeLists.txt", "CppDigitalTwin/*"
 
     def requirements(self):
-        self.requires("antlr4-cppruntime/4.13.1")
+        self.requires("antlr4-cppruntime/4.13.2")
         self.requires("boost/1.84.0")
         self.requires("async-mqtt/8.0.1")
         self.requires("libcurl/8.4.0")
@@ -89,7 +89,8 @@ class CppDigitalTwinRecipe(ConanFile):
     def build_requirements(self):
         self.tool_requires("cmake/3.30.0")
         self.tool_requires("icu/74.2")
-        self.tool_requires("qt/6.7.3")
+        if platform != "darwin":
+            self.tool_requires("qt/6.7.3")
         self.test_requires("gtest/1.14.0")
 
     def test(self):

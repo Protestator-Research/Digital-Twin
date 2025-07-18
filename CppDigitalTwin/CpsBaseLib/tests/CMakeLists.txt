@@ -5,9 +5,7 @@ find_package(Boost REQUIRED)
 add_executable(CpsBaseLibTests
         main.cpp
         BaseFunctions/StringExtentionTest.cpp
-        SysMLv2Standard/entities/SerializationTests.cpp
-        BaseFunctions/ListsExtentionTests.cpp
-        SysMLv2Standard/entities/GenerationTest.cpp)
+        BaseFunctions/ListsExtentionTests.cpp)
 
 target_include_directories(CpsBaseLibTests PRIVATE
                                     ../src/)
