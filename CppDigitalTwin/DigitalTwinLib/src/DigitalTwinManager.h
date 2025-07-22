@@ -20,7 +20,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     class MqttClientService;
 }
 
-namespace SysMLv2::Entities {
+namespace SysMLv2::REST {
     class DigitalTwin;
     class Element;
 }
@@ -41,9 +41,9 @@ namespace DigitalTwin {
 
         void downloadDigitalTwin(boost::uuids::uuid projectId, boost::uuids::uuid digitalTwinId);
 
-        DigitalTwin::Model::DigitalTwinModel* addDigitalTwinAndCreateModel(SysMLv2::Entities::DigitalTwin* digitalTwin);
+        DigitalTwin::Model::DigitalTwinModel* addDigitalTwinAndCreateModel(SysMLv2::REST::DigitalTwin* digitalTwin);
 
-        std::vector<std::shared_ptr<SysMLv2::Entities::Element>> downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
+        std::vector<std::shared_ptr<SysMLv2::REST::Element>> downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
     private:
         void generateMQTTInterface(Model::DigitalTwinModel* digitalTwin);

@@ -14,7 +14,7 @@
 #include <map>
 #include <functional>
 
-namespace SysMLv2::Entities {
+namespace SysMLv2::REST {
     class Element;
 }
 
@@ -28,7 +28,7 @@ namespace DigitalTwin::Client {
         void parseMarkdownFile(QString path);
         void parseMarkdown(QString markdown);
 
-        std::vector<SysMLv2::Entities::Element*> getElementsOfProject();
+        std::vector<std::shared_ptr<SysMLv2::REST::Element>> getElementsOfProject();
         QString getHTMLOfMarkdown();
         QString getMarkdownString();
 
@@ -36,7 +36,7 @@ namespace DigitalTwin::Client {
         std::string MarkdownString;
         cmark_node* MarkdownDocument;
 
-        SysMLv2::Entities::Element* createElement(std::string language, std::string body);
+        std::shared_ptr<SysMLv2::REST::Element> createElement(std::string language, std::string body);
         void parseInternally();
     };
 }

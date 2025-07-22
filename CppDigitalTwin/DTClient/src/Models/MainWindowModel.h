@@ -24,7 +24,7 @@ namespace BACKEND_COMMUNICATION{
     class CommunicationService;
 }
 
-namespace SysMLv2::Entities{
+namespace SysMLv2::REST{
     class DigitalTwin;
     class Project;
 }
@@ -70,9 +70,9 @@ namespace DigitalTwin::Client {
         ViewModels::ProjectTreeViewModel *ProjectViewModel;
         BACKEND_COMMUNICATION::CommunicationService *BackendCommunication = nullptr;
         MQTTConnectionThread* ConnectionThread = nullptr;
-        std::map<boost::uuids::uuid,std::vector<SysMLv2::Entities::DigitalTwin*>> DigitalTwinMap;
+        std::map<boost::uuids::uuid,std::vector<SysMLv2::REST::DigitalTwin*>> DigitalTwinMap;
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
-        std::vector<std::shared_ptr<SysMLv2::Entities::Project>> Projects;
+        std::vector<std::shared_ptr<SysMLv2::REST::Project>> Projects;
     };
 }
 

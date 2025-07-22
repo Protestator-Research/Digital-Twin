@@ -16,13 +16,13 @@ namespace DigitalTwin::Client::ViewModels {
     Parent(nullptr)
     {     }
 
-    ProjectTreeViewItem::ProjectTreeViewItem(SysMLv2::Entities::DigitalTwin *digitalTwin, ProjectTreeViewItem *parent) :
+    ProjectTreeViewItem::ProjectTreeViewItem(SysMLv2::REST::DigitalTwin *digitalTwin, ProjectTreeViewItem *parent) :
         ProjectData(nullptr),
         DigitalTwinData(digitalTwin),
         Parent(parent)
     {    }
 
-    ProjectTreeViewItem::ProjectTreeViewItem(std::shared_ptr<SysMLv2::Entities::Project> project, ProjectTreeViewItem *parent) :
+    ProjectTreeViewItem::ProjectTreeViewItem(std::shared_ptr<SysMLv2::REST::Project> project, ProjectTreeViewItem *parent) :
         ProjectData(project),
         DigitalTwinData(nullptr),
         Parent(parent)
@@ -68,11 +68,11 @@ namespace DigitalTwin::Client::ViewModels {
         return Parent;
     }
 
-    void ProjectTreeViewItem::appendProject(std::shared_ptr<SysMLv2::Entities::Project> project) {
+    void ProjectTreeViewItem::appendProject(std::shared_ptr<SysMLv2::REST::Project> project) {
         ChildItems.push_back(new ProjectTreeViewItem(project,this));
     }
 
-    void ProjectTreeViewItem::appendDigitalTwin(SysMLv2::Entities::DigitalTwin *digitalTwin) {
+    void ProjectTreeViewItem::appendDigitalTwin(SysMLv2::REST::DigitalTwin *digitalTwin) {
         ChildItems.push_back(new ProjectTreeViewItem(digitalTwin, this));
     }
 
@@ -83,11 +83,11 @@ namespace DigitalTwin::Client::ViewModels {
         ChildItems.clear();
     }
 
-    SysMLv2::Entities::DigitalTwin *ProjectTreeViewItem::getDigitalTwin() const {
+    SysMLv2::REST::DigitalTwin *ProjectTreeViewItem::getDigitalTwin() const {
         return DigitalTwinData;
     }
 
-    std::shared_ptr<SysMLv2::Entities::Project> ProjectTreeViewItem::getProject() const {
+    std::shared_ptr<SysMLv2::REST::Project> ProjectTreeViewItem::getProject() const {
         return ProjectData;
     }
 

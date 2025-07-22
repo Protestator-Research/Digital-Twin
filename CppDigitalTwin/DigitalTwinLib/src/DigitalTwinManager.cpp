@@ -45,11 +45,11 @@ namespace DigitalTwin {
         }
     }
 
-    std::vector<std::shared_ptr<SysMLv2::Entities::Element>> DigitalTwinManager::downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
+    std::vector<std::shared_ptr<SysMLv2::REST::Element>> DigitalTwinManager::downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
         return BackendCommunicationService->getAllElementsOfCommit(projectId,commitId);
     }
 
-    DigitalTwin::Model::DigitalTwinModel* DigitalTwinManager::addDigitalTwinAndCreateModel(SysMLv2::Entities::DigitalTwin *) {
+    DigitalTwin::Model::DigitalTwinModel* DigitalTwinManager::addDigitalTwinAndCreateModel(SysMLv2::REST::DigitalTwin *) {
 //        Model::DigitalTwinModel* returnValue = new Model::DigitalTwinModel(digitalTwin,this);
 //        DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(),returnValue));
 //        PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(digitalTwin->getId(), digitalTwin->parentProjectId());

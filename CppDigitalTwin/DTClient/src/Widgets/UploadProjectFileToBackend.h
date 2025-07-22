@@ -33,7 +33,7 @@ namespace DigitalTwin::Client {
         explicit UploadProjectFileToBackend(BACKEND_COMMUNICATION::CommunicationService* service, QWidget* parent = NULL);
         ~UploadProjectFileToBackend() override;
 
-        void setElementsForView(std::vector<std::shared_ptr<SysMLv2::Entities::Element>> elements, std::shared_ptr<SysMLv2::Entities::Commit> commit, std::shared_ptr<SysMLv2::Entities::Project> project);
+        void setElementsForView(std::vector<std::shared_ptr<SysMLv2::REST::Element>> elements, std::shared_ptr<SysMLv2::REST::Commit> commit, std::shared_ptr<SysMLv2::REST::Project> project);
         void setHTMLTextForView(QString htmlText);
 
     private slots:
@@ -49,14 +49,14 @@ namespace DigitalTwin::Client {
         void createOnlineProject();
         void redecorateWithStatusChange();
 
-        std::vector<std::shared_ptr<SysMLv2::Entities::Element>> Elements;
+        std::vector<std::shared_ptr<SysMLv2::REST::Element>> Elements;
         Ui::UploadProjectFileToBackend* Ui;
         MarkdownParser* Parser;
         QStandardItemModel* DTElementsModels;
         BACKEND_COMMUNICATION::CommunicationService* CommunicationService;
 
-        std::shared_ptr<SysMLv2::Entities::Commit> Commit;
-        std::shared_ptr<SysMLv2::Entities::Project> Project;
+        std::shared_ptr<SysMLv2::REST::Commit> Commit;
+        std::shared_ptr<SysMLv2::REST::Project> Project;
 
         UploadProjectFileToBackendStatus Status;
 

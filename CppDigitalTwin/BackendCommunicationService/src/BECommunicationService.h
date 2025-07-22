@@ -20,7 +20,7 @@
 // Forwarding
 //---------------------------------------------------------
 namespace SysMLv2 {
-    namespace Entities {
+    namespace REST {
         class IEntity;
         class Commit;
         class Branch;
@@ -49,7 +49,7 @@ namespace BACKEND_COMMUNICATION {
          * @param serverAddress Address of the Server. The server address can be an IP address or a url.
          * @param port Port of the AGILA Backend server.
          */
-        CommunicationService(std::string serverAddress, unsigned int port, std::string serverFolder = "/agila-server/");
+        CommunicationService(std::string serverAddress, unsigned int port, std::string serverFolder);
         /**
         * Constructor allows for the settings for the connection to the AGILA Backend.
         * @param serverAddress Address of the Server. The server address can be an IP address or a url.
@@ -71,13 +71,13 @@ namespace BACKEND_COMMUNICATION {
          * @see std::vector
          * @see ENTITIES::Element
          */
-        std::vector<std::shared_ptr<SysMLv2::Entities::Element>> getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId);
+        std::vector<std::shared_ptr<SysMLv2::REST::Element>> getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId);
 
         /**
          * Creates a connection to the REST endpoint of the given AGILA Backend sever, to get all saved projects within the instance of the Backend
          * @return An std::vector of the Projects
          */
-        std::vector<std::shared_ptr<SysMLv2::Entities::Project>> getAllProjects();
+        std::vector<std::shared_ptr<SysMLv2::REST::Project>> getAllProjects();
 
         /**
          * Creates online a project with the given Properties.
@@ -86,7 +86,7 @@ namespace BACKEND_COMMUNICATION {
          * @param defaultBranchName
          * @return
          */
-        std::shared_ptr<SysMLv2::Entities::Project> postProject(std::string projectName, std::string projectDescription, std::string defaultBranchName);
+        std::shared_ptr<SysMLv2::REST::Project> postProject(std::string projectName, std::string projectDescription, std::string defaultBranchName);
 
         /**
          * Downloads the Digital Twin data with its ID and the project id.
@@ -94,21 +94,21 @@ namespace BACKEND_COMMUNICATION {
          * @param projectId UUID ("@id") of the project.
          * @return The digital twins metadata.
          */
-        std::shared_ptr<SysMLv2::Entities::DigitalTwin> getDigitalTwinWithID(boost::uuids::uuid digitalTwinId, boost::uuids::uuid projectId);
+        std::shared_ptr<SysMLv2::REST::DigitalTwin> getDigitalTwinWithID(boost::uuids::uuid digitalTwinId, boost::uuids::uuid projectId);
 
         /**
          * Downloads all Digital Twins for a specific project.
          * @param projectId the ID of the given project.
          * @return A vector of all digital twins.
          */
-        std::vector<std::shared_ptr<SysMLv2::Entities::DigitalTwin>> getAllDigitalTwinsForProjectWithId(boost::uuids::uuid projectId);
+        std::vector<std::shared_ptr<SysMLv2::REST::DigitalTwin>> getAllDigitalTwinsForProjectWithId(boost::uuids::uuid projectId);
 
         /**
          * Download all branches for a project, with the projects id.
          * @param projectId UUID ("@id") of the project.
          * @return All Branches of the Project.
          */
-        std::vector<std::shared_ptr<SysMLv2::Entities::Branch>> getAllBranchesForProjectWithID(boost::uuids::uuid projectId);
+        std::vector<std::shared_ptr<SysMLv2::REST::Branch>> getAllBranchesForProjectWithID(boost::uuids::uuid projectId);
 
         /**
          * Download the commits with its commit id and project id identifying the specific commit.
@@ -117,7 +117,7 @@ namespace BACKEND_COMMUNICATION {
          * @return The complete Commit
          * @see ENTITIES::Commit
          */
-        std::shared_ptr<SysMLv2::Entities::Commit> getCommitWithId(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
+        std::shared_ptr<SysMLv2::REST::Commit> getCommitWithId(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
         /**
          * 
@@ -125,7 +125,7 @@ namespace BACKEND_COMMUNICATION {
          * @param commit 
          * @return 
          */
-        std::shared_ptr<SysMLv2::Entities::Commit> postCommitWithId(boost::uuids::uuid projectId, std::shared_ptr<SysMLv2::Entities::Commit> commit);
+        std::shared_ptr<SysMLv2::REST::Commit> postCommitWithId(boost::uuids::uuid projectId, std::shared_ptr<SysMLv2::REST::Commit> commit);
 
 
         /**
@@ -135,7 +135,7 @@ namespace BACKEND_COMMUNICATION {
          * @return All elements of the specific commit.
          * @see ENTITIES::Element
          */
-        std::vector<std::shared_ptr<SysMLv2::Entities::Element>> getAllElementsOfCommit(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
+        std::vector<std::shared_ptr<SysMLv2::REST::Element>> getAllElementsOfCommit(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
         /**
          * Sets and checks internally the user, that the server is connected to.
@@ -150,11 +150,11 @@ namespace BACKEND_COMMUNICATION {
          * @param digitalTwin
          * @return
          */
-        std::shared_ptr<SysMLv2::Entities::DigitalTwin> postDigitalTwin(std::shared_ptr<SysMLv2::Entities::DigitalTwin> digitalTwin, boost::uuids::uuid projectId);
+        std::shared_ptr<SysMLv2::REST::DigitalTwin> postDigitalTwin(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, boost::uuids::uuid projectId);
 
     private:
         std::string REST_Protocol = "http://";
-        std::string Entry_URI = "/agila-server/";
+        std::string Entry_URI = "";
         std::string ServerAddress = "localhost";
         unsigned int Port = 8080;
 

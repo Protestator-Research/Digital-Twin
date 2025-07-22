@@ -79,7 +79,7 @@ namespace DigitalTwin::Client {
         this->setWindowModified(false);
     }
 
-    void UploadProjectFileToBackend::setElementsForView(std::vector<std::shared_ptr<SysMLv2::Entities::Element>> elements, std::shared_ptr<SysMLv2::Entities::Commit> commit, std::shared_ptr<SysMLv2::Entities::Project> project) {
+    void UploadProjectFileToBackend::setElementsForView(std::vector<std::shared_ptr<SysMLv2::REST::Element>> elements, std::shared_ptr<SysMLv2::REST::Commit> commit, std::shared_ptr<SysMLv2::REST::Project> project) {
         Status = UploadProjectFileToBackendStatus::OnlineProjectOpened;
         Elements = elements;
         Commit = commit;
@@ -110,9 +110,9 @@ namespace DigitalTwin::Client {
         if(dialog.result()==QDialog::DialogCode::Accepted) {
             Project = CommunicationService->postProject(dialog.getProjectName(), dialog.getProjectDecription(), "Main");
 //            Elements = Parser->getElementsOfProject();
-            Commit = std::make_shared<SysMLv2::Entities::Commit>(dialog.getProjectName(), dialog.getProjectDecription(), Project);
+            Commit = std::make_shared<SysMLv2::REST::Commit>(dialog.getProjectName(), dialog.getProjectDecription(), Project);
 
-            std::vector<std::shared_ptr<SysMLv2::Entities::DataVersion>> dataVersions;
+            std::vector<std::shared_ptr<SysMLv2::REST::DataVersion>> dataVersions;
 //            for (const auto& element : Elements)
 //            {
 //                auto dataVersion = std::make_shared<SysMLv2::Entities::DataVersion>(new SysMLv2::Entities::DataIdentity(boost::uuids::random_generator()()), element);
@@ -148,7 +148,7 @@ namespace DigitalTwin::Client {
     }
 
     void UploadProjectFileToBackend::onCreateDigitalTwinClicked() {
-        std::vector<std::shared_ptr<SysMLv2::Entities::Element>> elements;
+        std::vector<std::shared_ptr<SysMLv2::REST::Element>> elements;
         for(const auto& elem : Elements) {
             if (!elem->body().empty() && (elem->language() != "Markdown") && (elem->language() != "YaML") && (elem->getType() == "TextualRepresentation"))
                 elements.push_back( elem);

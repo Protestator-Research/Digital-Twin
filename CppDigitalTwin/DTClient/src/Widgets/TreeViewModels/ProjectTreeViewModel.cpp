@@ -17,7 +17,7 @@ namespace DigitalTwin::Client::ViewModels {
         delete RootItem;
     }
 
-    void ProjectTreeViewModel::setProjects(std::vector<std::shared_ptr<SysMLv2::Entities::Project>> projects) {
+    void ProjectTreeViewModel::setProjects(std::vector<std::shared_ptr<SysMLv2::REST::Project>> projects) {
         if(projects.empty())
             return;
 
@@ -89,8 +89,8 @@ namespace DigitalTwin::Client::ViewModels {
         return 1;
     }
 
-    void ProjectTreeViewModel::setDigitalTwinForProjectWithId(SysMLv2::Entities::Project *project,
-                                                              std::vector<SysMLv2::Entities::DigitalTwin *> twins) {
+    void ProjectTreeViewModel::setDigitalTwinForProjectWithId(SysMLv2::REST::Project *project,
+                                                              std::vector<SysMLv2::REST::DigitalTwin *> twins) {
         beginInsertRows(QModelIndex(), 0, Projects.size()-1);
 
         for(int i = 0; i<RootItem->childCount(); i++){

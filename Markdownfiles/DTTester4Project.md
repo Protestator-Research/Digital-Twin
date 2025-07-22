@@ -121,10 +121,28 @@ part EVCharger {
     part dcdc : DCDC;
     part battery : Battery;
     part load : Load;
+    
+    connection grid2acdc {
+    	end gridOut : grid.ACVoltage;
+    	end acdcIn : acdc.ACVoltage;
+    }
+    
+    connection acdc2dcdc {
+    	end acdcOut : acdc.DCVoltage;
+    	end dcdcIn : dcdc.DCVoltageInput;
+    }
+    
+    connection dcdc2battery {
+    	end dcdcOut : dcdc.DCVoltageOutput;
+    	end batteryInOut : battery.DCVoltageOutput
+    }
+    
+    connection dcdc2load {
+    	end dcdcOut : dcdc.DCVoltageOutput;
+    	end loadIn : load.DCVoltage;
+    }
 }
 
-EVCharger::grid::ACVoltage connectTo EVCharger::acdc::ACVoltage;
-EVCharger::acdc::DCVoltage connectTo EVCharger::dcdc::DCVoltageInput;
-EVCharger::dcdc::DCVoltageOutput connectTo EVCharger::battery::DCVoltageOutput;
-EVCharger::dcdc::DCVoltageOutput connectTo EVCharger::load::DCVoltage;
+individual evCharger : EVCharger;
+
 ```

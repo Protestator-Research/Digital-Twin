@@ -9,7 +9,7 @@
 #include <vector>
 #include "ProjectTreeViewItem.h"
 
-namespace SysMLv2::Entities{
+namespace SysMLv2::REST{
     class Project;
     class DigitalTwin;
 }
@@ -31,13 +31,13 @@ namespace DigitalTwin::Client::ViewModels {
         int rowCount(const QModelIndex &parent = {}) const override;
         int columnCount(const QModelIndex &parent = {}) const override;
 
-        void setProjects(std::vector<std::shared_ptr<SysMLv2::Entities::Project>> projects);
-        void setDigitalTwinForProjectWithId(SysMLv2::Entities::Project* project, std::vector<SysMLv2::Entities::DigitalTwin*> twins);
+        void setProjects(std::vector<std::shared_ptr<SysMLv2::REST::Project>> projects);
+        void setDigitalTwinForProjectWithId(SysMLv2::REST::Project* project, std::vector<SysMLv2::REST::DigitalTwin*> twins);
         ProjectTreeViewItem* getProjectTreeViewItemFromIndex(const QModelIndex& index) const;
 
         void clearAllElements();
     private:
-        std::vector<std::shared_ptr<SysMLv2::Entities::Project>> Projects;
+        std::vector<std::shared_ptr<SysMLv2::REST::Project>> Projects;
         ProjectTreeViewItem* RootItem;
     };
 }
