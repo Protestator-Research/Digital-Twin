@@ -27,7 +27,7 @@ namespace DIGITAL_TWIN_SERVER {
     void DigitalTwinServerInstanceManager::createInstance() {
         BackendCommunicationService = new BACKEND_COMMUNICATION::CommunicationService(
                 ArgumentsMap[AGILA_URL],
-                std::stoi(ArgumentsMap[AGILA_PORT]));
+                std::stoi(ArgumentsMap[AGILA_PORT]), "");
         PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService(ArgumentsMap[INSTANCE_MQTT_PORT]);
         DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService, PhysicalTwinCommunicationService->getClientService(), true);
 

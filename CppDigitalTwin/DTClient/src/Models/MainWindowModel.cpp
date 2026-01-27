@@ -11,7 +11,7 @@
 #include <Services/MqttClientService.h>
 #include <sysmlv2/rest/entities/Branch.h>
 #include <sysmlv2/rest/entities/Commit.h>
-#include <sysmlv2/rest/entities/Element.h>
+#include <kerml/root/elements/Element.h>
 
 #include "MainWindowModel.h"
 #include "DigitalTwinClientSettings.h"

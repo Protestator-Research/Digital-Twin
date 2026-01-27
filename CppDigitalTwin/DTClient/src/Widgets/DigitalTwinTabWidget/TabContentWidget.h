@@ -6,6 +6,7 @@
 #define DIGITALTWIN_TABCONTENTWIDGET_H
 
 #include <QWidget>
+#include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QChartView>
 #include <QLineSeries>
 

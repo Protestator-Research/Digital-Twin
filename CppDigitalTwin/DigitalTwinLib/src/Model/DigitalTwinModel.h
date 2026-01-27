@@ -9,11 +9,15 @@
 #include <string>
 #include <map>
 #include <functional>
+#include <boost/uuid/uuid.hpp>
 
 #include "../cpp_digital_twin_lib_global.h"
 
-namespace SysMLv2::Entities {
+namespace SysMLv2::REST {
     class DigitalTwin;
+}
+
+namespace KerML::Entities {
     class Element;
 }
 
@@ -30,7 +34,7 @@ namespace DigitalTwin::Model {
     class CPPDIGITALTWINLIB_EXPORT DigitalTwinModel {
     public:
         DigitalTwinModel() = delete;
-        explicit DigitalTwinModel(SysMLv2::Entities::DigitalTwin* digitalTwin, DigitalTwinManager* manager);
+        explicit DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager* manager);
         virtual ~DigitalTwinModel();
 
         void generateDigitalTwinBackend();
@@ -46,8 +50,8 @@ namespace DigitalTwin::Model {
 
         void setUpdateModelFunction(std::function<void()> updateModel);
     private:
-//        SysMLv2::Entities::DigitalTwin* DigitalTwin;
-        std::vector<SysMLv2::Entities::Element*> DigitalTwinModelElements;
+        std::shared_ptr<SysMLv2::REST::DigitalTwin> DigitalTwin;
+        std::vector<std::shared_ptr<KerML::Entities::Element>> DigitalTwinModelElements;
         [[maybe_unused]] DigitalTwinManager* Manager;
         std::map<std::string, IDigitalTwinElement*> ComponentMap;
         std::map<std::string, IDigitalTwinElement*> PortMap;

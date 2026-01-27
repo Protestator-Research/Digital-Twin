@@ -10,6 +10,8 @@
 #include <vector>
 #include <boost/uuid/uuid.hpp>
 
+#include <memory>
+
 #include "cpp_digital_twin_lib_global.h"
 
 namespace BACKEND_COMMUNICATION {
@@ -22,6 +24,10 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
 namespace SysMLv2::REST {
     class DigitalTwin;
+}
+
+namespace KerML::Entities
+{
     class Element;
 }
 
@@ -41,9 +47,9 @@ namespace DigitalTwin {
 
         void downloadDigitalTwin(boost::uuids::uuid projectId, boost::uuids::uuid digitalTwinId);
 
-        DigitalTwin::Model::DigitalTwinModel* addDigitalTwinAndCreateModel(SysMLv2::REST::DigitalTwin* digitalTwin);
+        DigitalTwin::Model::DigitalTwinModel* addDigitalTwinAndCreateModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin);
 
-        std::vector<std::shared_ptr<SysMLv2::REST::Element>> downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
+        std::vector<std::shared_ptr<KerML::Entities::Element>> downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
     private:
         void generateMQTTInterface(Model::DigitalTwinModel* digitalTwin);

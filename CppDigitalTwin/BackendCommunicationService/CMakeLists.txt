@@ -10,7 +10,9 @@ find_package(sysmllib REQUIRED)
 add_library(CppBackendCommunication
         src/BECommunicationService.h
         src/BECommunicationService.cpp
-        src/cpp_backend_communication_global.h)
+        src/cpp_backend_communication_global.h
+        src/entities/DigitalTwin.cpp
+        src/entities/DigitalTwin.h)
 
 target_link_libraries(CppBackendCommunication
         CURL::libcurl

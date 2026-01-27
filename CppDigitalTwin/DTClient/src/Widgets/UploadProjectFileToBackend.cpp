@@ -14,6 +14,10 @@
 #include <boost/uuid/random_generator.hpp>
 #include <sysmlv2/rest/entities/DataIdentity.h>
 #include <sysmlv2/rest/entities/Commit.h>
+#include <sysmlv2/rest/entities/CommitRequest.h>
+#include <kerml/root/elements/Element.h>
+#include <kerml/root/annotations/TextualRepresentation.h>
+#include <memory>
 //#include "AGILABackendImplementation/DigitalTwin.h"
 
 namespace DigitalTwin::Client {
@@ -79,7 +83,7 @@ namespace DigitalTwin::Client {
         this->setWindowModified(false);
     }
 
-    void UploadProjectFileToBackend::setElementsForView(std::vector<std::shared_ptr<SysMLv2::REST::Element>> elements, std::shared_ptr<SysMLv2::REST::Commit> commit, std::shared_ptr<SysMLv2::REST::Project> project) {
+    void UploadProjectFileToBackend::setElementsForView(std::vector<std::shared_ptr<KerML::Entities::Element>> elements, std::shared_ptr<SysMLv2::REST::Commit> commit, std::shared_ptr<SysMLv2::REST::Project> project) {
         Status = UploadProjectFileToBackendStatus::OnlineProjectOpened;
         Elements = elements;
         Commit = commit;
@@ -89,8 +93,9 @@ namespace DigitalTwin::Client {
 
     void UploadProjectFileToBackend::setCodeElements() {
         for(const auto& elem : Elements) {
-            if(!elem->body().empty() && (elem->language()!="Markdown") && (elem->language() != "YaML") && (elem->getType()=="TextualRepresentation"))
-                DTElementsModels->appendRow( new QStandardItem(QString::fromStdString(elem->body())));
+            const auto& textualRep = std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem);
+            if(!textualRep->body().empty() && (textualRep->language()!="Markdown") && (textualRep->language() != "YaML") && (textualRep->getType()=="TextualRepresentation"))
+                DTElementsModels->appendRow( new QStandardItem(QString::fromStdString(textualRep->body())));
         }
     }
 
@@ -110,7 +115,7 @@ namespace DigitalTwin::Client {
         if(dialog.result()==QDialog::DialogCode::Accepted) {
             Project = CommunicationService->postProject(dialog.getProjectName(), dialog.getProjectDecription(), "Main");
 //            Elements = Parser->getElementsOfProject();
-            Commit = std::make_shared<SysMLv2::REST::Commit>(dialog.getProjectName(), dialog.getProjectDecription(), Project);
+            //Commit = std::make_shared<SysMLv2::REST::Commit>(dialog.getProjectName(), dialog.getProjectDecription(), Project);
 
             std::vector<std::shared_ptr<SysMLv2::REST::DataVersion>> dataVersions;
 //            for (const auto& element : Elements)
@@ -133,7 +138,7 @@ namespace DigitalTwin::Client {
             setCodeElements();
             QString markdown;
             for(const auto& elem : Elements){
-                markdown += QString::fromStdString(elem->getMarkdownString());
+                //markdown += QString::fromStdString(elem->getMarkdownString());
             }
             setMarkdownOfOnlineProject(markdown);
             Ui->actionDownload->setDisabled(false);
@@ -148,10 +153,11 @@ namespace DigitalTwin::Client {
     }
 
     void UploadProjectFileToBackend::onCreateDigitalTwinClicked() {
-        std::vector<std::shared_ptr<SysMLv2::REST::Element>> elements;
+        std::vector<std::shared_ptr<KerML::Entities::Element>> elements;
         for(const auto& elem : Elements) {
-            if (!elem->body().empty() && (elem->language() != "Markdown") && (elem->language() != "YaML") && (elem->getType() == "TextualRepresentation"))
-                elements.push_back( elem);
+            const auto& textRep = std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem);
+            if (!textRep->body().empty() && (textRep->language() != "Markdown") && (textRep->language() != "YaML") && (textRep->getType() == "TextualRepresentation"))
+                elements.push_back(textRep);
         }
 
         std::vector<boost::uuids::uuid> selectedElements;

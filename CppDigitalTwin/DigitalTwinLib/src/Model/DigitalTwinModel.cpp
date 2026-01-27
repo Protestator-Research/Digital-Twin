@@ -2,24 +2,23 @@
 // Created by Moritz Herzog on 23.05.24.
 //
 
-#include <sysmlv2service/online/SysMLAPIImplementation.h>
 #include <sysmlv2/rest/entities/DataIdentity.h>
-#include <sysmlv2/rest/entities/Element.h>
-#include <sysmlv2file/Parser.h>
+#include <kerml/root/elements/Element.h>
 #include <BaseFuctions/StringExtention.hpp>
+#include <boost/uuid/uuid.hpp>
 
 #include "DigitalTwinModel.h"
 #include "Entities/IDigitalTwinElement.h"
 #include "Entities/Component.h"
-#include "Entities/Connection.h"
-#include "Entities/Variable.h"
-#include "Entities/Port.h"
 #include "Exceptions/DigitalTwinAddressException.h"
 #include "../DigitalTwinManager.h"
+#include "entities/DigitalTwin.h"
+#include <kerml/root/annotations/TextualRepresentation.h>
+#include <sysmlv2/rest/entities/IEntity.h>
 
 namespace DigitalTwin::Model {
-    DigitalTwinModel::DigitalTwinModel(SysMLv2::Entities::DigitalTwin *, DigitalTwinManager *manager) :
-//            DigitalTwin(digitalTwin),
+    DigitalTwinModel::DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager *manager) :
+            DigitalTwin(digitalTwin),
             Manager(manager),
             UpdateModelFunction([]{})
     {
@@ -31,25 +30,26 @@ namespace DigitalTwin::Model {
     }
 
     void DigitalTwinModel::generateDigitalTwinBackend() {
-//        auto allElements = Manager->downloadDigitalTwinModel(DigitalTwin->parentProjectId(), DigitalTwin->commitId());
-//
-//        for(const auto item : DigitalTwin->getConnectedModels())
-//            for(const auto elem : allElements)
-//                if(item==elem->getId())
-//                    DigitalTwinModelElements.push_back(elem);
-//
-//        std::string completeModel;
-//
-//        for(const auto elem : DigitalTwinModelElements)
-//            completeModel+=elem->body();
-//
-//        auto digitalTwinElements = Parser::Parser::parse(Parser::SupportedModels::SysMLv2,completeModel);
-//        for(auto dtElement : digitalTwinElements) {
-//            if(dynamic_cast<Component*>(dtElement) != nullptr)
-//                ComponentMap.insert(std::make_pair(dtElement->getName(),dtElement));
-//            if(dynamic_cast<Port*>(dtElement) != nullptr)
-//                PortMap.insert(std::make_pair(dtElement->getName(), dtElement));
-//        }
+        auto allElements = Manager->downloadDigitalTwinModel(DigitalTwin->parentProjectId(), DigitalTwin->commitId());
+
+        for(const auto item : DigitalTwin->getConnectedModels())
+            for(const auto &elem : allElements)
+                if(item==elem->getId())
+                    DigitalTwinModelElements.push_back(elem);
+
+        std::string completeModel;
+
+        for(const auto &elem : DigitalTwinModelElements)
+            completeModel+=std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->body();
+
+        //auto digitalTwinElements = SysMLv2::Files::Parser::parseSysMLv2(completeModel);
+
+        // for(auto dtElement : digitalTwinElements) {
+            // if(dynamic_cast<Component*>(dtElement) != nullptr)
+                // ComponentMap.insert(std::make_pair(dtElement->getName(),dtElement));
+            // if(dynamic_cast<Port*>(dtElement) != nullptr)
+                // PortMap.insert(std::make_pair(dtElement->getName(), dtElement));
+        // }
     }
 
     std::string DigitalTwinModel::digitalTwinName() {

@@ -13,10 +13,10 @@
 #include <sysmlv2/rest/entities/Project.h>
 #include <sysmlv2/rest/entities/Commit.h>
 #include <sysmlv2/rest/entities/Branch.h>
-#include <sysmlv2/rest/entities/Element.h>
+#include <kerml/root/elements/Element.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/lexical_cast.hpp>
-#include <sysmlv2service/online/SysMLAPIImplementation.h>
+#include <sysmlv2/service/online/SysMLAPIImplementation.h>
 
 //---------------------------------------------------------
 // Internal Classes
@@ -41,12 +41,12 @@ namespace BACKEND_COMMUNICATION {
         Entry_URI = std::move(serverFolder);
     }
 
-    std::vector<std::shared_ptr<SysMLv2::REST::Element>> CommunicationService::getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId) {
+    std::vector<std::shared_ptr<KerML::Entities::Element>> CommunicationService::getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId) {
         auto entities = APIImplementation->getAllElementsFromCommit(boost::lexical_cast<std::string>(projectId),boost::lexical_cast<std::string>(commitId), BarrierString);
-        std::vector<std::shared_ptr<SysMLv2::REST::Element>> elements;
+        std::vector<std::shared_ptr<KerML::Entities::Element>> elements;
 
         for(auto entitiy : entities)
-            elements.push_back(dynamic_pointer_cast<SysMLv2::REST::Element>(entitiy));
+            elements.push_back(dynamic_pointer_cast<KerML::Entities::Element>(entitiy));
 
         return elements;
     }
@@ -115,13 +115,13 @@ namespace BACKEND_COMMUNICATION {
         return returnValue;
     }
 
-    std::vector<std::shared_ptr<SysMLv2::REST::Element >>
+    std::vector<std::shared_ptr<KerML::Entities::Element >>
     CommunicationService::getAllElementsOfCommit(boost::uuids::uuid projectId, boost::uuids::uuid commitId) {
         auto elements = APIImplementation->getAllElementsFromCommit(boost::lexical_cast<std::string>(projectId),boost::lexical_cast<std::string>(commitId), BarrierString);
-        std::vector<std::shared_ptr<SysMLv2::REST::Element>> returnValue;
+        std::vector<std::shared_ptr<KerML::Entities::Element>> returnValue;
 
         for(auto elem : elements)
-            returnValue.push_back(dynamic_pointer_cast<SysMLv2::REST::Element>(elem));
+            returnValue.push_back(dynamic_pointer_cast<KerML::Entities::Element>(elem));
 
         return returnValue;
     }

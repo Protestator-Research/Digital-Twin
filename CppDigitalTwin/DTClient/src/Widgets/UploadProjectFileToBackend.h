@@ -9,7 +9,7 @@
 #include <QStandardItemModel>
 #include "../Models/Markdown/MarkdownParser.h"
 #include <vector>
-#include <sysmlv2/rest/entities/Element.h>
+#include <kerml/root/elements/Element.h>
 #include <sysmlv2/rest/entities/Commit.h>
 #include <sysmlv2/rest/entities/Project.h>
 #include <BECommunicationService.h>
@@ -33,7 +33,7 @@ namespace DigitalTwin::Client {
         explicit UploadProjectFileToBackend(BACKEND_COMMUNICATION::CommunicationService* service, QWidget* parent = NULL);
         ~UploadProjectFileToBackend() override;
 
-        void setElementsForView(std::vector<std::shared_ptr<SysMLv2::REST::Element>> elements, std::shared_ptr<SysMLv2::REST::Commit> commit, std::shared_ptr<SysMLv2::REST::Project> project);
+        void setElementsForView(std::vector<std::shared_ptr<KerML::Entities::Element>> elements, std::shared_ptr<SysMLv2::REST::Commit> commit, std::shared_ptr<SysMLv2::REST::Project> project);
         void setHTMLTextForView(QString htmlText);
 
     private slots:
@@ -49,7 +49,7 @@ namespace DigitalTwin::Client {
         void createOnlineProject();
         void redecorateWithStatusChange();
 
-        std::vector<std::shared_ptr<SysMLv2::REST::Element>> Elements;
+        std::vector<std::shared_ptr<KerML::Entities::Element>> Elements;
         Ui::UploadProjectFileToBackend* Ui;
         MarkdownParser* Parser;
         QStandardItemModel* DTElementsModels;

@@ -14,6 +14,8 @@
 #include <map>
 #include <functional>
 
+#include "BECommunicationService.h"
+
 namespace SysMLv2::REST {
     class Element;
 }
@@ -25,10 +27,10 @@ namespace DigitalTwin::Client {
         MarkdownParser() = default;
 
 
-        void parseMarkdownFile(QString path);
+        void parseMarkdownFile(QString path); 
         void parseMarkdown(QString markdown);
 
-        std::vector<std::shared_ptr<SysMLv2::REST::Element>> getElementsOfProject();
+        std::vector<std::shared_ptr<KerML::Entities::Element>> getElementsOfProject();
         QString getHTMLOfMarkdown();
         QString getMarkdownString();
 
@@ -36,7 +38,7 @@ namespace DigitalTwin::Client {
         std::string MarkdownString;
         cmark_node* MarkdownDocument;
 
-        std::shared_ptr<SysMLv2::REST::Element> createElement(std::string language, std::string body);
+        std::shared_ptr<KerML::Entities::Element> createElement(std::string language, std::string body);
         void parseInternally();
     };
 }

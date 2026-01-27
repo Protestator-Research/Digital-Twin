@@ -26,11 +26,16 @@ namespace SysMLv2 {
         class Branch;
         class Project;
         class DigitalTwin;
-        class Element;
     }
 
     namespace API {
         class SysMLAPIImplementation;
+    }
+}
+
+namespace KerML {
+    namespace Entities {
+        class Element;
     }
 }
 
@@ -71,7 +76,7 @@ namespace BACKEND_COMMUNICATION {
          * @see std::vector
          * @see ENTITIES::Element
          */
-        std::vector<std::shared_ptr<SysMLv2::REST::Element>> getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId);
+        std::vector<std::shared_ptr<KerML::Entities::Element>> getAllElements(boost::uuids::uuid commitId, boost::uuids::uuid projectId);
 
         /**
          * Creates a connection to the REST endpoint of the given AGILA Backend sever, to get all saved projects within the instance of the Backend
@@ -135,7 +140,7 @@ namespace BACKEND_COMMUNICATION {
          * @return All elements of the specific commit.
          * @see ENTITIES::Element
          */
-        std::vector<std::shared_ptr<SysMLv2::REST::Element>> getAllElementsOfCommit(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
+        std::vector<std::shared_ptr<KerML::Entities::Element>> getAllElementsOfCommit(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
         /**
          * Sets and checks internally the user, that the server is connected to.

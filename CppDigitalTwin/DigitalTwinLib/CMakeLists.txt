@@ -4,7 +4,7 @@ project(CppDigitalTwinLib CXX)
 
 find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(Boost REQUIRED CONFIG)
+find_package(Boost REQUIRED)
 find_package(antlr4-runtime REQUIRED)
 find_package(sysmllib REQUIRED)
 
@@ -33,11 +33,13 @@ add_library(CppDigitalTwinLib
 )
 
 target_include_directories(CppDigitalTwinLib PUBLIC
+        boost::boost
         ../PhysicalTwinCommunicationService/src/
         ../BackendCommunicationService/src/
         ../CpsBaseLib/src)
 
 target_link_libraries(CppDigitalTwinLib
+        boost::boost
         CppPhysicalTwinCommunication
         CppBackendCommunication
         CPSBaseLib
