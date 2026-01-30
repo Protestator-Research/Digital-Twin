@@ -22,6 +22,8 @@ namespace DIGITAL_TWIN_SERVER {
         AGILA_USERNAME,
         AGILA_PASSWORD,
         INSTANCE_MQTT_PORT,
+        INSTANCE_MQTT_CERT_CHAIN,
+        INSTANCE_MQTT_CERT_PRIV,
         ARGUMENTS_SIZE
     };
 
@@ -55,11 +57,13 @@ namespace DIGITAL_TWIN_SERVER {
          *
          */
         const std::string Arguments[ARGUMENTS_SIZE] = {
-            "agila.url",
-            "agila.port",
-            "agila.username",
-            "agila.password",
-            "instance.mqtt.port"
+            "sysml.url",
+            "sysml.port",
+            "sysml.username",
+            "sysml.password",
+            "instance.mqtt.port",
+			"instance.mqtt.cert_chain",
+			"instance.mqtt.cert_private_key"
         };
 
         /**
@@ -68,16 +72,18 @@ namespace DIGITAL_TWIN_SERVER {
         const std::string DefaultValueForArgument[ARGUMENTS_SIZE]{
             "localhost",
             "8080",
-            "admin@cps.de",
             "admin",
-            "1883"
+            "admin",
+            "",
+			"",
+			""
         };
 
         void mapInstanceSettingsByArguments(int argc, char *argv[]);
 
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService = nullptr;
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
-        PHYSICAL_TWIN_COMMUNICATION::CommunicationService* PhysicalTwinCommunicationService = nullptr;
+        //PHYSICAL_TWIN_COMMUNICATION::CommunicationService* PhysicalTwinCommunicationService = nullptr;
 
         std::vector<SysMLv2::REST::Project*> Projects;
         std::map<ARGUMENTS,std::string> ArgumentsMap;
@@ -85,4 +91,4 @@ namespace DIGITAL_TWIN_SERVER {
 
         int ErrorCode = EXIT_SUCCESS;
     };
-}
+}<

@@ -8,7 +8,7 @@
 #include "../MQTT/Topics.h"
 
 #include <iostream>
-#include <async_mqtt/predefined_layer/ws.hpp>
+#include <async_mqtt/all.hpp>
 #include <thread>
 
 #include <boost/asio.hpp>

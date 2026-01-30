@@ -30,7 +30,7 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("boost/[>=1.86.0 <2]")
         self.requires("libcurl/[>=8.4.0 <9]")
         self.requires("nlohmann_json/[>=3.11.3 <3.13]")
-        self.requires("async-mqtt/8.0.1")
+        self.requires("async-mqtt/10.2.8")
         self.requires("date/3.0.4")
         if platform != "darwin":
             self.requires("qt/6.8.3")

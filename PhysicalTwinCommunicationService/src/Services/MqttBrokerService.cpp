@@ -6,7 +6,7 @@
 #include <boost/optional.hpp>
 #include <boost/asio/recycling_allocator.hpp>
 #include <memory>
-#include <async_mqtt/endpoint.hpp>
+#include <async_mqtt/all.hpp>
 
 #include "../broker_includes/broker.hpp"
 #include "../broker_includes/endpoint_variant.hpp"
