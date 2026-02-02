@@ -2,6 +2,8 @@
 
 #include <async_mqtt/all.hpp>
 #include "BrokerState.h"
+#include "SubscriptionStorage.h"
+#include "AuthenticationService.h"
 #include <memory>
 
 namespace DIGITAL_TWIN_SERVER
@@ -9,7 +11,8 @@ namespace DIGITAL_TWIN_SERVER
 	class Session : std::enable_shared_from_this<Session>
 	{
 	public:
-		explicit Session(boost::asio::any_io_executor executor, ) = default;
+		Session() = delete;
+		explicit Session(boost::asio::any_io_executor executor, SubscriptionStorage& subStore, AuthenticationService& authService, Principal principal);
 		~Session() = default;
 
 

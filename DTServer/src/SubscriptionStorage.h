@@ -22,12 +22,13 @@ namespace DIGITAL_TWIN_SERVER
 
 		void add(std::shared_ptr<Session> const& session, std::string filter, bool no_local);
 		void removeAll(std::shared_ptr<Session> const& session);
+		bool matchFilter(std::string_view filter, std::string_view topic);
+		static std::vector<std::string_view> split(std::string_view s);
+
 		template<class F>
 		void forEachMatch(std::string_view topic, Session const* publisher, F&& value);
-
 	private:
 		std::mutex Mutex;
 		std::vector<SubscriptionEntry> Subscriptions;
 	};
-
 }
