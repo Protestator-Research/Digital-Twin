@@ -4,10 +4,11 @@
 #include <vector>
 #include <memory>
 #include <string>
-#include "Session.h"
 
 namespace DIGITAL_TWIN_SERVER
 {
+	class Session;
+
 	struct SubscriptionEntry {
 		std::weak_ptr<Session> Session;
 		std::string Filter;

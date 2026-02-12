@@ -6,26 +6,31 @@
 #include <boost/optional.hpp>
 #include <boost/asio/recycling_allocator.hpp>
 #include <memory>
-#include <async_mqtt/endpoint.hpp>
 
 #include "MqttBrokerService.h"
 
+#include <async_mqtt/all.hpp>
 
-
+#include "Session.h"
+#include "SubscriptionStorage.h"
 
 namespace DIGITAL_TWIN_SERVER {
 
-    MQTTBrokerService::MQTTBrokerService(unsigned serverPort, std::string serverCertPath, std::string serverCertPrivKeyPath)
+    MQTTBrokerService::MQTTBrokerService(boost::asio::io_context* ioc, unsigned serverPort, std::string serverCertPath, std::string serverCertPrivKeyPath) :
+    Context(ioc),
+    Acceptor(*ioc,boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), serverPort))
     {
         ServerPort = serverPort;
-        assert(("Setting the servers SSL certificate but no private key is not allowed.", !serverCertPath.empty() && serverCertPrivKeyPath.empty()));
+        assert(!(!serverCertPath.empty() && serverCertPrivKeyPath.empty()));
         ServerCertPath = serverCertPath;
         ServerCertPrivKeyPath = serverCertPrivKeyPath;
     }
 
-    MQTTBrokerService::MQTTBrokerService(std::string serverCertPath, std::string serverCertPrivKeyPath)
+    MQTTBrokerService::MQTTBrokerService(boost::asio::io_context* ioc, std::string serverCertPath, std::string serverCertPrivKeyPath):
+    Context(ioc),
+    Acceptor(*ioc,boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 1883))
     {
-        assert(("Setting the servers SSL certificate but no private key is not allowed.", !serverCertPath.empty() && serverCertPrivKeyPath.empty()));
+        assert(!(!serverCertPath.empty() && serverCertPrivKeyPath.empty()));
         ServerCertPath = serverCertPath;
         ServerCertPrivKeyPath = serverCertPrivKeyPath;
     }
@@ -36,5 +41,23 @@ namespace DIGITAL_TWIN_SERVER {
 
     void MQTTBrokerService::run()
     {
+        accept_one();
+    }
+
+    void MQTTBrokerService::accept_one() {
+        using Ep = async_mqtt::endpoint<async_mqtt::role::server, async_mqtt::protocol::mqtt>;
+        SubscriptionStorage hub;
+
+        std::function<void()> do_accept;
+        do_accept = [this, &hub, do_accept]()  {
+            auto s = std::make_shared<Session>(Context->get_executor(), hub, authService);
+            Acceptor.async_accept(s->lowest_layer(), [&, s](boost::system::error_code ec) {
+                if (!ec) s->start();
+                do_accept();
+            });
+        };
+        do_accept();
+
+        Context->run();
     }
 }

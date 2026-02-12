@@ -12,7 +12,7 @@ namespace DIGITAL_TWIN_SERVER
 	{
 	public:
 		Session() = delete;
-		explicit Session(boost::asio::any_io_executor executor, SubscriptionStorage& subStore, AuthenticationService& authService, Principal principal);
+		Session(boost::asio::any_io_executor executor, SubscriptionStorage& subStore, AuthenticationService& authService);
 		~Session() = default;
 
 

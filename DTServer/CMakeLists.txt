@@ -4,32 +4,16 @@ add_executable(DigitalTwinServer
         src/main.cpp
         src/DigitalTwinServerInstanceManager.cpp
         src/DigitalTwinServerInstanceManager.h
-        src/MQTTBrokerLegacy/external/picosha2.h
-        src/MQTTBrokerLegacy/broker.hpp
-        src/MQTTBrokerLegacy/constant.hpp
-        src/MQTTBrokerLegacy/endpoint_variant.hpp
-        src/MQTTBrokerLegacy/fixed_core_map.hpp
-        src/MQTTBrokerLegacy/inflight_message.hpp
-        src/MQTTBrokerLegacy/mutex.hpp
-        src/MQTTBrokerLegacy/offline_message.hpp
-        src/MQTTBrokerLegacy/retain_type.hpp
-        src/MQTTBrokerLegacy/retained_messages.hpp
-        src/MQTTBrokerLegacy/retained_topic_map.hpp
-        src/MQTTBrokerLegacy/security.hpp
-        src/MQTTBrokerLegacy/session_state.hpp
-        src/MQTTBrokerLegacy/session_state_fwd.hpp
-        src/MQTTBrokerLegacy/shared_target.hpp
-        src/MQTTBrokerLegacy/shared_target_impl.hpp
-        src/MQTTBrokerLegacy/sub_con_map.hpp
-        src/MQTTBrokerLegacy/subscription.hpp
-        src/MQTTBrokerLegacy/subscription_map.hpp
-        src/MQTTBrokerLegacy/tags.hpp
-        src/MQTTBrokerLegacy/topic_filter.hpp
-        src/MQTTBrokerLegacy/uuid.hpp
         src/MQTTBrokerService.h
         src/MQTTBrokerService.cpp
         src/AuthenticationService.h
-        src/AuthenticationService.cpp)
+        src/AuthenticationService.cpp
+        src/BrokerState.h
+        src/BrokerState.cpp
+        src/Session.h
+        src/Session.cpp
+        src/SubscriptionStorage.h
+        src/SubscriptionStorage.cpp)
 
 target_include_directories(DigitalTwinServer PUBLIC
         ../BackendCommunicationService/src/

@@ -137,7 +137,7 @@ namespace DigitalTwin::Client {
         if(Status==UploadProjectFileToBackendStatus::OnlineProjectOpened) {
             setCodeElements();
             QString markdown;
-            for(const auto& elem : Elements){
+            for([[maybe_unused]] const auto& elem : Elements){
                 //markdown += QString::fromStdString(elem->getMarkdownString());
             }
             setMarkdownOfOnlineProject(markdown);

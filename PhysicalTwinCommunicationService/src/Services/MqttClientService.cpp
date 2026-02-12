@@ -10,194 +10,179 @@
 #include <iostream>
 #include <async_mqtt/all.hpp>
 #include <thread>
+#include <optional>
 
 #include <boost/asio.hpp>
-#include <boost/asio/async_result.hpp>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/use_awaitable.hpp>
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
-
-
-    MqttClientService::MqttClientService(std::string server, std::string port) :
-        ioContext(boost::asio::io_context())
-    {
+    MqttClientService::MqttClientService(std::string server, std::string port, std::string clientId) : KeepAlive(60),
+        Client(Strand),
+        ClientStarted(false),
+        Connected(false) {
         Server = server;
         Port = port;
-        Client = client_t::create(ioContext.get_executor());
+        ClientId = clientId;
     }
 
     MqttClientService::~MqttClientService() {
-
+        stop();
     }
 
-    void MqttClientService::sendValueToServer(std::string topic, std::string content) {
-            Client->async_publish(
-                    *Client->acquire_unique_packet_id(), // sync version only works thread safe context
-                    topic,
-                    content,
-                    async_mqtt::qos::at_least_once,
-                    [this](auto&&... args) {
-                        handlePublishResponse(
-                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
-                        );
-                    }
-            );
+    void MqttClientService::start() {
+        if (ClientStarted.exchange(true)) return;
+        WorkerThread = std::thread([this] {
+            boost::asio::co_spawn(Strand, [this]() -> boost::asio::awaitable<void> { co_await run(); }, boost::asio::detached);
+            IoContext.run();
+        });
     }
 
-    void MqttClientService::addCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction, std::string valueForInit) {
-        CallbackFuctionsPerTopic[topic] = callbackFunction;
-        std::vector<async_mqtt::topic_subopts> sub_entry;
-
-        for(auto element : CallbackFuctionsPerTopic) {
-            sub_entry.push_back({element.first, async_mqtt::qos::at_least_once});
-        }
-
-        if(ClientStarted) {
-            Client->async_subscribe(
-                    *Client->acquire_unique_packet_id(),
-                    async_mqtt::force_move(sub_entry),
-                    [this](auto&&... args) {
-                        handleSubscribeResponse(
-                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
-                        );
-                    }
-                    );
-
-            Client->async_publish(
-                    *Client->acquire_unique_packet_id(),
-                    topic,
-                    valueForInit,
-                    async_mqtt::qos::at_least_once,
-                    [this](auto&&... args) {
-                        handlePublishResponse(
-                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
-                        );
-                    }
-            );
-        }
+    void MqttClientService::stop() {
+        if (!ClientStarted.exchange(false)) return;
+        boost::asio::post(Strand, [this] {
+            boost::asio::co_spawn(Strand, [this]() -> boost::asio::awaitable<void> {
+                try { co_await Client.async_close(boost::asio::use_awaitable); } catch (...) {}
+                IoContext.stop();
+                co_return;
+            }, boost::asio::detached);
+        });
+        if (WorkerThread.joinable()) WorkerThread.join();
     }
 
-    void MqttClientService::connectClientStartCommunication() {
-        auto next_layer = &Client->next_layer();
-        async_mqtt::async_underlying_handshake(
-                *next_layer,
-                Server,
-                Port,
-                [this](auto&&... args) {
-                    handleUnderlyingHandshake(
-                            std::forward<std::remove_reference_t<decltype(args)>>(args)...
-                    );
-                }
+    void MqttClientService::publish(std::string topic, std::string payload, async_mqtt::qos qos) {
+        boost::asio::post(Strand, [this, topic=std::move(topic), payload=std::move(payload), qos] {
+        if (!Connected) return;
+        boost::asio::co_spawn(Strand, [this, topic, payload, qos]() -> boost::asio::awaitable<void> {
+            co_await Client.async_publish(async_mqtt::v5::publish_packet{topic, payload, qos}, boost::asio::use_awaitable);
+            co_return;
+            }, boost::asio::detached);
+        });
+    }
+
+    std::future<std::string> MqttClientService::request(std::string topic, std::string payload, std::string respTopic) {
+        std::promise<std::string> prom;
+        auto fut = prom.get_future();
+
+        boost::asio::post(Strand, [this,
+                          req_topic=std::move(topic),
+                          req_payload=std::move(payload),
+                          resp_topic=std::move(respTopic),
+                          prom=std::move(prom)]() mutable {
+            if (!Connected) {
+                prom.set_exception(std::make_exception_ptr(std::runtime_error("Not connected")));
+                return;
+            }
+
+            auto corr = makeCorrelationData();
+            std::string corr_key(reinterpret_cast<char const*>(corr.data()), corr.size());
+            Pending[corr_key] = std::move(prom);
+
+            // subscribe response topic einmalig (hier minimalistisch)
+            if (!HasResponseSubscription) {
+                HasResponseSubscription = true;
+                boost::asio::co_spawn(Strand, [this, resp_topic]() -> boost::asio::awaitable<void> {
+                    auto pid = co_await Client.async_acquire_unique_packet_id_wait_until(boost::asio::use_awaitable);
+                    if (!pid) co_return;
+                    std::vector<async_mqtt::topic_subopts> entries{{resp_topic, async_mqtt::qos::at_most_once}};
+                    co_await Client.async_subscribe(async_mqtt::v5::subscribe_packet{pid, async_mqtt::force_move(entries)},
+                                                     boost::asio::use_awaitable_t<boost::asio::any_io_executor>{});
+                    co_return;
+                }, boost::asio::detached);
+            }
+
+            // publish request mit ResponseTopic + CorrelationData
+            boost::asio::co_spawn(Strand, [this, req_topic, req_payload, resp_topic, corr_key]() -> boost::asio::awaitable<void> {
+                std::vector<async_mqtt::property_variant> props;
+                props.emplace_back(async_mqtt::property::response_topic{resp_topic});
+                props.emplace_back(async_mqtt::property::correlation_data{corr_key});
+                const auto package = async_mqtt::v5::publish_packet{
+                        req_topic, req_payload, async_mqtt::qos::at_most_once, async_mqtt::properties{async_mqtt::force_move(props)}
+                    };
+                co_await Client.async_publish(
+                    std::move(package),
+                    boost::asio::use_awaitable_t<boost::asio::any_io_executor>{}
+                );
+                co_return;
+            }, boost::asio::detached);
+        });
+
+        return fut;
+    }
+
+    boost::asio::awaitable<void> MqttClientService::run() {
+        // 1) TCP handshake :contentReference[oaicite:5]{index=5}
+        co_await Client.async_underlying_handshake(Server, Port, boost::asio::use_awaitable);
+
+        // 2) MQTT CONNECT + start receive loop :contentReference[oaicite:6]{index=6}
+        auto connack_opt = co_await Client.async_start(
+            async_mqtt::v5::connect_packet{
+                true,
+                (uint16_t)KeepAlive.count(),
+                ClientId
+            },
+            boost::asio::use_awaitable
         );
-        ioContext.run();
-    }
+        (void)connack_opt;
+        Connected = true;
 
-    void MqttClientService::handleUnderlyingHandshake(async_mqtt::error_code errorCode) {
-        if(errorCode) return;
-        Client->async_start(true,
-                           std::uint16_t(0),
-                           "",
-                           std::nullopt,
-                           "", //Username
-                           "", //Password
-                           [this](auto&&... args) {
-                               handleStartResponse(std::forward<decltype(args)>(args)...);
-                           }
-                           );
-        ClientStarted=true;
-    }
+        // 3) Receive dispatcher (holt PUBLISH/DISCONNECT/AUTH aus interner Queue) :contentReference[oaicite:7]{index=7}
+        while (ClientStarted) {
+            auto pv = co_await Client.async_recv(boost::asio::use_awaitable);
 
-    void MqttClientService::handleStartResponse(async_mqtt::error_code ec,
-                                                std::optional<client_t::connack_packet> connack_opt) {
-        if (ec) return;
-        if (connack_opt) {
-            std::cout << *connack_opt << std::endl;
-//            Client->async_publish(
-//                    *Client->acquire_unique_packet_id(),
-//                    CONNECT_TO_TWIN,
-//                    "value",
-//                    async_mqtt::qos::at_least_once,
-//                    [this](auto&&... args) {
-//                        handlePublishResponse(
-//                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
-//                        );
-//                    }
-//            );
-        }
-    }
+            pv->visit(async_mqtt::overload{
+                [&](async_mqtt::v5::publish_packet& p) {
+                    const std::string topic = p.topic();
+                    const std::string payload = p.payload();
 
-    void MqttClientService::handlePublishResponse(async_mqtt::error_code ec, client_t::pubres_type pubres) {
-        if (ec) return;
-        if (pubres.puback_opt) {
-            std::cout << *pubres.puback_opt << std::endl;
-        }
-        if (pubres.pubrec_opt) {
-            std::cout << *pubres.pubrec_opt << std::endl;
-        }
-        if (pubres.pubcomp_opt) {
-            std::cout << *pubres.pubcomp_opt << std::endl;
-            Client->async_disconnect(boost::asio::detached);
-        }
-    }
-
-    void MqttClientService::handleSubscribeResponse(async_mqtt::error_code ec, std::optional<client_t::suback_packet> suback_opt) {
-        if (ec) {
-            //reconnect();
-            return;
-        }
-        if (suback_opt) {
-            std::cout << *suback_opt << std::endl;
-        }
-        Client->async_recv(
-                [this](auto&&... args) {
-                    handleReceive(
-                            std::forward<std::remove_reference_t<decltype(args)>>(args)...
-                    );
-                }
-        );
-    }
-
-    void MqttClientService::handleReceive(async_mqtt::error_code ec, async_mqtt::packet_variant pv) {
-        if (ec) {
-//            reconnect();
-            return;
-        }
-        BOOST_ASSERT(pv);
-        auto value = pv.get<async_mqtt::v3_1_1::publish_packet>();
-
-        try {
-            CallbackFuctionsPerTopic[value.topic()](value.payload());
-        } catch(std::exception& ex) {
-            std::cout << ex.what() << std::endl;
-        }
-
-        // next receive
-        Client->async_recv(
-                [this](auto&&... args) {
-                    handleReceive(
-                            std::forward<std::remove_reference_t<decltype(args)>>(args)...
-                    );
-                }
-        );
-    }
-
-    void MqttClientService::addCallbackFunction(const std::string &topic, std::function<void(std::string)> callbackFunction) {
-        CallbackFuctionsPerTopic[topic] = callbackFunction;
-        std::vector<async_mqtt::topic_subopts> sub_entry;
-
-        for(auto element : CallbackFuctionsPerTopic) {
-            sub_entry.push_back({element.first, async_mqtt::qos::at_least_once});
-        }
-
-        if(ClientStarted) {
-            Client->async_subscribe(
-                    *Client->acquire_unique_packet_id(),
-                    async_mqtt::force_move(sub_entry),
-                    [this](auto&&... args) {
-                        handleSubscribeResponse(
-                                std::forward<std::remove_reference_t<decltype(args)>>(args)...
-                        );
+                    // Request/Response: correlation_data suchen
+                    if (auto corr_key = extractCorrelationKey(p)) {
+                        auto it = Pending.find(*corr_key);
+                        if (it != Pending.end()) {
+                            it->second.set_value(payload);
+                            Pending.erase(it);
+                            return;
+                        }
                     }
-            );
+
+                    // normale subscriptions (hier nur exact match)
+                    if (auto it = Subscriptions.find(topic); it != Subscriptions.end()) {
+                        it->second(topic, payload);
+                    }
+                },
+                [&](async_mqtt::v5::disconnect_packet&) {
+                    Connected = false;
+                },
+                [&](auto&) {
+                    // ignore
+                }
+            });
         }
+
+        co_return;
+    }
+
+    std::vector<uint8_t> MqttClientService::makeCorrelationData() {
+        static std::uint64_t counter = 0;
+        auto v = ++counter;
+
+        std::vector<std::uint8_t> data(sizeof(v));
+        std::memcpy(data.data(), &v, sizeof(v));
+        return data;
+    }
+
+    std::optional<std::string> MqttClientService::extractCorrelationKey(async_mqtt::v5::publish_packet const &packet) {
+        // publish_packet besitzt properties; correlation_data ist ein MQTT v5 property
+        // (Konkrete Property-Container-Typen sind in async_mqtt als property_variant modelliert)
+        for (auto const& prop : packet.props()) {
+            if (auto cd = prop.get_if<async_mqtt::property::correlation_data>()) {
+                auto const& b = cd->val();
+                return std::string(reinterpret_cast<const char*>(b.data()), b.size());
+            }
+        }
+        return std::nullopt;
     }
 }

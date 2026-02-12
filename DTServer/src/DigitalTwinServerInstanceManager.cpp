@@ -20,7 +20,7 @@ namespace DIGITAL_TWIN_SERVER {
         if(ErrorCode==EXIT_SUCCESS){
             delete BackendCommunicationService;
             delete DigitalTwinManager;
-            delete PhysicalTwinCommunicationService;
+            // delete PhysicalTwinCommunicationService;
         }
     }
 
@@ -28,29 +28,31 @@ namespace DIGITAL_TWIN_SERVER {
         BackendCommunicationService = new BACKEND_COMMUNICATION::CommunicationService(
                 ArgumentsMap[AGILA_URL],
                 std::stoi(ArgumentsMap[AGILA_PORT]), "");
-        PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService(ArgumentsMap[INSTANCE_MQTT_PORT]);
-        DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService, PhysicalTwinCommunicationService->getClientService(), true);
+        // PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService(ArgumentsMap[INSTANCE_MQTT_PORT]);
+        BrokerService = new MQTTBrokerService();
+        DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService, nullptr, true);
 
     }
 
     void DigitalTwinServerInstanceManager::runInstance() {
-        PhysicalTwinCommunicationService->startThreads();
+        BrokerService->run();
+        // PhysicalTwinCommunicationService->startThreads();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        PhysicalTwinCommunicationService->addObservationCallbackForTopic(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN,[&](std::string value) {
-            if(value.empty()) {
-                PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity;
-                PhysicalTwinCommunicationService->publishMQTTMessage(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN,entity.serialize());
-            } else {
-                PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(value);
-                DigitalTwinManager->downloadDigitalTwin(entity.projectId(),entity.digitalTwinId());
-            }
-        },PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity().serialize());
+        // PhysicalTwinCommunicationService->addObservationCallbackForTopic(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN,[&](std::string value) {
+            // if(value.empty()) {
+                // PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity;
+                // PhysicalTwinCommunicationService->publishMQTTMessage(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN,entity.serialize());
+            // } else {
+                // PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(value);
+                // DigitalTwinManager->downloadDigitalTwin(entity.projectId(),entity.digitalTwinId());
+            // }
+        // },PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity().serialize());
 
         BackendCommunicationService->setUserForLoginInBackend(ArgumentsMap[AGILA_USERNAME], ArgumentsMap[AGILA_PASSWORD]);
 
-        PhysicalTwinCommunicationService->joinThreads();
+        // PhysicalTwinCommunicationService->joinThreads();
     }
 
     int DigitalTwinServerInstanceManager::getRunTimeCode() {

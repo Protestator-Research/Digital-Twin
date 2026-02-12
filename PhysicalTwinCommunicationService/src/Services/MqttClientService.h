@@ -14,10 +14,15 @@
 
 #include <async_mqtt/all.hpp>
 
+#include <boost/asio.hpp>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/strand.hpp>
 
 #include "../cpp_physical_twin_communication_global.h"
 
-using client_t = async_mqtt::client<async_mqtt::protocol_version::v3_1_1,async_mqtt::protocol::mqtt>;
+using client_t = async_mqtt::client<async_mqtt::protocol_version::v5,async_mqtt::protocol::mqtt>;
 
 namespace PHYSICAL_TWIN_COMMUNICATION {
     class CPPPHYSICALTWINCOMMUNICATION_EXPORT MqttClientService {
@@ -31,50 +36,40 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
          * @param server The Server URL or IP
          * @param port The Port on the server, where the DT Server is running.
          */
-        MqttClientService(std::string server, std::string port);
+        MqttClientService(std::string server, std::string port, std::string clientId);
 
         virtual ~MqttClientService();
 
-        /**
-         * Sends the value for a given Topic to the server.
-         * @param topic MQTT Topic
-         * @param content Content that is sent.
-         */
-        void sendValueToServer(std::string topic, std::string content);
-        /**
-         *
-         * @param topic
-         * @param callbackFunction
-         */
-        void addCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction);
-        /**
-         *
-         * @param topic
-         * @param callbackFunction
-         * @param valueForInit
-         */
-        void addCallbackFunction(const std::string& topic, std::function<void(std::string)> callbackFunction, std::string valueForInit);
-        /**
-         * Connects to a client and starts the communication.
-         */
-        void connectClientStartCommunication();
+        void start();
+        void stop();
+
+        void publish(std::string topic, std::string payload, async_mqtt::qos qos=async_mqtt::qos::at_most_once);
+        std::future<std::string> request(std::string topic, std::string payload, std::string respTopic);
+
+
 
     private:
-        void handleUnderlyingHandshake(async_mqtt::error_code errorCode);
-        void handleStartResponse(async_mqtt::error_code ec, std::optional<client_t::connack_packet> connack_opt);
-        void handlePublishResponse(async_mqtt::error_code ec, client_t::pubres_type pubres);
-        void handleSubscribeResponse(async_mqtt::error_code ec, std::optional<client_t::suback_packet> suback_opt);
-        void handleReceive(async_mqtt::error_code ec, async_mqtt::packet_variant pv);
+        boost::asio::awaitable<void> run();
+        static std::vector<uint8_t> makeCorrelationData();
+        static std::optional<std::string> extractCorrelationKey(async_mqtt::v5::publish_packet const& packet);
 
-        std::map<std::string,std::function<void(std::string)>> CallbackFuctionsPerTopic;
-        std::map<uint16_t, std::string> PackedIdToTopicMapping;
-
-        boost::asio::io_context ioContext;
-        std::shared_ptr<client_t> Client;
+        boost::asio::io_context IoContext;
         std::string Server;
         std::string Port;
+        std::string ClientId;
+        std::chrono::seconds KeepAlive;
 
-        bool ClientStarted = false;
+        boost::asio::strand<boost::asio::any_io_executor> Strand;
+
+        std::thread WorkerThread;
+        async_mqtt::client<async_mqtt::protocol_version::v5, async_mqtt::protocol::mqtt> Client;
+
+        std::atomic<bool> ClientStarted;
+        std::atomic<bool> Connected;
+
+        std::unordered_map<std::string, std::function<void(std::string topic, std::string payload)>> Subscriptions;
+        std::unordered_map<std::string, std::promise<std::string>> Pending;
+        bool HasResponseSubscription{false};
     };
 }
 

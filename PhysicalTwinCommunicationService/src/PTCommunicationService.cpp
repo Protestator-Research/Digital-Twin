@@ -17,7 +17,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
     CommunicationService::CommunicationService(std::string mqttPort) {
         MqttPort=std::stoi(mqttPort);
-        ClientService = new MqttClientService("localhost",std::to_string(MqttPort));
+        ClientService = new MqttClientService("localhost",std::to_string(MqttPort),"");
     }
 
     void CommunicationService::startThreads() {
@@ -28,7 +28,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
             ClientThread = std::thread([this] {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                ClientService->connectClientStartCommunication();
+                ClientService->start();
             });
         }
         catch(std::exception& e) {
@@ -36,12 +36,12 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         }
     }
 
-    void CommunicationService::addObservationCallbackForTopic(std::string topic, std::function<void(std::string)> callback, std::string initValue) {
-        ClientService->addCallbackFunction(topic,callback, initValue);
+    void CommunicationService::addObservationCallbackForTopic([[maybe_unused]] std::string topic,[[maybe_unused]] std::function<void(std::string)> callback,[[maybe_unused]] std::string initValue) {
+        // ClientService->addCallbackFunction(topic,callback, initValue);
     }
 
     void CommunicationService::publishMQTTMessage(std::string topic, std::string content) {
-        ClientService->sendValueToServer(topic, content);
+        ClientService->publish(topic, content);
     }
 
     void CommunicationService::joinThreads() {

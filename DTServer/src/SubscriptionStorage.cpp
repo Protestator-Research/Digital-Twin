@@ -1,5 +1,7 @@
 ﻿#include "SubscriptionStorage.h"
+#include <algorithm>
 
+#include "Session.h"
 
 namespace DIGITAL_TWIN_SERVER
 {
@@ -12,7 +14,7 @@ namespace DIGITAL_TWIN_SERVER
 	void SubscriptionStorage::removeAll(std::shared_ptr<Session> const& session)
 	{
 		std::lock_guard lg(Mutex);
-		Subscriptions.erase(std::remove_if(Subscriptions.begin(), Subscriptions.end(), [&](const& auto elem)
+		Subscriptions.erase(std::remove_if(Subscriptions.begin(), Subscriptions.end(), [&](SubscriptionEntry elem)
 		{
 			auto session_lock = elem.Session.lock();
 			return !session_lock || session_lock.get() == session.get();

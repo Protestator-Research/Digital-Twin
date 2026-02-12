@@ -10,6 +10,7 @@
 #include <BECommunicationService.h>
 #include <DigitalTwinManager.h>
 #include <PTCommunicationService.h>
+#include "MqttBrokerService.h"
 
 
 namespace DIGITAL_TWIN_SERVER {
@@ -71,7 +72,7 @@ namespace DIGITAL_TWIN_SERVER {
          */
         const std::string DefaultValueForArgument[ARGUMENTS_SIZE]{
             "localhost",
-            "8080",
+            "8088",
             "admin",
             "admin",
             "",
@@ -84,6 +85,7 @@ namespace DIGITAL_TWIN_SERVER {
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService = nullptr;
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
         //PHYSICAL_TWIN_COMMUNICATION::CommunicationService* PhysicalTwinCommunicationService = nullptr;
+        MQTTBrokerService* BrokerService = nullptr;
 
         std::vector<SysMLv2::REST::Project*> Projects;
         std::map<ARGUMENTS,std::string> ArgumentsMap;
@@ -91,4 +93,4 @@ namespace DIGITAL_TWIN_SERVER {
 
         int ErrorCode = EXIT_SUCCESS;
     };
-}<
+}

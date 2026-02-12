@@ -54,14 +54,14 @@ namespace DigitalTwin {
         Model::DigitalTwinModel* returnValue = new Model::DigitalTwinModel(digitalTwin,this);
         DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(),returnValue));
         PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(digitalTwin->getId(), digitalTwin->parentProjectId());
-        ClientService->sendValueToServer(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN, entity.serialize());
+        ClientService->publish(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN, entity.serialize());
         return returnValue;
     }
 
     void DigitalTwinManager::generateMQTTInterface(Model::DigitalTwinModel* digitalTwin) {
         std::string baseName = digitalTwin->digitalTwinName();
         for(const auto &elementName : digitalTwin->getElementStrings()) {
-            ClientService->sendValueToServer(baseName + "/" + elementName, "testValue");
+            ClientService->publish(baseName + "/" + elementName, "testValue");
         }
     }
 

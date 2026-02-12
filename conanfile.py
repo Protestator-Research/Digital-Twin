@@ -32,11 +32,11 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("nlohmann_json/[>=3.11.3 <3.13]")
         self.requires("async-mqtt/10.2.8")
         self.requires("date/3.0.4")
-        if platform != "darwin":
-            self.requires("qt/6.8.3")
+        self.requires("qt/6.8.3")
         self.requires("md4c/0.5.2")
         self.requires("sysmllib/1.0-beta-4-main")
         self.requires("yaml-cpp/0.8.0")
+        self.requires("openssl/3.6.0")
 
     def config_options(self):
         if self.settings.os == "Windows":
