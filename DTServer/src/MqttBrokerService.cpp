@@ -41,22 +41,16 @@ namespace DIGITAL_TWIN_SERVER {
 
     void MQTTBrokerService::run()
     {
-        accept_one();
+        SubscriptionStorage hub;
+        accept_one(hub);
+        Context->run();
     }
 
-    void MQTTBrokerService::accept_one() {
-        SubscriptionStorage hub;
-
-        std::function<void()> do_accept;
-        do_accept = [this, &hub, do_accept]()  {
-            auto s = std::make_shared<Session>(Context->get_executor(), hub, authService);
-            Acceptor.async_accept(s->lowest_layer(), [&, s](boost::system::error_code ec) {
-                if (!ec) s->start();
-                do_accept();
-            });
-        };
-        do_accept();
-
-        Context->run();
+    void MQTTBrokerService::accept_one(SubscriptionStorage& hub) {
+        auto s = new Session(Context, hub, authService);
+        Acceptor.async_accept(s->lowest_layer(), [&, s](boost::system::error_code ec) {
+            if (!ec) s->start();
+            accept_one(hub);
+        });
     }
 }

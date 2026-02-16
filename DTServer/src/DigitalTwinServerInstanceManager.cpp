@@ -29,7 +29,7 @@ namespace DIGITAL_TWIN_SERVER {
                 ArgumentsMap[AGILA_URL],
                 std::stoi(ArgumentsMap[AGILA_PORT]), "");
         // PhysicalTwinCommunicationService = new PHYSICAL_TWIN_COMMUNICATION::CommunicationService(ArgumentsMap[INSTANCE_MQTT_PORT]);
-        BrokerService = new MQTTBrokerService(new boost::asio::io_context{static_cast<int>(std::thread::hardware_concurrency() / 2)},1883);
+        BrokerService = new MQTTBrokerService(new boost::asio::io_context(),1883);
         DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService, nullptr, true);
 
     }

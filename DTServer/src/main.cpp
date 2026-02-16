@@ -21,7 +21,8 @@ int main(int argc, char *argv[]) {
 
     try {
         instanceManager->runInstance();
-    }catch (...){
+    }catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
         instanceManager->destroyOnError();
     }
 
