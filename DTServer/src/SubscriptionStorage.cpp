@@ -5,19 +5,19 @@
 
 namespace DIGITAL_TWIN_SERVER
 {
-	void SubscriptionStorage::add(std::shared_ptr<Session> const& session, std::string filter, bool no_local)
+	void SubscriptionStorage::add(Session* session, std::string filter, bool no_local)
 	{
 		std::lock_guard lg(Mutex);
 		Subscriptions.push_back(SubscriptionEntry{ session,std::move(filter), no_local });
 	}
 
-	void SubscriptionStorage::removeAll(std::shared_ptr<Session> const& session)
+	void SubscriptionStorage::removeAll(Session* session)
 	{
 		std::lock_guard lg(Mutex);
 		Subscriptions.erase(std::remove_if(Subscriptions.begin(), Subscriptions.end(), [&](SubscriptionEntry elem)
 		{
-			auto session_lock = elem.Session.lock();
-			return !session_lock || session_lock.get() == session.get();
+			auto session_lock = elem.Session;
+			return !session_lock || session_lock == session;
 		}), Subscriptions.end());
 	}
 
@@ -50,7 +50,7 @@ namespace DIGITAL_TWIN_SERVER
 
 	void SubscriptionStorage::broadcast(std::string topic, std::string payload) {
 		for (const auto& subscription : Subscriptions) {
-			subscription.Session.lock()->send_qos0_publish(topic, payload);
+			subscription.Session->send_qos0_publish(topic, payload);
 		}
 	}
 
@@ -60,13 +60,13 @@ namespace DIGITAL_TWIN_SERVER
 		std::lock_guard lg(Mutex);
 		for (auto it = Subscriptions.begin(); it != Subscriptions.end();)
 		{
-			auto session_lock = it->Session.lock();
+			auto session_lock = it->Session;
 			if (!session_lock)
 			{
 				it = Subscriptions.erase(it);
 				continue;
 			}
-			if (it->NoLocal && session_lock.get() == publisher)
+			if (it->NoLocal && session_lock == publisher)
 			{
 				++it;
 				continue;

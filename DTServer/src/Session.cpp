@@ -5,26 +5,25 @@
 
 namespace DIGITAL_TWIN_SERVER
 {
-    Session::Session(boost::asio::any_io_executor executor, SubscriptionStorage &subStore,
+    Session::Session(boost::asio::io_context* ioc, SubscriptionStorage &subStore,
                      [[maybe_unused]] AuthenticationService &authService) :
-        ServerEndpoint(std::make_shared<async_mqtt::endpoint<async_mqtt::role::server, async_mqtt::protocol::mqtt>>(async_mqtt::protocol_version::v5,async_mqtt::force_move(executor))),
         _subscriptionStorage(subStore){
+        ServerEndpoint = new async_mqtt::endpoint<async_mqtt::role::server, async_mqtt::protocol::mqtt>(async_mqtt::protocol_version::v5,ioc->get_executor());
     }
 
     void Session::start() {
-        _subscriptionStorage.add(this->shared_from_this(),"",false);
+        _subscriptionStorage.add(this,"",false);
         recv_connect();
     }
 
     void Session::stop() {
-        auto self = this->shared_from_this();
-        _subscriptionStorage.removeAll(self);
+        _subscriptionStorage.removeAll(this);
         boost::system::error_code ec;
         ServerEndpoint->lowest_layer().close(ec);
     }
 
     void Session::recv_connect() {
-        auto self = this->shared_from_this();
+        auto self = this;
         ServerEndpoint->async_recv([self](async_mqtt::error_code const& ec, std::optional<async_mqtt::packet_variant> pv_opt) {
             if (ec || !pv_opt) return self->stop();
 
@@ -50,7 +49,7 @@ namespace DIGITAL_TWIN_SERVER
     }
 
     void Session::recv_loop() {
-        auto self = this->shared_from_this();
+        auto self = this;
         ServerEndpoint->async_recv([self](async_mqtt::error_code const& ec, std::optional<async_mqtt::packet_variant> pv_opt) {
             if (ec || !pv_opt) return self->stop();
 
@@ -108,5 +107,9 @@ namespace DIGITAL_TWIN_SERVER
 
     boost::asio::ip::tcp::socket::lowest_layer_type & Session::lowest_layer() {
         return ServerEndpoint->lowest_layer();
+    }
+
+    bool Session::operator==(const Session &other) const {
+        return ClientId==other.ClientId;
     }
 }
