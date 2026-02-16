@@ -45,7 +45,6 @@ namespace DIGITAL_TWIN_SERVER {
     }
 
     void MQTTBrokerService::accept_one() {
-        using Ep = async_mqtt::endpoint<async_mqtt::role::server, async_mqtt::protocol::mqtt>;
         SubscriptionStorage hub;
 
         std::function<void()> do_accept;

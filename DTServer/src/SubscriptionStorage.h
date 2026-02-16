@@ -28,6 +28,8 @@ namespace DIGITAL_TWIN_SERVER
 
 		template<class F>
 		void forEachMatch(std::string_view topic, Session const* publisher, F&& value);
+
+		void broadcast(std::string topic, std::string payload);
 	private:
 		std::mutex Mutex;
 		std::vector<SubscriptionEntry> Subscriptions;

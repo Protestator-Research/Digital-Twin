@@ -48,6 +48,12 @@ namespace DIGITAL_TWIN_SERVER
 		return out;
 	}
 
+	void SubscriptionStorage::broadcast(std::string topic, std::string payload) {
+		for (const auto& subscription : Subscriptions) {
+			subscription.Session.lock()->send_qos0_publish(topic, payload);
+		}
+	}
+
 	template <class F>
 	void SubscriptionStorage::forEachMatch(std::string_view topic, Session const* publisher, F&& function)
 	{
