@@ -1,0 +1,275 @@
+<RCC>
+    <qresource prefix="/icons/arrows">
+        <file>icons/2874403-arrows/png/001-arrow upper right.png</file>
+        <file>icons/2874403-arrows/png/002-up left.png</file>
+        <file>icons/2874403-arrows/png/003-arrow upper right.png</file>
+        <file alias="StepBack">icons/2874403-arrows/png/004-arrow left.png</file>
+        <file alias="StepForward">icons/2874403-arrows/png/005-arrow right.png</file>
+        <file>icons/2874403-arrows/png/006-down arrow.png</file>
+        <file>icons/2874403-arrows/png/007-up arrow.png</file>
+        <file>icons/2874403-arrows/png/008-double arrows.png</file>
+        <file>icons/2874403-arrows/png/009-two arrows.png</file>
+        <file>icons/2874403-arrows/png/010-down right arrow.png</file>
+        <file>icons/2874403-arrows/png/011-down left arrow.png</file>
+        <file>icons/2874403-arrows/png/012-arrow upward.png</file>
+        <file>icons/2874403-arrows/png/013-arrow upper right.png</file>
+        <file>icons/2874403-arrows/png/014-arrow left.png</file>
+        <file>icons/2874403-arrows/png/015-arrow right.png</file>
+        <file>icons/2874403-arrows/png/016-download.png</file>
+        <file>icons/2874403-arrows/png/017-up arrow.png</file>
+        <file>icons/2874403-arrows/png/018-direction arrow.png</file>
+        <file>icons/2874403-arrows/png/019-direction arrow.png</file>
+        <file>icons/2874403-arrows/png/020-refresh.png</file>
+        <file>icons/2874403-arrows/png/021-direction arrow.png</file>
+        <file>icons/2874403-arrows/png/022-left and right arrows.png</file>
+        <file>icons/2874403-arrows/png/023-arrow pointer.png</file>
+        <file>icons/2874403-arrows/png/024-arrow left.png</file>
+        <file>icons/2874403-arrows/png/025-double arrows.png</file>
+        <file>icons/2874403-arrows/png/026-fast forward.png</file>
+        <file>icons/2874403-arrows/png/027-rewind.png</file>
+        <file>icons/2874403-arrows/png/028-down arrow.png</file>
+        <file>icons/2874403-arrows/png/029-up arrow.png</file>
+        <file>icons/2874403-arrows/png/030-arrow left.png</file>
+        <file>icons/2874403-arrows/png/031-right arrow.png</file>
+        <file>icons/2874403-arrows/png/032-curve arrow.png</file>
+        <file>icons/2874403-arrows/png/033-down left arrow.png</file>
+        <file>icons/2874403-arrows/png/034-turn right.png</file>
+        <file>icons/2874403-arrows/png/035-left turn.png</file>
+        <file>icons/2874403-arrows/png/036-arrow down.png</file>
+        <file>icons/2874403-arrows/png/037-up arrow.png</file>
+        <file>icons/2874403-arrows/png/038-arrow right.png</file>
+        <file>icons/2874403-arrows/png/039-left turn.png</file>
+        <file>icons/2874403-arrows/png/040-down left arrow.png</file>
+        <file>icons/2874403-arrows/png/041-down right arrow.png</file>
+        <file>icons/2874403-arrows/png/042-turn left.png</file>
+        <file>icons/2874403-arrows/png/043-turn right.png</file>
+        <file>icons/2874403-arrows/png/044-double chevron.png</file>
+        <file>icons/2874403-arrows/png/045-right chevron.png</file>
+        <file alias="UpGreen">icons/2874403-arrows/png/046-down chevron.png</file>
+        <file alias="DownGreen">icons/2874403-arrows/png/047-up chevron.png</file>
+        <file>icons/2874403-arrows/png/048-down left arrow.png</file>
+        <file>icons/2874403-arrows/png/049-down right arrow.png</file>
+        <file>icons/2874403-arrows/png/050-turn left.png</file>
+        <file>icons/2874403-arrows/png/051-arrow upper right.png</file>
+        <file>icons/2874403-arrows/png/052-back arrow.png</file>
+        <file>icons/2874403-arrows/png/053-arrow right.png</file>
+        <file>icons/2874403-arrows/png/054-down arrow.png</file>
+        <file>icons/2874403-arrows/png/055-up arrow.png</file>
+        <file>icons/2874403-arrows/png/056-down left arrow.png</file>
+        <file>icons/2874403-arrows/png/057-down right arrow.png</file>
+        <file>icons/2874403-arrows/png/058-up left.png</file>
+        <file>icons/2874403-arrows/png/059-arrow upper right.png</file>
+        <file>icons/2874403-arrows/png/060-down arrow.png</file>
+        <file>icons/2874403-arrows/png/061-up arrow.png</file>
+        <file>icons/2874403-arrows/png/062-arrow left.png</file>
+        <file>icons/2874403-arrows/png/063-arrow right.png</file>
+        <file>icons/2874403-arrows/png/064-arrow upper right.png</file>
+        <file>icons/2874403-arrows/png/065-arrow upward.png</file>
+        <file>icons/2874403-arrows/png/066-arrow down.png</file>
+        <file>icons/2874403-arrows/png/067-arrow upward.png</file>
+        <file>icons/2874403-arrows/png/068-three arrows.png</file>
+        <file>icons/2874403-arrows/png/069-arrow right.png</file>
+        <file>icons/2874403-arrows/png/070-down arrow.png</file>
+        <file>icons/2874403-arrows/png/071-up arrows.png</file>
+        <file>icons/2874403-arrows/png/072-down right arrow.png</file>
+        <file>icons/2874403-arrows/png/073-down left arrow.png</file>
+        <file>icons/2874403-arrows/png/074-arrow upward.png</file>
+    </qresource>
+    <qresource prefix="/icons/userinterface">
+        <file>icons/3032829-user-interface/png/001-audio headset.png</file>
+        <file>icons/3032829-user-interface/png/002-alert.png</file>
+        <file>icons/3032829-user-interface/png/003-note pad.png</file>
+        <file>icons/3032829-user-interface/png/004-dvd.png</file>
+        <file>icons/3032829-user-interface/png/005-book.png</file>
+        <file>icons/3032829-user-interface/png/006-smartphone.png</file>
+        <file>icons/3032829-user-interface/png/007-shopping store.png</file>
+        <file>icons/3032829-user-interface/png/008-diamond.png</file>
+        <file alias="Commit">icons/3032829-user-interface/png/009-tick.png</file>
+        <file>icons/3032829-user-interface/png/010-target.png</file>
+        <file>icons/3032829-user-interface/png/011-shopping bag.png</file>
+        <file>icons/3032829-user-interface/png/012-art.png</file>
+        <file>icons/3032829-user-interface/png/013-alert.png</file>
+        <file alias="Save">icons/3032829-user-interface/png/014-newspaper.png</file>
+        <file>icons/3032829-user-interface/png/015-alarm clock.png</file>
+        <file alias="Delete">icons/3032829-user-interface/png/016-delete.png</file>
+        <file>icons/3032829-user-interface/png/017-volume.png</file>
+        <file>icons/3032829-user-interface/png/018-chat box.png</file>
+        <file>icons/3032829-user-interface/png/019-leaf.png</file>
+        <file>icons/3032829-user-interface/png/020-checklist.png</file>
+        <file>icons/3032829-user-interface/png/021-protection.png</file>
+        <file>icons/3032829-user-interface/png/022-goals.png</file>
+        <file>icons/3032829-user-interface/png/023-photo camera.png</file>
+        <file>icons/3032829-user-interface/png/024-heart.png</file>
+        <file>icons/3032829-user-interface/png/025-notification.png</file>
+        <file>icons/3032829-user-interface/png/026-power switch.png</file>
+        <file>icons/3032829-user-interface/png/027-bookmarks.png</file>
+        <file>icons/3032829-user-interface/png/028-email.png</file>
+        <file>icons/3032829-user-interface/png/029-cogwheel.png</file>
+        <file>icons/3032829-user-interface/png/030-telephone book.png</file>
+        <file>icons/3032829-user-interface/png/031-compass.png</file>
+        <file alias="Open">icons/3032829-user-interface/png/032-folder.png</file>
+        <file>icons/3032829-user-interface/png/033-clock.png</file>
+        <file>icons/3032829-user-interface/png/034-battery.png</file>
+        <file>icons/3032829-user-interface/png/035-pulse rate.png</file>
+        <file>icons/3032829-user-interface/png/036-lock.png</file>
+        <file>icons/3032829-user-interface/png/037-cloudy day.png</file>
+        <file>icons/3032829-user-interface/png/038-address.png</file>
+        <file alias="New">icons/3032829-user-interface/png/039-diary.png</file>
+        <file alias="Add">icons/3032829-user-interface/png/040-plus.png</file>
+        <file>icons/3032829-user-interface/png/041-bluetooth.png</file>
+        <file>icons/3032829-user-interface/png/042-airdrop.png</file>
+        <file>icons/3032829-user-interface/png/043-user interface.png</file>
+        <file>icons/3032829-user-interface/png/044-adjust.png</file>
+        <file>icons/3032829-user-interface/png/045-user.png</file>
+        <file>icons/3032829-user-interface/png/046-eye.png</file>
+        <file>icons/3032829-user-interface/png/047-shield.png</file>
+        <file>icons/3032829-user-interface/png/048-location.png</file>
+        <file>icons/3032829-user-interface/png/049-idea.png</file>
+        <file>icons/3032829-user-interface/png/050-paper plane.png</file>
+        <file>icons/4622503-user-interface/png/001-torch.png</file>
+        <file>icons/4622503-user-interface/png/002-briefcase.png</file>
+        <file>icons/4622503-user-interface/png/003-browser.png</file>
+        <file alias="Connection">icons/4622503-user-interface/png/004-server.png</file>
+        <file>icons/4622503-user-interface/png/005-map.png</file>
+        <file>icons/4622503-user-interface/png/006-headset.png</file>
+        <file>icons/4622503-user-interface/png/007-target.png</file>
+        <file>icons/4622503-user-interface/png/008-microphone.png</file>
+        <file>icons/4622503-user-interface/png/009-web.png</file>
+        <file>icons/4622503-user-interface/png/010-wifi.png</file>
+        <file>icons/4622503-user-interface/png/011-unlock.png</file>
+        <file>icons/4622503-user-interface/png/012-open book.png</file>
+        <file>icons/4622503-user-interface/png/013-wristwatch.png</file>
+        <file>icons/4622503-user-interface/png/014-power.png</file>
+        <file>icons/4622503-user-interface/png/015-camera.png</file>
+        <file>icons/4622503-user-interface/png/016-shopping bag.png</file>
+        <file>icons/4622503-user-interface/png/017-calendar.png</file>
+        <file>icons/4622503-user-interface/png/018-video camera.png</file>
+        <file>icons/4622503-user-interface/png/019-email.png</file>
+        <file>icons/4622503-user-interface/png/020-compass.png</file>
+        <file>icons/4622503-user-interface/png/021-watch.png</file>
+        <file>icons/4622503-user-interface/png/022-chain.png</file>
+        <file>icons/4622503-user-interface/png/023-comment.png</file>
+        <file>icons/4622503-user-interface/png/024-attached.png</file>
+        <file>icons/4622503-user-interface/png/025-filters.png</file>
+        <file>icons/4622503-user-interface/png/026-packard bell.png</file>
+        <file>icons/4622503-user-interface/png/027-shield.png</file>
+        <file>icons/4622503-user-interface/png/028-market.png</file>
+        <file>icons/4622503-user-interface/png/029-mug.png</file>
+        <file>icons/4622503-user-interface/png/030-rainy.png</file>
+        <file>icons/4622503-user-interface/png/031-battery level.png</file>
+        <file>icons/4622503-user-interface/png/032-video player.png</file>
+        <file>icons/4622503-user-interface/png/033-music note.png</file>
+        <file>icons/4622503-user-interface/png/034-gps.png</file>
+        <file>icons/4622503-user-interface/png/035-bookmark.png</file>
+        <file>icons/4622503-user-interface/png/036-adjust.png</file>
+        <file>icons/4622503-user-interface/png/037-phone book.png</file>
+        <file>icons/4622503-user-interface/png/038-mission.png</file>
+        <file>icons/4622503-user-interface/png/039-view.png</file>
+        <file>icons/4622503-user-interface/png/040-network.png</file>
+        <file alias="New">icons/4622503-user-interface/png/041-address book.png</file>
+        <file>icons/4622503-user-interface/png/042-calendar.png</file>
+        <file>icons/4622503-user-interface/png/043-payment.png</file>
+        <file alias="Settings">icons/4622503-user-interface/png/044-gear.png</file>
+        <file>icons/4622503-user-interface/png/045-closed.png</file>
+        <file>icons/4622503-user-interface/png/046-location.png</file>
+        <file>icons/4622503-user-interface/png/047-search.png</file>
+        <file>icons/4622503-user-interface/png/048-bulb.png</file>
+        <file>icons/4622503-user-interface/png/049-dvd.png</file>
+    </qresource>
+    <qresource prefix="/icons/sience">
+        <file>icons/4847335-science-and-technology/png/001-funnel.png</file>
+        <file>icons/4847335-science-and-technology/png/002-earth.png</file>
+        <file>icons/4847335-science-and-technology/png/003-flask.png</file>
+        <file>icons/4847335-science-and-technology/png/004-mobile.png</file>
+        <file>icons/4847335-science-and-technology/png/005-flask.png</file>
+        <file>icons/4847335-science-and-technology/png/006-medicine dropper.png</file>
+        <file>icons/4847335-science-and-technology/png/007-reporting.png</file>
+        <file>icons/4847335-science-and-technology/png/008-lab.png</file>
+        <file>icons/4847335-science-and-technology/png/009-chemical reaction.png</file>
+        <file>icons/4847335-science-and-technology/png/010-test tube.png</file>
+        <file>icons/4847335-science-and-technology/png/011-dropper.png</file>
+        <file>icons/4847335-science-and-technology/png/012-molecules.png</file>
+        <file>icons/4847335-science-and-technology/png/013-flask.png</file>
+        <file>icons/4847335-science-and-technology/png/014-flask.png</file>
+        <file>icons/4847335-science-and-technology/png/015-team management.png</file>
+        <file>icons/4847335-science-and-technology/png/016-laboratory.png</file>
+        <file>icons/4847335-science-and-technology/png/017-laptop.png</file>
+        <file>icons/4847335-science-and-technology/png/018-setting.png</file>
+        <file>icons/4847335-science-and-technology/png/019-orbit.png</file>
+        <file>icons/4847335-science-and-technology/png/020-test tubes.png</file>
+        <file>icons/4847335-science-and-technology/png/021-orbit.png</file>
+        <file>icons/4847335-science-and-technology/png/022-test tubes.png</file>
+        <file>icons/4847335-science-and-technology/png/023-cloud.png</file>
+        <file>icons/4847335-science-and-technology/png/024-notepad.png</file>
+        <file>icons/4847335-science-and-technology/png/025-monitor.png</file>
+        <file>icons/4847335-science-and-technology/png/026-experiment.png</file>
+        <file>icons/4847335-science-and-technology/png/027-tube.png</file>
+        <file>icons/4847335-science-and-technology/png/028-search.png</file>
+        <file>icons/4847335-science-and-technology/png/029-laboratory.png</file>
+        <file>icons/4847335-science-and-technology/png/030-chip.png</file>
+        <file>icons/4847335-science-and-technology/png/031-idea.png</file>
+        <file>icons/4847335-science-and-technology/png/032-experiment.png</file>
+        <file alias="Debug">icons/4847335-science-and-technology/png/033-laboratory.png</file>
+        <file>icons/4847335-science-and-technology/png/034-cloud.png</file>
+        <file>icons/4847335-science-and-technology/png/035-microscope.png</file>
+        <file>icons/4847335-science-and-technology/png/036-molecule.png</file>
+        <file>icons/4847335-science-and-technology/png/037-funnel ball.png</file>
+        <file>icons/4847335-science-and-technology/png/038-flask.png</file>
+        <file>icons/4847335-science-and-technology/png/039-experiment.png</file>
+        <file>icons/4847335-science-and-technology/png/040-dna.png</file>
+        <file>icons/4847335-science-and-technology/png/041-molecules.png</file>
+        <file>icons/4847335-science-and-technology/png/042-tube.png</file>
+        <file>icons/4847335-science-and-technology/png/043-tube.png</file>
+        <file>icons/4847335-science-and-technology/png/044-experiment.png</file>
+        <file>icons/4847335-science-and-technology/png/045-light bulb.png</file>
+        <file>icons/4847335-science-and-technology/png/046-setting.png</file>
+        <file>icons/4847335-science-and-technology/png/047-experiment.png</file>
+    </qresource>
+    <qresource prefix="/icons/cloud_computing">
+        <file>icons/5183073-cloud-computing/png/001-home.png</file>
+        <file>icons/5183073-cloud-computing/png/002-error.png</file>
+        <file>icons/5183073-cloud-computing/png/003-data.png</file>
+        <file>icons/5183073-cloud-computing/png/004-folder.png</file>
+        <file>icons/5183073-cloud-computing/png/005-location.png</file>
+        <file>icons/5183073-cloud-computing/png/006-chat.png</file>
+        <file>icons/5183073-cloud-computing/png/007-connection.png</file>
+        <file>icons/5183073-cloud-computing/png/008-mail.png</file>
+        <file>icons/5183073-cloud-computing/png/009-pie chart.png</file>
+        <file>icons/5183073-cloud-computing/png/010-delete.png</file>
+        <file>icons/5183073-cloud-computing/png/011-movie.png</file>
+        <file>icons/5183073-cloud-computing/png/012-computer.png</file>
+        <file>icons/5183073-cloud-computing/png/013-music.png</file>
+        <file>icons/5183073-cloud-computing/png/014-message.png</file>
+        <file>icons/5183073-cloud-computing/png/015-repair.png</file>
+        <file>icons/5183073-cloud-computing/png/016-smartphone.png</file>
+        <file>icons/5183073-cloud-computing/png/017-reload.png</file>
+        <file>icons/5183073-cloud-computing/png/018-call.png</file>
+        <file>icons/5183073-cloud-computing/png/019-upload.png</file>
+        <file>icons/5183073-cloud-computing/png/020-rating.png</file>
+        <file>icons/5183073-cloud-computing/png/021-server.png</file>
+        <file>icons/5183073-cloud-computing/png/022-remove.png</file>
+        <file>icons/5183073-cloud-computing/png/023-stop.png</file>
+        <file>icons/5183073-cloud-computing/png/024-wifi.png</file>
+        <file>icons/5183073-cloud-computing/png/025-search.png</file>
+        <file>icons/5183073-cloud-computing/png/026-download.png</file>
+        <file>icons/5183073-cloud-computing/png/027-plug.png</file>
+        <file>icons/5183073-cloud-computing/png/028-server.png</file>
+        <file>icons/5183073-cloud-computing/png/029-info.png</file>
+        <file>icons/5183073-cloud-computing/png/030-video.png</file>
+        <file>icons/5183073-cloud-computing/png/031-check.png</file>
+        <file>icons/5183073-cloud-computing/png/032-document.png</file>
+        <file>icons/5183073-cloud-computing/png/033-settings.png</file>
+        <file>icons/5183073-cloud-computing/png/034-user.png</file>
+        <file>icons/5183073-cloud-computing/png/035-gallery.png</file>
+        <file>icons/5183073-cloud-computing/png/036-add.png</file>
+        <file>icons/5183073-cloud-computing/png/037-security.png</file>
+        <file>icons/5183073-cloud-computing/png/038-bell.png</file>
+        <file>icons/5183073-cloud-computing/png/039-control.png</file>
+        <file>icons/5183073-cloud-computing/png/040-padlock.png</file>
+        <file>icons/5183073-cloud-computing/png/041-download.png</file>
+        <file>icons/5183073-cloud-computing/png/042-clock.png</file>
+        <file>icons/5183073-cloud-computing/png/043-cross.png</file>
+        <file>icons/5183073-cloud-computing/png/044-globe.png</file>
+        <file>icons/5183073-cloud-computing/png/045-compact disc.png</file>
+    </qresource>
+</RCC>
