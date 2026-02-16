@@ -19,7 +19,7 @@ namespace DIGITAL_TWIN_SERVER
 		void stop();
 		void recv_connect();
 		void recv_loop();
-		void send_qos0_(std::string const& topic, std::string const& payload);
+		void send_qos0_publish(std::string const& topic, std::string const& payload);
 		boost::asio::ip::tcp::socket::lowest_layer_type& lowest_layer();
 		bool operator==(const Session &) const;
 
