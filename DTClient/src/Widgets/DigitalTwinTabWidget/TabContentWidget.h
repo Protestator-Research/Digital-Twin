@@ -7,8 +7,8 @@
 
 #include <QWidget>
 #include <QtOpenGLWidgets/QOpenGLWidget>
-// #include <QChartView>
-// #include <QLineSeries>
+#include <QChartView>
+#include <QLineSeries>
 
 namespace DigitalTwin::Client {
     QT_BEGIN_NAMESPACE
@@ -32,8 +32,8 @@ namespace DigitalTwin::Client {
         void appendValue();
     private:
         Ui::TabContentWidget *ui;
-        // QChartView* Chart;
-        // QLineSeries* LineSeries;
+        QChartView* Chart;
+        QLineSeries* LineSeries;
 
         TabContentWidgetStatus InternalStatus;
 

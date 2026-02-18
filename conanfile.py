@@ -55,6 +55,7 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["date/*"].shared = True
             self.options["antlr4-cppruntime/*"].shared = True
             self.options["sysmllib/*"].shared=True
+            self.options["qt/*"].shared = True
         else:
             self.options["boost/*"].shared = False
             self.options["gtest/*"].shared = False
@@ -64,10 +65,11 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["date/*"].shared = False
             self.options["antlr4-cppruntime/*"].shared = False
             self.options["sysmllib/*"].shared=False
+            self.options["qt/*"].shared = False
 
-        if platform != "darwin":
-            self.options["qt/*"].qtcharts = True
-            self.options["qt/*"].qthttpserver = True
+
+        self.options["qt/*"].qtcharts = True
+        self.options["qt/*"].qthttpserver = True
 
     
     def layout(self):
