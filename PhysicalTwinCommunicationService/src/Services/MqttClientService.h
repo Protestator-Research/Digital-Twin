@@ -64,7 +64,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         std::thread WorkerThread;
         async_mqtt::client<async_mqtt::protocol_version::v5, async_mqtt::protocol::mqtt> Client;
 
-        std::atomic<bool> ClientStarted;
+        bool ClientStarted;
         std::atomic<bool> Connected;
 
         std::unordered_map<std::string, std::function<void(std::string topic, std::string payload)>> Subscriptions;

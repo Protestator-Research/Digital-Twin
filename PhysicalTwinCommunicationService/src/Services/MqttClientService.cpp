@@ -23,7 +23,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     MqttClientService::MqttClientService(std::string server, std::string port, std::string clientId) : KeepAlive(60),
         Client(Strand),
         ClientStarted(false),
-        Connected(false) {
+        Connected(std::atomic<bool>(false)) {
         Server = server;
         Port = port;
         ClientId = clientId;
@@ -34,15 +34,16 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     void MqttClientService::start() {
-        if (ClientStarted.exchange(true)) return;
+        if (ClientStarted == true) return;
         WorkerThread = std::thread([this] {
             boost::asio::co_spawn(Strand, [this]() -> boost::asio::awaitable<void> { co_await run(); }, boost::asio::detached);
             IoContext.run();
         });
+        ClientStarted = true;
     }
 
     void MqttClientService::stop() {
-        if (!ClientStarted.exchange(false)) return;
+        if (!ClientStarted == false) return;
         boost::asio::post(Strand, [this] {
             boost::asio::co_spawn(Strand, [this]() -> boost::asio::awaitable<void> {
                 try { co_await Client.async_close(boost::asio::use_awaitable); } catch (...) {}

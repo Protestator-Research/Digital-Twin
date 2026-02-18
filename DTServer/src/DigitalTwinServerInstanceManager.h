@@ -9,7 +9,7 @@
 #include <map>
 #include <BECommunicationService.h>
 #include <DigitalTwinManager.h>
-#include <PTCommunicationService.h>
+#include <Services/MqttClientService.h>
 #include "MqttBrokerService.h"
 
 
@@ -84,7 +84,7 @@ namespace DIGITAL_TWIN_SERVER {
 
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService = nullptr;
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
-        //PHYSICAL_TWIN_COMMUNICATION::CommunicationService* PhysicalTwinCommunicationService = nullptr;
+        PHYSICAL_TWIN_COMMUNICATION::MqttClientService* ClientService = nullptr;
         MQTTBrokerService* BrokerService = nullptr;
 
         std::vector<SysMLv2::REST::Project*> Projects;
