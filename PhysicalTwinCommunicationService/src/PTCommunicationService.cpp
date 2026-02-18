@@ -37,7 +37,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     void CommunicationService::addObservationCallbackForTopic([[maybe_unused]] std::string topic,[[maybe_unused]] std::function<void(std::string)> callback,[[maybe_unused]] std::string initValue) {
-        // ClientService->addCallbackFunction(topic,callback, initValue);
+        //ClientService->addCallbackFunction(topic,callback, initValue);
     }
 
     void CommunicationService::publishMQTTMessage(std::string topic, std::string content) {
