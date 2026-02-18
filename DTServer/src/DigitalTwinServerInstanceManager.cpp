@@ -4,11 +4,13 @@
 
 #include "DigitalTwinServerInstanceManager.h"
 #include <Model/DigitalTwinModel.h>
+#include <MQTT/Topics.h>
 #include <BaseFuctions/StringExtention.hpp>
 #include <MQTT/entities/DigitalTwinEntity.h>
 #include <MQTT/Topics.h>
 #include <iostream>
 #include <utility>
+#include <string>
 
 namespace DIGITAL_TWIN_SERVER {
     DigitalTwinServerInstanceManager::DigitalTwinServerInstanceManager(int argc, char *argv[])
@@ -27,20 +29,28 @@ namespace DIGITAL_TWIN_SERVER {
         BackendCommunicationService = new BACKEND_COMMUNICATION::CommunicationService(
                 ArgumentsMap[AGILA_URL],
                 std::stoi(ArgumentsMap[AGILA_PORT]), "");
-        BrokerService = new MQTTBrokerService(new boost::asio::io_context(),1883);
-        ClientService = new PHYSICAL_TWIN_COMMUNICATION::MqttClientService("localhost","1883","digital-twin-server");
-        DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService, ClientService, true);
+
+        const auto ioc = new boost::asio::io_context();
+
+        BrokerService = new MQTTBrokerService(ioc,1883);
+
+        ClientService = new PHYSICAL_TWIN_COMMUNICATION::MqttClientService(ioc,"localhost","1883","digital-twin-server");
+        DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService, ClientService, false);
     }
 
     void DigitalTwinServerInstanceManager::runInstance() {
+        BackendCommunicationService->setUserForLoginInBackend(ArgumentsMap[AGILA_USERNAME], ArgumentsMap[AGILA_PASSWORD]);
+
         std::thread mqttBrokerThread([this]() {
             BrokerService->run();
         });
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::thread mqttClientThread([this]() {
+            ClientService->start();
+        });
 
-        // ClientService->start();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-        BackendCommunicationService->setUserForLoginInBackend(ArgumentsMap[AGILA_USERNAME], ArgumentsMap[AGILA_PASSWORD]);
+        createDTTopicAndCallback();
 
         mqttBrokerThread.join();
     }
@@ -74,4 +84,11 @@ namespace DIGITAL_TWIN_SERVER {
                 ArgumentsMap.insert(std::make_pair<ARGUMENTS,std::string>(ARGUMENTS(i), std::string(DefaultValueForArgument[i])));
     }
 
+    void DigitalTwinServerInstanceManager::createDTTopicAndCallback() {
+        ClientService->publish(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN,PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity().serialize());
+        ClientService->subscribe(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN,[this]([[maybe_unused]] std::string topic,std::string payload)->void {
+            const auto& dtEntity = PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity(payload);
+            DigitalTwinManager->downloadDigitalTwin(dtEntity.projectId(),dtEntity.digitalTwinId());
+        });
+    }
 }

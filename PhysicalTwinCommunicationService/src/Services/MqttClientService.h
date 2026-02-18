@@ -36,7 +36,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
          * @param server The Server URL or IP
          * @param port The Port on the server, where the DT Server is running.
          */
-        MqttClientService(std::string server, std::string port, std::string clientId);
+        MqttClientService(boost::asio::io_context* ioc, std::string server, std::string port, std::string clientId);
 
         virtual ~MqttClientService();
 
@@ -46,7 +46,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         void publish(std::string topic, std::string payload, async_mqtt::qos qos=async_mqtt::qos::at_most_once);
         std::future<std::string> request(std::string topic, std::string payload, std::string respTopic);
 
-
+        void subscribe(std::string topic, std::function<void(std::string topic, std::string payload)> callback);
 
     private:
         boost::asio::awaitable<void> run();
@@ -65,11 +65,13 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         async_mqtt::client<async_mqtt::protocol_version::v5, async_mqtt::protocol::mqtt> Client;
 
         bool ClientStarted;
-        std::atomic<bool> Connected;
+        bool Connected;
 
         std::unordered_map<std::string, std::function<void(std::string topic, std::string payload)>> Subscriptions;
         std::unordered_map<std::string, std::promise<std::string>> Pending;
         bool HasResponseSubscription{false};
+
+        std::unordered_map<std::string, std::function<void(std::string topic, std::string payload)>> Callbacks;
     };
 }
 

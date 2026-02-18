@@ -5,8 +5,6 @@ add_library(PhysicalTwinCommunication
         src/PTCommunicationService.h
         src/Services/AuthenticationService.cpp
         src/Services/AuthenticationService.h
-        src/Services/MqttBrokerService.cpp
-        src/Services/MqttBrokerService.h
         src/Services/MqttClientService.cpp
         src/Services/MqttClientService.h
         src/MQTT/entities/DigitalTwinEntity.cpp

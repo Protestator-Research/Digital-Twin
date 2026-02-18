@@ -82,6 +82,8 @@ namespace DIGITAL_TWIN_SERVER {
 
         void mapInstanceSettingsByArguments(int argc, char *argv[]);
 
+        void createDTTopicAndCallback();
+
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService = nullptr;
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
         PHYSICAL_TWIN_COMMUNICATION::MqttClientService* ClientService = nullptr;
