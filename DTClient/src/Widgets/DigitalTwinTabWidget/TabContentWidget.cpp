@@ -15,8 +15,8 @@ namespace DigitalTwin::Client {
             ui(new Ui::TabContentWidget),
             InternalStatus(TabContentWidgetStatus::TableView){
         ui->setupUi(this);
-        Chart = new QChartView(this);
-        LineSeries = new QLineSeries(Chart);
+        // Chart = new QChartView(this);
+        // LineSeries = new QLineSeries(Chart);
 
         setupUi();
         makeConnection();
@@ -24,12 +24,12 @@ namespace DigitalTwin::Client {
 
     TabContentWidget::~TabContentWidget() {
         delete ui;
-        delete Chart;
+        // delete Chart;
     }
 
     void TabContentWidget::setupUi() {
         ui->page->setLayout(new QHBoxLayout);
-        ui->page->layout()->addWidget(Chart);
+        // ui->page->layout()->addWidget(Chart);
 
     }
 
