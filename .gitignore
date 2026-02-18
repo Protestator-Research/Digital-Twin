@@ -7,3 +7,4 @@
 **/cmake-**/**
 CMakeUserPresets.json
 CMakePresets.json
+.DS_STORE
