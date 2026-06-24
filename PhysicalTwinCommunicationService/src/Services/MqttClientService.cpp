@@ -24,7 +24,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         Strand(ioc->get_executor()),
         Client(Strand),
         ClientStarted(false),
-        Connected(false) {
+        Connected(std::atomic<bool>(false)) {
         Server = server;
         Port = port;
         ClientId = clientId;
@@ -109,8 +109,12 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                 props.emplace_back(async_mqtt::property::response_topic{resp_topic});
                 props.emplace_back(async_mqtt::property::correlation_data{corr_key});
                 const auto package = async_mqtt::v5::publish_packet{
-                        req_topic, req_payload, async_mqtt::qos::at_most_once, async_mqtt::properties{async_mqtt::force_move(props)}
-                    };
+                    req_topic,
+                    req_payload,
+                    async_mqtt::qos::at_most_once,
+                    async_mqtt::force_move(props)
+                };
+
                 co_await Client.async_publish(
                     std::move(package),
                     boost::asio::use_awaitable_t<boost::asio::any_io_executor>{}
