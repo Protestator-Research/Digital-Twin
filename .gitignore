@@ -8,3 +8,5 @@
 CMakeUserPresets.json
 CMakePresets.json
 **/.DS_Store
+/DigitalTwinLib/resources/grammars/.antlr
+/config.cfg

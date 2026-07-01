@@ -30,6 +30,7 @@ namespace DigitalTwin::Model {
         void setNewValue(double value);
         void setNewValue(bool value);
 
+        Variable* copy();
          
     private:
         void updateLinkedVariables();

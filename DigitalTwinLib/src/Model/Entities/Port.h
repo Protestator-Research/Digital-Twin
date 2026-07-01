@@ -8,9 +8,12 @@
 #include "IDigitalTwinElement.h"
 
 #include <string>
+#include <vector>
 #include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model {
+    class Variable;
+
     class CPPDIGITALTWINLIB_EXPORT Port : public IDigitalTwinElement {
     public:
         Port() = delete;
@@ -18,6 +21,10 @@ namespace DigitalTwin::Model {
 
         ~Port() = default;
 
+        void addVariable(Variable* variable);
+        Variable* getVarialbe(std::string variableName);
+    private:
+        std::vector<Variable*> Variables;
     };
 }
 

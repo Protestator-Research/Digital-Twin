@@ -37,6 +37,7 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("sysmllib/1.0-beta-4-main")
         self.requires("yaml-cpp/0.8.0")
         self.requires("openssl/3.6.0")
+        self.requires("antlr4-cppruntime/4.13.2")
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -56,6 +57,7 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["antlr4-cppruntime/*"].shared = True
             self.options["sysmllib/*"].shared=True
             self.options["qt/*"].shared = True
+            self.options["antlr4-cppruntime/*"].shared = True
         else:
             self.options["boost/*"].shared = False
             self.options["gtest/*"].shared = False
@@ -66,6 +68,7 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["antlr4-cppruntime/*"].shared = False
             self.options["sysmllib/*"].shared=False
             self.options["qt/*"].shared = False
+            self.options["antlr4-cppruntime/*"].shared = False
 
 
         self.options["qt/*"].qtcharts = True

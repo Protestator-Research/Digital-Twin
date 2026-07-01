@@ -6,18 +6,24 @@
 #include <kerml/root/elements/Element.h>
 #include <BaseFuctions/StringExtention.hpp>
 #include <boost/uuid/uuid.hpp>
-
-#include "DigitalTwinModel.h"
-#include "Entities/IDigitalTwinElement.h"
-#include "Entities/Component.h"
-#include "Exceptions/DigitalTwinAddressException.h"
-#include "../DigitalTwinManager.h"
-#include "entities/DigitalTwin.h"
+#include <iostream>
 #include <kerml/root/annotations/TextualRepresentation.h>
 #include <sysmlv2/rest/entities/Commit.h>
 #include <sysmlv2/rest/entities/IEntity.h>
 #include <sysmlv2/rest/entities/Project.h>
 #include <sysmlv2/Parser.h>
+
+
+#include "DigitalTwinModel.h"
+#include "Entities/IDigitalTwinElement.h"
+#include "Entities/Component.h"
+#include "Entities/Port.h"
+#include "Exceptions/DigitalTwinAddressException.h"
+#include "../DigitalTwinManager.h"
+#include "entities/DigitalTwin.h"
+#include "../Parser/SysMLv2BaseListener.h"
+#include "../Parser/SysMLv2Lexer.h"
+#include "../Parser/SysMLv2Parser.h"
 
 #include "Entities/Port.h"
 
@@ -40,19 +46,32 @@ namespace DigitalTwin::Model {
         std::string completeModel;
 
         for(const auto &elem : DigitalTwinModelElements)
-            if (std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->language()!="Markdown")
+            if ((std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->language()!="Markdown")&& (std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->language() != "YaML"))
                 completeModel+=std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->body();
 
-        auto digitalTwinElements = SysMLv2::Files::Parser::parseSysMLv2(completeModel);
+        antlr4::ANTLRInputStream input(completeModel);
+        auto listenerImplementation = new SysMLv2BaseListener();
+        SysMLv2Lexer lexer(&input);
+        antlr4::CommonTokenStream tokens(&lexer);
+        SysMLv2Parser parser(&tokens);
+        parser.addParseListener(listenerImplementation);
+        parser.start();
 
-        for(auto dtElement : digitalTwinElements.first) {
-            //TODO Needs Fixing
+        auto digitalTwinElements = listenerImplementation->getElements();
+
+        for(auto dtElement : digitalTwinElements) {
+            auto component = dynamic_cast<Component*>(dtElement);
+            if (component != nullptr)
+                ComponentMap.insert(std::make_pair(component->getName(), component));
+
+            auto port = dynamic_cast<Port*>(dtElement);
+            if (port != nullptr)
+                PortMap.insert(std::make_pair(port->getName(), port));
         }
     }
 
     std::string DigitalTwinModel::digitalTwinName() {
-//        return DigitalTwin->getName();
-        return "";
+        return DigitalTwin->getName();
     }
 
     void DigitalTwinModel::setUpdateModelFunction(std::function<void()> updateModel) {

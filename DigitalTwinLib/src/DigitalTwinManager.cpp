@@ -32,7 +32,7 @@ namespace DigitalTwin {
         try {
             auto digitalTwins = BackendCommunicationService->getAllDigitalTwinsForProjectWithId(projectId);
 
-            std::cout<<"Number of Downloaded DTs from Backend for Project: "<<digitalTwins.size()<<std::endl;
+            //std::cout<<"Number of Downloaded DTs from Backend for Project: "<<digitalTwins.size()<<std::endl;
 
             for (auto digitalTwin: digitalTwins)
                 if (digitalTwin->getId() == digitalTwinId) {

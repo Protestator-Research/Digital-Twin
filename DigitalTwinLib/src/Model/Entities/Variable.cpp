@@ -5,6 +5,7 @@
 #include "Variable.h"
 
 #include <exception>
+#include <iostream>
 
 namespace DigitalTwin::Model {
     Variable::Variable(std::string name, SupportedTypes type) : IDigitalTwinElement(name) {
@@ -109,8 +110,10 @@ namespace DigitalTwin::Model {
             case BOOLEAN:
                 Value = (void*)(new bool);
                 break;
-            default:
-                throw new std::exception();
+        default:
+            std::cout << "Wrong Type given." << std::endl;
+            break;
+        	/*throw new std::exception();*/
         }
     }
 
@@ -128,5 +131,11 @@ namespace DigitalTwin::Model {
 
         *(bool *)Value=value;
         updateLinkedVariables();
+    }
+
+    Variable* Variable::copy()
+    {
+        return new Variable(Name, Type);
+
     }
 }

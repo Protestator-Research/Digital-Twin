@@ -9,7 +9,7 @@
 #include <vector>
 #include <map>
 
-#include "IDigitalTwinElement.h"
+#include "ICollectionType.h"
 #include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model {
@@ -20,7 +20,7 @@ namespace DigitalTwin::Model {
     /**
      *
      */
-    class CPPDIGITALTWINLIB_EXPORT Component : public IDigitalTwinElement{
+    class CPPDIGITALTWINLIB_EXPORT Component : public ICollectionType {
     public:
         /**
          * CTor is Deleted
@@ -35,9 +35,9 @@ namespace DigitalTwin::Model {
         ~Component() override;
 
         void appendComponent(Component* component);
-        void appendAttribute(Variable* variable);
-        void appendControllable(Variable* variable);
-        void appendMeasurable(Variable* variable);
+        void appendAttribute(Variable* variable) override;
+        void appendControllable(Variable* variable) override;
+        void appendMeasurable(Variable* variable) override;
 
 
         Variable* getControllable(std::string name);
@@ -50,6 +50,8 @@ namespace DigitalTwin::Model {
         std::vector<Variable*> getAllVariables();
 
         std::vector<std::string> getAllMQTTTopics();
+
+        Component* instantiate(std::string name);
 
     private:
         std::map<std::string, Component*> ComponentMap;

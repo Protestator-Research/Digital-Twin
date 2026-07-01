@@ -1,6 +1,6 @@
 [toc]
 
-# DigitalTwinKi4Boarnet
+# Digital Twin
 
 ## Structure
 

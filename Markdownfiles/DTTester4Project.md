@@ -59,7 +59,7 @@ port def CablePort {
 The grid part displays the real grid that is part of the systems definition. In the grid we could connect to an alternating current (two phases) or an tree phase current.
 
 ```SysMLv2
-part Grid {
+part def Grid {
     measurable ACVoltage : Voltage;
     port WallOutlet : CablePort;
 }
@@ -70,7 +70,7 @@ part Grid {
 This changes the alternating current to the direct current. This part can eigthe be in the car or in the charging station, dependend on the used standard [[Source](https://en.wikipedia.org/wiki/Charging_station)]. Normally also a n Inverter is needed inside of the model, to allow for the Implementation of the charging of the grid.
 
 ```SysMLv2
-part ACDC {
+part def ACDC {
     port WallPlug : CablePort;
     measurable ACVoltage : Voltage;
     measurable DCVoltage : Voltage;
@@ -83,7 +83,7 @@ part ACDC {
 The dc-to-dc converter allows for the convertion between the voltages.  With having an high voltage side and a low voltage side. The converter needs to convert in both directions, allowing for the bidirectional charging.
 
 ```SysMLV2
-part DCDC {
+part def DCDC {
     port HVVoltagePort : CablePort;
     measurable HVVoltage : Voltage;
     measurable LVVoltage : Voltage;
@@ -96,7 +96,7 @@ part DCDC {
 The battery that is charged and discharged. Normally the battery as a specific side on the dc-dc converter.
 
 ```SysMLv2
-part Battery {
+part def Battery {
     port plusVoltage : CablePort;
     port referenceVoltage : CablePort;
     measurable batteryVoltage : Voltage;
@@ -110,7 +110,7 @@ part Battery {
 The load that is used to display the bidirectinal system side.
 
 ```SysMLv2
-part Load {
+part def Load {
     measurable dCVoltage : Voltage;
     controllable offSwitch : Boolean;
 }
@@ -121,7 +121,7 @@ part Load {
 This models the complete System.
 
 ```SysMLv2
-part EVCharger {
+part def EVCharger {
     part grid : Grid;
     part acdc : ACDC;
     part dcdc : DCDC;
