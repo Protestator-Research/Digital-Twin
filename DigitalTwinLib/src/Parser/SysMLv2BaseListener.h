@@ -203,7 +203,7 @@ public:
 	void enterAttribute_definition(SysMLv2Parser::Attribute_definitionContext* /*ctx*/) override { }
 	void exitAttribute_definition(SysMLv2Parser::Attribute_definitionContext* /*ctx*/) override { }
 
-	void enterAttribute_usage(SysMLv2Parser::Attribute_usageContext* ) override { }
+	void enterAttribute_usage(SysMLv2Parser::Attribute_usageContext* ctx) override;
 	void exitAttribute_usage(SysMLv2Parser::Attribute_usageContext* ctx) override;
 
 	void enterEnumeration_definition(SysMLv2Parser::Enumeration_definitionContext * /*ctx*/) override { }

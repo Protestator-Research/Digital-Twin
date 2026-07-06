@@ -53,7 +53,7 @@ void SysMLv2BaseListener::exitAttribute_usage(SysMLv2Parser::Attribute_usageCont
 		{
 			parentElement->appendMeasurable(variable);
 		}
-		else if (ctx->usage_prefix()->getText().find("measurable") != std::string::npos)
+		else if (ctx->usage_prefix()->getText().find("controllable") != std::string::npos)
 		{
 			parentElement->appendControllable(variable);
 		}
@@ -135,10 +135,12 @@ std::vector<DigitalTwin::Model::IDigitalTwinElement*> SysMLv2BaseListener::getEl
 
 DigitalTwin::Model::SupportedTypes SysMLv2BaseListener::getTypeForString(std::string type)
 {
-	if ((type=="Real")||(type=="Voltage"))
+	if ((type=="Real")||(type=="Voltage")||(type=="Current")||(type=="Resistance"))
 		return DigitalTwin::Model::SupportedTypes::DOUBLE;
 	
 	if (type=="Integer")
 		return DigitalTwin::Model::INT;
 	
+	if (type == "Boolean")
+		return DigitalTwin::Model::BOOLEAN;
 }
