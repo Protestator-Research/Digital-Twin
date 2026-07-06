@@ -8,7 +8,7 @@ from sys import platform
 
 class CppDigitalTwinRecipe(ConanFile):
     name = "digitaltwin"
-    version = "2501"
+    version = "2607"
     package_type = "application"
 
     # Optional metadata
@@ -34,9 +34,10 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("date/3.0.4")
         self.requires("qt/6.8.3")
         self.requires("md4c/0.5.2")
-        self.requires("sysmllib/1.0-beta-4-main")
+        self.requires("sysmllib/2607beta")
         self.requires("yaml-cpp/0.8.0")
-        self.requires("openssl/3.6.0")
+        self.requires("openssl/3.6.3")
+        self.requires("antlr4-cppruntime/4.13.2")
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -44,8 +45,6 @@ class CppDigitalTwinRecipe(ConanFile):
 
     def configure(self):
         if self.options.shared:
-            # If os=Windows, fPIC will have been removed in config_options()
-            # use rm_safe to avoid double delete errors
             self.options.rm_safe("fPIC")
             self.options["boost/*"].shared = True
             self.options["gtest/*"].shared = True
@@ -56,6 +55,7 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["antlr4-cppruntime/*"].shared = True
             self.options["sysmllib/*"].shared=True
             self.options["qt/*"].shared = True
+            self.options["antlr4-cppruntime/*"].shared = True
         else:
             self.options["boost/*"].shared = False
             self.options["gtest/*"].shared = False
@@ -66,6 +66,7 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["antlr4-cppruntime/*"].shared = False
             self.options["sysmllib/*"].shared=False
             self.options["qt/*"].shared = False
+            self.options["antlr4-cppruntime/*"].shared = False
 
 
         self.options["qt/*"].qtcharts = True

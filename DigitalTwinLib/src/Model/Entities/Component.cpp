@@ -9,7 +9,7 @@
 #include "Variable.h"
 
 namespace DigitalTwin::Model {
-    Component::Component(std::string name) : IDigitalTwinElement(name) {
+    Component::Component(std::string name) : ICollectionType(name) {
 
     }
 
@@ -99,6 +99,25 @@ namespace DigitalTwin::Model {
             returnValue.push_back(element.first);
 
         return returnValue;
+    }
+
+    Component* Component::instantiate(std::string name)
+    {
+        auto comp = new Component(name);
+        
+        for (const auto [name, component] : ComponentMap)
+            comp->appendComponent(component->instantiate(name));
+
+        for (auto [_, controllable] : Controllables)
+            comp->appendControllable(controllable->copy());
+
+        for (auto [_, measurable] : Measurables)
+            comp->appendMeasurable(measurable);
+
+        for (auto [_, attribute] : Attributes)
+            comp->appendMeasurable(attribute);
+
+        return comp;
     }
 
     Variable *Component::getVariable(std::string name) {

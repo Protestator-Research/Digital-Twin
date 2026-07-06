@@ -18,7 +18,7 @@ namespace DigitalTwin::Client {
     public:
         /**
          * Constructor
-         * @param parent
+         * @param parent The parent object, so that the dialog is destroyed, if the parent is destroyed.
          */
         DigitalTwinClientSettings(QObject *parent = nullptr);
 

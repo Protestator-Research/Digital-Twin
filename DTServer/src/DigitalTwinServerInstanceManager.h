@@ -37,9 +37,9 @@ namespace DIGITAL_TWIN_SERVER {
     class DigitalTwinServerInstanceManager {
     public:
         /**
-         * Constructor to
-         * @param argc
-         * @param argv
+         * Constructor to create the Instace Manager.
+         * @param argc The program argument counter
+         * @param argv The program argument list
          */
         DigitalTwinServerInstanceManager(int argc, char *argv[]);
         /**

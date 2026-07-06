@@ -24,7 +24,8 @@ namespace KerML::Entities {
 namespace DigitalTwin {
     class DigitalTwinManager;
     namespace Model{
-        class IDigitalTwinElement;
+	    class Port;
+	    class IDigitalTwinElement;
         class Component;
         class Variable;
     }
@@ -53,8 +54,8 @@ namespace DigitalTwin::Model {
         std::shared_ptr<SysMLv2::REST::DigitalTwin> DigitalTwin;
         std::vector<std::shared_ptr<KerML::Entities::Element>> DigitalTwinModelElements;
         [[maybe_unused]] DigitalTwinManager* Manager;
-        std::map<std::string, IDigitalTwinElement*> ComponentMap;
-        std::map<std::string, IDigitalTwinElement*> PortMap;
+        std::map<std::string, Component*> ComponentMap;
+        std::map<std::string, Port*> PortMap;
         std::function<void()> UpdateModelFunction;
     };
 }
