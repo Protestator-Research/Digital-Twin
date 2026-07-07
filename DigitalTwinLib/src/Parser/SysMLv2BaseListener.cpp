@@ -4,6 +4,7 @@
 
 #include "SysMLv2BaseListener.h"
 
+#include "../Model/DigitalTwinModel.h"
 #include "../Model/Entities/Component.h"
 #include "../Model/Entities/Package.h"
 #include "../Model/Entities/Variable.h"
@@ -49,11 +50,12 @@ void SysMLv2BaseListener::exitAttribute_usage(SysMLv2Parser::Attribute_usageCont
 	auto variable = new DigitalTwin::Model::Variable(name,getTypeForString(type));
 	if (ParentStack.size() > 0) {
 		auto parentElement = dynamic_cast<DigitalTwin::Model::ICollectionType*>(ParentStack.top());
-		if (ctx->usage_prefix()->getText().find("measurable") != std::string::npos)
+		std::string usage_prefix_text = ctx->usage_prefix()->getText();
+		if (usage_prefix_text.find("measurable") != std::string::npos)
 		{
 			parentElement->appendMeasurable(variable);
 		}
-		else if (ctx->usage_prefix()->getText().find("controllable") != std::string::npos)
+		else if (usage_prefix_text.find("controllable") != std::string::npos)
 		{
 			parentElement->appendControllable(variable);
 		}
@@ -99,16 +101,31 @@ void SysMLv2BaseListener::exitPart_definition(SysMLv2Parser::Part_definitionCont
 	Elements.push_back(component);
 }
 
-void SysMLv2BaseListener::enterPart_usage(SysMLv2Parser::Part_usageContext* ctx)
-{
-}
-
 void SysMLv2BaseListener::exitPart_usage(SysMLv2Parser::Part_usageContext* ctx)
 {
+	if (ParentStack.size() > 0)
+	{
+		const auto memberName = ctx->usage()->usage_declaration()->identification()->getText();
+		const auto partDefinition = ctx->usage()->usage_declaration()->feature_specialization_part()->feature_specilization().front()->typings()->owned_typed_by()->owned_feature_typing()->general_type()->getText();
+		const auto elemToInit = getElementWithName(partDefinition);
+		const auto parentElement = dynamic_cast<DigitalTwin::Model::Component*>(ParentStack.top());
+		if (elemToInit!=nullptr)
+		{
+			const auto compToInit = dynamic_cast<DigitalTwin::Model::Component*>(elemToInit);
+			if (compToInit!=nullptr)
+			{
+				if (parentElement!=nullptr)
+				{
+					parentElement->appendComponent(compToInit->instantiate(memberName));
+				}
+			}
+		}
+	}
 }
 
 void SysMLv2BaseListener::enterPort_definition(SysMLv2Parser::Port_definitionContext* ctx)
 {
+
 }
 
 void SysMLv2BaseListener::exitPort_definition(SysMLv2Parser::Port_definitionContext* ctx)
@@ -117,6 +134,7 @@ void SysMLv2BaseListener::exitPort_definition(SysMLv2Parser::Port_definitionCont
 
 void SysMLv2BaseListener::enterPort_usage(SysMLv2Parser::Port_usageContext* ctx)
 {
+
 }
 
 void SysMLv2BaseListener::exitPort_usage(SysMLv2Parser::Port_usageContext* ctx)
@@ -143,4 +161,12 @@ DigitalTwin::Model::SupportedTypes SysMLv2BaseListener::getTypeForString(std::st
 	
 	if (type == "Boolean")
 		return DigitalTwin::Model::BOOLEAN;
+}
+
+DigitalTwin::Model::IDigitalTwinElement* SysMLv2BaseListener::getElementWithName(std::string name)
+{
+	for (const auto& elem : Elements)
+		if (elem->getName() == name)
+			return elem;
+	return nullptr;
 }

@@ -40,7 +40,7 @@ namespace DigitalTwin::Model {
     }
 
     void Component::appendControllable(Variable *variable) {
-        Measurables.insert(std::make_pair(variable->getName(),variable));
+        Controllables.insert(std::make_pair(variable->getName(),variable));
     }
 
     void Component::appendAttribute(Variable *variable) {
@@ -76,10 +76,13 @@ namespace DigitalTwin::Model {
     std::vector<Variable *> Component::getAllVariables() {
         std::vector<Variable*> variables;
 
-        for(auto element : Controllables)
+        for (const auto& elem : Attributes)
+            variables.push_back(elem.second);
+
+        for(const auto& element : Controllables)
             variables.push_back(element.second);
 
-        for(auto element : Measurables)
+        for(const auto& element : Measurables)
             variables.push_back(element.second);
 
         return variables;

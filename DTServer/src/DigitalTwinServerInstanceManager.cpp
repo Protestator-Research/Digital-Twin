@@ -98,7 +98,7 @@ namespace DIGITAL_TWIN_SERVER {
 
             ArgumentsMap[AGILA_URL] = json["sysml"]["url"];
             ArgumentsMap[AGILA_PORT] = json["sysml"]["port"];
-            ArgumentsMap[AGILA_USERNAME] = json["sysml"]["username"];
+            ArgumentsMap[AGILA_USERNAME] = json["sysml"]["username"]; 
             ArgumentsMap[AGILA_PASSWORD] = json["sysml"]["password"];
 
             ArgumentsMap[INSTANCE_MQTT_PORT] = json["run"]["mqtt"]["port"];

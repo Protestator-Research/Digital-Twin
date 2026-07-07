@@ -7,7 +7,8 @@
 
 #include <string>
 #include <functional>
-#include <QMqttClient>
+//#include <QMqttClient>
+#include <QObject>
 
 #include <Services/IMqttClientService.h>
 
@@ -21,7 +22,7 @@ namespace DigitalTwin::Client {
     public:
         MQTTConnectionThread() = delete;
         MQTTConnectionThread(std::string url, std::string port, std::string username = "", std::string password = "");
-        virtual ~MQTTConnectionThread();
+        virtual ~MQTTConnectionThread() = default;
 
         void start();
 
@@ -31,10 +32,10 @@ namespace DigitalTwin::Client {
     private slots:
         void onConnect();
         void onDisconnect();
-        void onErrorChanged(QMqttClient::ClientError err);
+        void onErrorChanged();
 
     private:
-       QMqttClient* ClientService;
+       std::shared_ptr<PHYSICAL_TWIN_COMMUNICATION::MqttClientService> ClientService;
     };
 }
 
