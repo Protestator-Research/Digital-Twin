@@ -5,7 +5,9 @@
 #include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model {
-    class Variable;
+	class Port;
+	class Component;
+	class Variable;
     /**
      * @class 
      * @author Moritz Herzog
@@ -27,12 +29,15 @@ namespace DigitalTwin::Model {
          */
         explicit ICollectionType(std::string name) : IDigitalTwinElement(name) { }
 
-        virtual ~ICollectionType() = default;
-
+        virtual void appendComponent(Component* compoonent) = 0;
+        virtual void appendPort(Port* port) = 0;
         virtual void appendAttribute(Variable* variable) = 0;
         virtual void appendControllable(Variable* variable) = 0;
         virtual void appendMeasurable(Variable* variable) = 0;
 
+        virtual Variable* resolveVariable(std::string name) = 0;
+        virtual Variable* resolveVariable(std::vector<std::string> domains, int index) = 0;
+        
     };
 }
 

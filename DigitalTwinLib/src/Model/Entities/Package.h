@@ -19,8 +19,8 @@ namespace DigitalTwin::Model {
 
 		virtual ~Package() = default;
 
-		void addComponentDefinition(Component* component);
-		void addPortDefinition(Port* port);
+		void appendComponent(Component* component) override;
+		void appendPort(Port* port) override;
 		void appendAttribute(Variable* variable) override;
 		void appendMeasurable(Variable* variable) override;
 		void appendControllable(Variable* variable) override;
@@ -28,7 +28,8 @@ namespace DigitalTwin::Model {
 
 		Component* getComponentDefinition(std::string name);
 		Port* getPort(std::string name);
-		Variable* getVariable(std::string name);
+		Variable* resolveVariable(std::string name) override;
+		Variable* resolveVariable(std::vector<std::string> domains, int index) override;
 		Variable* getMeasurable(std::string name);
 		Variable* getControllable(std::string name);
 		Component* getIndividualInstance(std::string name);
@@ -38,9 +39,9 @@ namespace DigitalTwin::Model {
 	private:
 		std::map<std::string, Component*> ComponentDefinitions;
 		std::map<std::string, Port*> PortDefinitions;
-		std::map<std::string, Variable*> Variables;
+		std::map<std::string, Variable*> Attributes;
 		std::map<std::string, Variable*> Measurables;
-		std::map<std::string, Variable*> Controllebles;
+		std::map<std::string, Variable*> Controllables;
 		std::map<std::string, Component*> IndividualInstances;
 	};
 }

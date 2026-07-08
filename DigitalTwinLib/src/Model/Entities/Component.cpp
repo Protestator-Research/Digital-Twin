@@ -6,6 +6,8 @@
 
 #include "../Exceptions/DigitalTwinAddressException.h"
 #include "Component.h"
+
+#include "Port.h"
 #include "Variable.h"
 
 namespace DigitalTwin::Model {
@@ -29,6 +31,11 @@ namespace DigitalTwin::Model {
 
         Measurables.clear();
 
+    }
+
+    void Component::appendPort(Port* port)
+    {
+        PortMap.insert(std::make_pair(port->getName(), port));
     }
 
     void Component::appendComponent(Component *component) {
@@ -60,6 +67,11 @@ namespace DigitalTwin::Model {
         return ComponentMap.at(name);
     }
 
+    Port* Component::getPort(std::string name)
+    {
+        return PortMap.at(name);
+    }
+
     Variable *Component::getAttribute(std::string name) {
         return Attributes.at(name);
     }
@@ -86,6 +98,16 @@ namespace DigitalTwin::Model {
             variables.push_back(element.second);
 
         return variables;
+    }
+
+    std::vector<Port*> Component::getAllPorts()
+    {
+        std::vector<Port*> ports;
+
+        for (auto element : PortMap)
+            ports.push_back(element.second);
+
+        return ports;
     }
 
     std::vector<std::string> Component::getAllMQTTTopics() {
@@ -123,22 +145,46 @@ namespace DigitalTwin::Model {
         return comp;
     }
 
-    Variable *Component::getVariable(std::string name) {
-        const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '/');
+    Variable *Component::resolveVariable(std::string name) {
+        //const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '/');
 
-        if(splittedAdress.size()<1)
+        //if(splittedAdress.size()<1)
+        //    throw DigitalTwinAddressException();
+
+        //if(splittedAdress.size()==1)
+        //    return dynamic_cast<Variable*>(ComponentMap[splittedAdress[0]]);
+
+        //std::string addressWithHigherIndex="";
+        //for(size_t i = 1; i<splittedAdress.size(); i++){
+        //    addressWithHigherIndex+=splittedAdress[i];
+        //    if(i<(splittedAdress.size()-1))
+        //        addressWithHigherIndex+="/";
+        //}
+
+        auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '/');
+
+        if (splittedAdress.size() == 1)
+            splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '.');
+
+        return resolveVariable(splittedAdress, 0);
+    }
+
+    Variable* Component::resolveVariable(std::vector<std::string> domains, int index)
+    {
+        if (index >= domains.size())
             throw DigitalTwinAddressException();
 
-        if(splittedAdress.size()==1)
-            return dynamic_cast<Variable*>(ComponentMap[splittedAdress[0]]);
-
-        std::string addressWithHigherIndex="";
-        for(size_t i = 1; i<splittedAdress.size(); i++){
-            addressWithHigherIndex+=splittedAdress[i];
-            if(i<(splittedAdress.size()-1))
-                addressWithHigherIndex+="/";
+        if ((size_t)index == (domains.size()-1))
+        {
+            if (Controllables.contains(domains.back()))
+                return Controllables.at(domains.back());
+            if (Measurables.contains(domains.back()))
+                return Measurables.at(domains.back());
+            if (Attributes.contains(domains.back()))
+                return Attributes.at(domains.back());
+            throw DigitalTwinAddressException();
         }
 
-        return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getVariable(addressWithHigherIndex);
-    }
+        return dynamic_cast<Component*>(ComponentMap[domains[index]])->resolveVariable(domains, index + 1);
+    } 
 }

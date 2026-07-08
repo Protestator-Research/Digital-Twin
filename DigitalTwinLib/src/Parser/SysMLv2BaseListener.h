@@ -275,7 +275,7 @@ public:
 	void enterPort_definition(SysMLv2Parser::Port_definitionContext* ctx) override;
 	void exitPort_definition(SysMLv2Parser::Port_definitionContext* ctx) override;
 
-	void enterPort_usage(SysMLv2Parser::Port_usageContext* ctx) override;
+	void enterPort_usage(SysMLv2Parser::Port_usageContext* /*ctx*/) override { }
 	void exitPort_usage(SysMLv2Parser::Port_usageContext* ctx) override;
 
 	void enterConjungated_port_typing(SysMLv2Parser::Conjungated_port_typingContext * /*ctx*/) override { }
@@ -1618,7 +1618,10 @@ public:
 
 
 	std::vector<DigitalTwin::Model::IDigitalTwinElement*> getElements() const;
+
 private:
+	DigitalTwin::Model::IDigitalTwinElement* resolveElement(std::string connectorEndMember);
+
 	DigitalTwin::Model::SupportedTypes getTypeForString(std::string type);
 
 	DigitalTwin::Model::IDigitalTwinElement* getElementWithName(std::string name);

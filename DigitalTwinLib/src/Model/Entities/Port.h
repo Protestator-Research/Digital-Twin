@@ -5,26 +5,41 @@
 #ifndef DIGITALTWIN_PORT_H
 #define DIGITALTWIN_PORT_H
 
+
 #include "IDigitalTwinElement.h"
 
 #include <string>
+#include <map>
 #include <vector>
+
+#include "ICollectionType.h"
 #include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model {
     class Variable;
 
-    class CPPDIGITALTWINLIB_EXPORT Port : public IDigitalTwinElement {
+    class CPPDIGITALTWINLIB_EXPORT Port : public ICollectionType {
     public:
         Port() = delete;
         explicit Port(std::string name);
 
         ~Port() = default;
 
-        void addVariable(Variable* variable);
-        Variable* getVarialbe(std::string variableName);
+        void appendAttribute(Variable* variable) override;
+        Variable* getAttribute(std::string variableName);
+        void appendComponent(Component* compoonent) override;
+        void appendPort(Port* port) override;
+        void appendControllable(Variable* variable) override;
+        void appendMeasurable(Variable* variable) override;
+        Variable* resolveVariable(std::string name) override;
+        Variable* resolveVariable(std::vector<std::string> domains, int index) override;
+
     private:
-        std::vector<Variable*> Variables;
+        std::map<std::string, Component*> ComponentMap;
+        std::map<std::string, Port*> PortMap;
+        std::map<std::string, Variable*> Controllables;
+        std::map<std::string, Variable*> Measurables;
+        std::map<std::string, Variable*> Attributes;
     };
 }
 
