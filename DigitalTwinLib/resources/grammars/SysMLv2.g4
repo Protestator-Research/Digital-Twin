@@ -142,6 +142,7 @@ behavior_usage_element: action_usage |
                         include_use_case_usage |
                         assert_constriant_usage |
                         satisfy_requirement_usage;
+
 variant_usage_element: variant_reference |
                        reference_usage |
                        attribute_usage |

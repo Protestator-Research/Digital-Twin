@@ -102,7 +102,9 @@ namespace DIGITAL_TWIN_SERVER
             payload,
             async_mqtt::qos::at_most_once
         };
-        ServerEndpoint->async_send(out, [](async_mqtt::error_code const&) {});
+        ServerEndpoint->async_send(out, [](async_mqtt::error_code const& code) {
+            std::cout << "MQTT Error: " << code<<std::endl;
+            });
     }
 
     boost::asio::ip::tcp::socket::lowest_layer_type & Session::lowest_layer() {

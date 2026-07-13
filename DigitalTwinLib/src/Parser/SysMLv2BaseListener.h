@@ -203,7 +203,7 @@ public:
 	void enterAttribute_definition(SysMLv2Parser::Attribute_definitionContext* /*ctx*/) override { }
 	void exitAttribute_definition(SysMLv2Parser::Attribute_definitionContext* /*ctx*/) override { }
 
-	void enterAttribute_usage(SysMLv2Parser::Attribute_usageContext* ctx) override;
+	void enterAttribute_usage(SysMLv2Parser::Attribute_usageContext* /*ctx*/) override { }
 	void exitAttribute_usage(SysMLv2Parser::Attribute_usageContext* ctx) override;
 
 	void enterEnumeration_definition(SysMLv2Parser::Enumeration_definitionContext * /*ctx*/) override { }
@@ -269,13 +269,13 @@ public:
 	void enterPart_definition(SysMLv2Parser::Part_definitionContext* ctx) override;
 	void exitPart_definition(SysMLv2Parser::Part_definitionContext* ctx) override;
 
-	void enterPart_usage(SysMLv2Parser::Part_usageContext* ctx) override;
+	void enterPart_usage(SysMLv2Parser::Part_usageContext* /*ctx*/) override { }
 	void exitPart_usage(SysMLv2Parser::Part_usageContext* ctx) override;
 
 	void enterPort_definition(SysMLv2Parser::Port_definitionContext* ctx) override;
 	void exitPort_definition(SysMLv2Parser::Port_definitionContext* ctx) override;
 
-	void enterPort_usage(SysMLv2Parser::Port_usageContext* ctx) override;
+	void enterPort_usage(SysMLv2Parser::Port_usageContext* /*ctx*/) override { }
 	void exitPort_usage(SysMLv2Parser::Port_usageContext* ctx) override;
 
 	void enterConjungated_port_typing(SysMLv2Parser::Conjungated_port_typingContext * /*ctx*/) override { }
@@ -1618,8 +1618,13 @@ public:
 
 
 	std::vector<DigitalTwin::Model::IDigitalTwinElement*> getElements() const;
+
 private:
+	DigitalTwin::Model::IDigitalTwinElement* resolveElement(std::string connectorEndMember);
+
 	DigitalTwin::Model::SupportedTypes getTypeForString(std::string type);
+
+	DigitalTwin::Model::IDigitalTwinElement* getElementWithName(std::string name);
 
 	std::vector<DigitalTwin::Model::IDigitalTwinElement*> Elements;
 	std::stack< DigitalTwin::Model::IDigitalTwinElement*> ParentStack;

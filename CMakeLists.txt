@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 3.15)
 
 project(DigitalTwin CXX C)
 
+if(APPLE)
+    list(APPEND CMAKE_PREFIX_PATH "~/Qt/6.11.1/macos/")
+endif(APPLE)
+if(WIN32)
+   list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.11.1/msvc2022_64")
+endif(WIN32)
+
 find_package(nlohmann_json REQUIRED)
 find_package(Boost REQUIRED)
 find_package(date REQUIRED)
@@ -10,10 +17,10 @@ find_package(GTest REQUIRED)
 find_package(CURL REQUIRED)
 find_package(antlr4-runtime REQUIRED)
 find_package(mqtt_cpp REQUIRED)
-find_package(Qt6 REQUIRED)
+find_package(PahoMqttCpp REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Charts)
 find_package(md4c REQUIRED)
 find_package(Threads REQUIRED)
-
 
 include(CMakeDependentOption)
 

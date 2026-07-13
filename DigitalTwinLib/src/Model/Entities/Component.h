@@ -34,7 +34,8 @@ namespace DigitalTwin::Model {
 
         ~Component() override;
 
-        void appendComponent(Component* component);
+        void appendPort(Port* port) override;
+        void appendComponent(Component* component) override;
         void appendAttribute(Variable* variable) override;
         void appendControllable(Variable* variable) override;
         void appendMeasurable(Variable* variable) override;
@@ -43,11 +44,14 @@ namespace DigitalTwin::Model {
         Variable* getControllable(std::string name);
         Variable* getMeasurable(std::string name);
         Variable* getAttribute(std::string name);
-        Variable* getVariable(std::string name);
+        Variable* resolveVariable(std::string name) override;
+        Variable* resolveVariable(std::vector<std::string> domains, int index) override;
         Component* getComponent(std::string name);
+        Port* getPort(std::string name);
 
         std::vector<Component*> getAllComponents();
         std::vector<Variable*> getAllVariables();
+        std::vector<Port*> getAllPorts();
 
         std::vector<std::string> getAllMQTTTopics();
 
@@ -55,7 +59,8 @@ namespace DigitalTwin::Model {
 
     private:
         std::map<std::string, Component*> ComponentMap;
-        std::map<std::string, Variable*> Controllables;
+        std::map<std::string, Port*> PortMap;
+    	std::map<std::string, Variable*> Controllables;
         std::map<std::string, Variable*> Measurables;
         std::map<std::string, Variable*> Attributes;
     };

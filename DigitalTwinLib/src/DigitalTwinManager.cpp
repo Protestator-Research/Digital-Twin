@@ -32,8 +32,6 @@ namespace DigitalTwin {
         try {
             auto digitalTwins = BackendCommunicationService->getAllDigitalTwinsForProjectWithId(projectId);
 
-            //std::cout<<"Number of Downloaded DTs from Backend for Project: "<<digitalTwins.size()<<std::endl;
-
             for (auto digitalTwin: digitalTwins)
                 if (digitalTwin->getId() == digitalTwinId) {
                     auto returnValue = new Model::DigitalTwinModel(digitalTwin, this);
@@ -60,7 +58,7 @@ namespace DigitalTwin {
     void DigitalTwinManager::generateMQTTInterface(Model::DigitalTwinModel* digitalTwin) {
         std::string baseName = digitalTwin->digitalTwinName();
         for(const auto &elementName : digitalTwin->getElementStrings()) {
-            ClientService->publish(baseName + "/" + elementName, "testValue");
+            ClientService->publish(baseName + "/" + elementName, "value=0");
         }
     }
 

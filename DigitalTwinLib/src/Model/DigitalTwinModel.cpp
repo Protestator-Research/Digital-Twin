@@ -129,6 +129,6 @@ namespace DigitalTwin::Model {
                 addressWithHigherIndex+="/";
         }
 
-        return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getVariable(addressWithHigherIndex);
+        return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
     }
 }
