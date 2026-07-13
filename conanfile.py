@@ -31,8 +31,9 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("libcurl/[>=8.4.0 <9]")
         self.requires("nlohmann_json/[>=3.11.3 <3.13]")
         self.requires("async-mqtt/10.2.8")
+        self.requires("paho-mqtt-cpp/1.6.0")
         self.requires("date/3.0.4")
-        self.requires("qt/6.8.3")
+        self.requires("qt/6.11.1")
         self.requires("md4c/0.5.2")
         self.requires("sysmllib/2607beta")
         self.requires("yaml-cpp/0.8.0")
@@ -70,8 +71,8 @@ class CppDigitalTwinRecipe(ConanFile):
 
 
         self.options["qt/*"].qtcharts = True
-        self.options["qt/*"].qthttpserver = True
-        self.options["qt/*"].qtmqtt = True
+        # self.options["qt/*"].qthttpserver = True
+        # self.options["qt/*"].qtmqtt = True
 
     
     def layout(self):
@@ -90,6 +91,7 @@ class CppDigitalTwinRecipe(ConanFile):
         cmake.build()
 
     def build_requirements(self):
+        # self.tool_requires("qt/6.11.1")
         self.tool_requires("cmake/[>=3.30.0 <5]")
         self.test_requires("gtest/[>=1.14.0 <2]")
 

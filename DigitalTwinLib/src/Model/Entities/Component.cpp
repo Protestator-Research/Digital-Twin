@@ -185,6 +185,6 @@ namespace DigitalTwin::Model {
             throw DigitalTwinAddressException();
         }
 
-        return dynamic_cast<Component*>(ComponentMap[domains[index]])->resolveVariable(domains, index + 1);
+        return ComponentMap[domains[index]]->resolveVariable(domains, index + 1);
     } 
 }

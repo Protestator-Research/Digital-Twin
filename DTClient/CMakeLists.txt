@@ -70,14 +70,20 @@ set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Widgets/Dialogs/CreateProjectDialog.cpp
         src/Widgets/Dialogs/CreateProjectDialog.h
         src/Models/MqttConnectionThread.cpp
-        src/Models/MqttConnectionThread.h)
-
-qt_wrap_ui(SOURCES ui/DigitalTwinTabWidget.ui
+        src/Models/MqttConnectionThread.h
+        ui/DigitalTwinTabWidget.ui
         ui/SettingsDialog.ui
         ui/DigitalTwinMainWindow.ui
         ui/TabContentWidget.ui
         ui/UploadProjectFileToBackend.ui
         ui/CreateProjectDialog.ui)
+
+qt_wrap_ui(SOURCES ui/DigitalTwinTabWidget.ui
+         ui/SettingsDialog.ui
+         ui/DigitalTwinMainWindow.ui
+         ui/TabContentWidget.ui
+         ui/UploadProjectFileToBackend.ui
+         ui/CreateProjectDialog.ui)
 
 add_executable(DigitalTwinClient ${SOURCES})
 
@@ -95,8 +101,12 @@ target_link_libraries(DigitalTwinClient PUBLIC
         DigitalTwinLib
         PhysicalTwinCommunication
         CPSBaseLib
-        qt::qt
+        Qt::Core
+        Qt::Widgets
+        Qt::Network
+        Qt::Charts
         mqtt_cpp::mqtt_cpp
+        paho-mqtt-cpp::paho-mqtt-cpp
         md4c::md4c
         sysmllib::sysmllib)
 
