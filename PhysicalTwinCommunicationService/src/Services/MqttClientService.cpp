@@ -130,6 +130,7 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
         boost::asio::post(Strand, [this, topic = std::move(topic), callback = std::move(callback)]() mutable {
 
             Callbacks[topic] = std::move(callback);
+            Subscriptions.emplace(std::make_pair(topic, callback));
 
             if (!Connected) return;
 
@@ -164,10 +165,8 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     }
 
     boost::asio::awaitable<void> MqttClientService::run() {
-        // 1) TCP handshake :contentReference[oaicite:5]{index=5}
         co_await Client.async_underlying_handshake(Server, Port, boost::asio::use_awaitable);
 
-        // 2) MQTT CONNECT + start receive loop :contentReference[oaicite:6]{index=6}
         auto connack_opt = co_await Client.async_start(
             async_mqtt::v5::connect_packet{
                 true,
@@ -200,7 +199,8 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
                     // normale subscriptions (hier nur exact match)
                     if (auto it = Subscriptions.find(topic); it != Subscriptions.end()) {
-                        it->second(topic, payload);
+                        //it->second(topic, payload);
+                        Callbacks.at(topic)(topic,payload);
                     }
                 },
                 [&](async_mqtt::v5::disconnect_packet&) {
