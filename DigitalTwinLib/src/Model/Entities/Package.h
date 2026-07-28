@@ -29,7 +29,7 @@ namespace DigitalTwin::Model {
 		Component* getComponentDefinition(std::string name);
 		Port* getPort(std::string name);
 		Variable* resolveVariable(std::string name) override;
-		Variable* resolveVariable(std::vector<std::string> domains, int index) override;
+		Variable* resolveVariable(std::vector<std::string> domains, size_t index) override;
 		Variable* getMeasurable(std::string name);
 		Variable* getControllable(std::string name);
 		Component* getIndividualInstance(std::string name);

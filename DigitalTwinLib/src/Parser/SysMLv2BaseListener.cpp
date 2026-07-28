@@ -12,13 +12,13 @@
 #include "BaseFuctions/StringExtention.hpp"
 
 
-void SysMLv2BaseListener::enterPackage(SysMLv2Parser::PackageContext* ctx)
+void SysMLv2BaseListener::enterPackage(SysMLv2Parser::PackageContext* )
 {
 	const auto package = new DigitalTwin::Model::Package("");
 	ParentStack.emplace(package);
 }
 
-void SysMLv2BaseListener::exitPackage(SysMLv2Parser::PackageContext* ctx)
+void SysMLv2BaseListener::exitPackage(SysMLv2Parser::PackageContext* )
 {
 	const auto package = dynamic_cast<DigitalTwin::Model::Package*>(ParentStack.top());
 	if (package == nullptr)
@@ -98,7 +98,7 @@ void SysMLv2BaseListener::exitIndividual_usage(SysMLv2Parser::Individual_usageCo
 	}
 }
 
-void SysMLv2BaseListener::enterPart_definition(SysMLv2Parser::Part_definitionContext* ctx)
+void SysMLv2BaseListener::enterPart_definition(SysMLv2Parser::Part_definitionContext*)
 {
 	auto component = new DigitalTwin::Model::Component("");
 	ParentStack.emplace(component);
@@ -136,7 +136,7 @@ void SysMLv2BaseListener::exitPart_usage(SysMLv2Parser::Part_usageContext* ctx)
 	}
 }
 
-void SysMLv2BaseListener::enterPort_definition(SysMLv2Parser::Port_definitionContext* ctx)
+void SysMLv2BaseListener::enterPort_definition(SysMLv2Parser::Port_definitionContext*)
 {
 	auto port = new DigitalTwin::Model::Port("");
 	ParentStack.emplace(port);

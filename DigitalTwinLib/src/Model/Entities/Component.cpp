@@ -130,7 +130,7 @@ namespace DigitalTwin::Model {
     {
         auto comp = new Component(name);
         
-        for (const auto [name, component] : ComponentMap)
+        for (const auto& [name, component] : ComponentMap)
             comp->appendComponent(component->instantiate(name));
 
         for (auto [_, controllable] : Controllables)
@@ -169,7 +169,7 @@ namespace DigitalTwin::Model {
         return resolveVariable(splittedAdress, 0);
     }
 
-    Variable* Component::resolveVariable(std::vector<std::string> domains, int index)
+    Variable* Component::resolveVariable(std::vector<std::string> domains, size_t index)
     {
         if (index >= domains.size())
             throw DigitalTwinAddressException();

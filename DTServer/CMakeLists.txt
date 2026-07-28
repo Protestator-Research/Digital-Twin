@@ -1,11 +1,12 @@
+
 cmake_minimum_required(VERSION 3.15)
 
 add_executable(DigitalTwinServer
         src/main.cpp
         src/DigitalTwinServerInstanceManager.cpp
         src/DigitalTwinServerInstanceManager.h
-        src/MQTTBrokerService.h
-        src/MQTTBrokerService.cpp
+        src/MqttBrokerService.h
+        src/MqttBrokerService.cpp
         src/AuthenticationService.h
         src/AuthenticationService.cpp
         src/BrokerState.h
