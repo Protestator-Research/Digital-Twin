@@ -22,12 +22,13 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
 
 namespace DigitalTwin::Client {
 	class MQTTActionListener : public mqtt::iaction_listener {
+	public:
 		// Geerbt über iaction_listener
-		void on_failure(const mqtt::token& asyncActionToken) override {
+		void on_failure([[maybe_unused]] const mqtt::token& asyncActionToken) override {
 			qDebug() << "Message not successfully delivered";
 		}
 
-		void on_success(const mqtt::token& asyncActionToken) override {
+		void on_success([[maybe_unused]] const mqtt::token& asyncActionToken) override {
 			qDebug() << "Message successully delivered";
 		}
 	};

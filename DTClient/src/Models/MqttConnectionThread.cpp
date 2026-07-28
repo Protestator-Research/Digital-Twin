@@ -9,7 +9,7 @@
 
 namespace DigitalTwin::Client {
 
-    MQTTConnectionThread::MQTTConnectionThread(std::string url, std::string port, std::string username, std::string password) :
+    MQTTConnectionThread::MQTTConnectionThread(std::string url, std::string port, [[maybe_unused]] std::string username, [[maybe_unused]] std::string password) :
     Client(mqtt::async_client(url + ":" + port, "digital-twin-client"))
     {
 
