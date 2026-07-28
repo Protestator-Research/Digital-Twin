@@ -36,7 +36,7 @@ namespace DigitalTwin::Model {
         virtual void appendMeasurable(Variable* variable) = 0;
 
         virtual Variable* resolveVariable(std::string name) = 0;
-        virtual Variable* resolveVariable(std::vector<std::string> domains, int index) = 0;
+        virtual Variable* resolveVariable(std::vector<std::string> domains, size_t index) = 0;
         
     };
 }

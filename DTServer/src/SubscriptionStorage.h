@@ -10,7 +10,7 @@ namespace DIGITAL_TWIN_SERVER
 	class Session;
 
 	struct SubscriptionEntry {
-		Session* Session;
+		Session* _Session;
 		std::string Filter;
 		bool NoLocal = false;
 	};

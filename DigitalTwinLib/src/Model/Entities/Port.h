@@ -32,7 +32,7 @@ namespace DigitalTwin::Model {
         void appendControllable(Variable* variable) override;
         void appendMeasurable(Variable* variable) override;
         Variable* resolveVariable(std::string name) override;
-        Variable* resolveVariable(std::vector<std::string> domains, int index) override;
+        Variable* resolveVariable(std::vector<std::string> domains, size_t index) override;
 
     private:
         std::map<std::string, Component*> ComponentMap;
