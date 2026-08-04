@@ -2,15 +2,16 @@
 // Created by Moritz Herzog on 12.09.24.
 //
 
-#ifndef DIGITALTWIN_SUPPORTEDTYPES_H
-#define DIGITALTWIN_SUPPORTEDTYPES_H
+#pragma once
+
 namespace DigitalTwin::Model {
     enum SupportedTypes {
         BOOLEAN,
-        CHAR,
         INT,
+        CHAR,
+        FLOAT,
         DOUBLE,
         NA
     };
 }
-#endif //DIGITALTWIN_SUPPORTEDTYPES_H
+

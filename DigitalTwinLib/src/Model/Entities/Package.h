@@ -11,6 +11,7 @@ namespace DigitalTwin::Model {
 	class Variable;
 	class Port;
 
+
 	class Package : public ICollectionType
 	{
 	public:
@@ -39,9 +40,6 @@ namespace DigitalTwin::Model {
 	private:
 		std::map<std::string, Component*> ComponentDefinitions;
 		std::map<std::string, Port*> PortDefinitions;
-		std::map<std::string, Variable*> Attributes;
-		std::map<std::string, Variable*> Measurables;
-		std::map<std::string, Variable*> Controllables;
 		std::map<std::string, Component*> IndividualInstances;
 	};
 }

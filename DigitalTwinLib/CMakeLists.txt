@@ -32,7 +32,13 @@ add_library(DigitalTwinLib
         src/Parser/SysMLv2Lexer.cpp
         src/Parser/SysMLv2BaseListener.h
         src/Parser/SysMLv2BaseListener.cpp
-        src/Model/Entities/ICollectionType.h)
+        src/Model/Entities/ICollectionType.h
+        src/Model/Entities/Individual.cpp
+        src/Model/Entities/Individual.h
+        src/Model/Entities/Function.cpp
+        src/Model/Entities/Function.h
+        src/Model/Entities/Bindings.cpp
+        src/Model/Entities/Bindings.h)
 
 target_include_directories(DigitalTwinLib PUBLIC
         boost::boost
