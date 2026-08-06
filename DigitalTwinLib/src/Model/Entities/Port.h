@@ -35,11 +35,7 @@ namespace DigitalTwin::Model {
         Variable* resolveVariable(std::vector<std::string> domains, size_t index) override;
 
     private:
-        std::map<std::string, Component*> ComponentMap;
-        std::map<std::string, Port*> PortMap;
-        std::map<std::string, Variable*> Controllables;
-        std::map<std::string, Variable*> Measurables;
-        std::map<std::string, Variable*> Attributes;
+
     };
 }
 

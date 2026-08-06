@@ -58,11 +58,7 @@ namespace DigitalTwin::Model {
         Component* instantiate(std::string name);
 
     private:
-        std::map<std::string, Component*> ComponentMap;
-        std::map<std::string, Port*> PortMap;
-    	std::map<std::string, Variable*> Controllables;
-        std::map<std::string, Variable*> Measurables;
-        std::map<std::string, Variable*> Attributes;
+
     };
 }
 

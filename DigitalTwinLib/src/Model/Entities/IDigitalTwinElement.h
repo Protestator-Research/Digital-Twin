@@ -34,10 +34,18 @@ namespace DigitalTwin::Model {
 
         virtual ~IDigitalTwinElement() = default;
 
+        /**
+         * Gives access to the Digital Twin.
+         * @return Name of the Element.
+         */
         std::string getName() {
             return Name;
         }
 
+        /**
+         * Allows to reset the name of the corresponding Object.
+         * @param name The name of the corresponding Object.
+         */
         void setName(std::string name) {
             Name = name;
         }
