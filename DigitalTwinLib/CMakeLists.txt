@@ -8,7 +8,7 @@ add_library(DigitalTwinLib
         src/Model/Entities/Component.cpp
         src/Model/Entities/Component.h
         src/Model/Entities/Variable.cpp
-        src/Model/Entities/Variable.h
+        src/Model/Entities/Variable.hpp
         src/Model/Entities/IDigitalTwinElement.h
         src/cpp_digital_twin_lib_global.h
         src/Model/SupportedTypes/SupportedTypes.h

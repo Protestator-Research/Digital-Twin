@@ -8,7 +8,7 @@
 #include "Component.h"
 
 #include "Port.h"
-#include "Variable.h"
+#include "Variable.hpp"
 
 namespace DigitalTwin::Model {
     Component::Component(std::string name) : ICollectionType(name) {

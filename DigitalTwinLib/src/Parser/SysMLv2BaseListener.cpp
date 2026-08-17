@@ -10,7 +10,7 @@
 #include "../Model/Entities/Component.h"
 #include "../Model/Entities/Package.h"
 #include "../Model/Entities/Port.h"
-#include "../Model/Entities/Variable.h"
+#include "../Model/Entities/Variable.hpp"
 #include "BaseFuctions/StringExtention.hpp"
 
 

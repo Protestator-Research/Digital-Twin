@@ -7,7 +7,7 @@
 
 #include <vector>
 #include <Model/Entities/Component.h>
-#include <Model/Entities/Variable.h>
+#include <Model/Entities/Variable.hpp>
 #include <QVariant>
 
 namespace DigitalTwin::Client {
