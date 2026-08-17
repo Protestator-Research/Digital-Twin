@@ -42,24 +42,24 @@ namespace DigitalTwin::Model {
         ComponentMap.insert(std::make_pair(component->Name, component));
     }
 
-    void Component::appendMeasurable(Variable *variable) {
+    void Component::appendMeasurable(Variable<std::any>* variable) {
         Measurables.insert(std::make_pair(variable->getName(),variable));
     }
 
-    void Component::appendControllable(Variable *variable) {
+    void Component::appendControllable(Variable<std::any>* variable) {
         Controllables.insert(std::make_pair(variable->getName(),variable));
     }
 
-    void Component::appendAttribute(Variable *variable) {
+    void Component::appendAttribute(Variable<std::any>* variable) {
 
         Attributes.insert(std::make_pair(variable->getName(),variable));
     }
 
-    Variable *Component::getControllable(std::string name) {
+    Variable<std::any>* Component::getControllable(std::string name) {
         return Controllables.at(name);
     }
 
-    Variable *Component::getMeasurable(std::string name) {
+    Variable<std::any>* Component::getMeasurable(std::string name) {
         return Measurables.at(name);
     }
 
@@ -72,7 +72,7 @@ namespace DigitalTwin::Model {
         return PortMap.at(name);
     }
 
-    Variable *Component::getAttribute(std::string name) {
+    Variable<std::any>* Component::getAttribute(std::string name) {
         return Attributes.at(name);
     }
 
@@ -85,8 +85,8 @@ namespace DigitalTwin::Model {
         return components;
     }
 
-    std::vector<Variable *> Component::getAllVariables() {
-        std::vector<Variable*> variables;
+    std::vector<Variable<std::any>*> Component::getAllVariables() {
+        std::vector<Variable<std::any>*> variables;
 
         for (const auto& elem : Attributes)
             variables.push_back(elem.second);
@@ -130,8 +130,8 @@ namespace DigitalTwin::Model {
     {
         auto comp = new Component(name);
         
-        for (const auto& [name, component] : ComponentMap)
-            comp->appendComponent(component->instantiate(name));
+        for (const auto& [comp_name, component] : ComponentMap)
+            comp->appendComponent(component->instantiate(comp_name));
 
         for (auto [_, controllable] : Controllables)
             comp->appendControllable(controllable->copy());
@@ -145,22 +145,7 @@ namespace DigitalTwin::Model {
         return comp;
     }
 
-    Variable *Component::resolveVariable(std::string name) {
-        //const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '/');
-
-        //if(splittedAdress.size()<1)
-        //    throw DigitalTwinAddressException();
-
-        //if(splittedAdress.size()==1)
-        //    return dynamic_cast<Variable*>(ComponentMap[splittedAdress[0]]);
-
-        //std::string addressWithHigherIndex="";
-        //for(size_t i = 1; i<splittedAdress.size(); i++){
-        //    addressWithHigherIndex+=splittedAdress[i];
-        //    if(i<(splittedAdress.size()-1))
-        //        addressWithHigherIndex+="/";
-        //}
-
+    Variable<std::any>* Component::resolveVariable(std::string name) {
         auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '/');
 
         if (splittedAdress.size() == 1)
@@ -169,7 +154,7 @@ namespace DigitalTwin::Model {
         return resolveVariable(splittedAdress, 0);
     }
 
-    Variable* Component::resolveVariable(std::vector<std::string> domains, size_t index)
+    Variable<std::any>* Component::resolveVariable(std::vector<std::string> domains, size_t index)
     {
         if (index >= domains.size())
             throw DigitalTwinAddressException();

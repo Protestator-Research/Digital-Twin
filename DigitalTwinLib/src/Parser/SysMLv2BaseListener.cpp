@@ -4,6 +4,8 @@
 
 #include "SysMLv2BaseListener.h"
 
+#include <any>
+
 #include "../Model/DigitalTwinModel.h"
 #include "../Model/Entities/Component.h"
 #include "../Model/Entities/Package.h"
@@ -49,7 +51,7 @@ void SysMLv2BaseListener::exitAttribute_usage(SysMLv2Parser::Attribute_usageCont
 	}
 	auto type = ctx->identification().back()->NAME()->toString();
 	auto name = ctx->identification().front()->NAME()->toString();
-	auto variable = new DigitalTwin::Model::Variable(name, getTypeForString(type));
+	auto variable = new DigitalTwin::Model::Variable<std::any>(name);
 
 	if (ParentStack.size() > 0) {
 		auto parentElement = dynamic_cast<DigitalTwin::Model::ICollectionType*>(ParentStack.top());
@@ -186,8 +188,8 @@ void SysMLv2BaseListener::exitBinding_connector_as_usage(SysMLv2Parser::Binding_
 
 		if ((firstElement != nullptr) && (secondElement != nullptr))
 		{
-			const auto firstVariable = dynamic_cast<DigitalTwin::Model::Variable*>(firstElement);
-			const auto secondVariable = dynamic_cast<DigitalTwin::Model::Variable*>(secondElement);
+			const auto firstVariable = dynamic_cast<DigitalTwin::Model::Variable<std::any>*>(firstElement);
+			const auto secondVariable = dynamic_cast<DigitalTwin::Model::Variable<std::any>*>(secondElement);
 
 			if ((firstVariable != nullptr) && (secondVariable != nullptr))
 			{

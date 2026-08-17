@@ -17,10 +17,10 @@ namespace DigitalTwin::Model
 
         void appendComponent(Component* compoonent) override;
         void appendPort(Port* port) override;
-        void appendAttribute(Variable* variable) override;
-        void appendControllable(Variable* variable) override;
-        void appendMeasurable(Variable* variable) override;
-        Variable* resolveVariable(std::string name) override;
+        void appendAttribute(Variable<std::any>* variable) override;
+        void appendControllable(Variable<std::any>* variable) override;
+        void appendMeasurable(Variable<std::any>* variable) override;
+        Variable<std::any>* resolveVariable(std::string name) override;
 
     };
 } // DigitalTwin::Model

@@ -8,134 +8,84 @@
 #include <iostream>
 
 namespace DigitalTwin::Model {
-    Variable::Variable(std::string name, SupportedTypes type) : IDigitalTwinElement(name) {
-        Type = type;
-        initValue();
+    template <typename T>
+    Variable<T>::Variable(std::string name) : IDigitalTwinElement(name)
+    {    }
+
+    template <typename T>
+    Variable<T>::Variable(std::string name, T value) : IDigitalTwinElement(name)
+    {
+        Value = value;
     }
 
-    void Variable::updateLinkedVariables() {
+    template <typename T>
+    void Variable<T>::updateLinkedVariables() {
         for(auto variable : LinkedVariables)
             variable->setVariableValueWithoutPropagation(Value);
     }
 
-    void Variable::setVariableValueWithoutPropagation(void* value) {
-        if(Type == SupportedTypes::INT) {
-            int* valueAsInt = (int*)Value;
-            int* valueGetAsInt = (int*)value;
-            *valueAsInt = *valueGetAsInt;
-        }
-
-        if(Type == SupportedTypes::CHAR) {
-            char* valueAsChar= (char*)Value;
-            char* valueGetAsChar = (char*)value;
-            *valueAsChar = *valueGetAsChar;
-        }
-
-        if(Type == SupportedTypes::DOUBLE) {
-            double* valueAsDouble = (double*)Value;
-            double* valueGetAsDouble = (double*)value;
-            *valueAsDouble = *valueGetAsDouble;
-        }
-
-        if(Type==SupportedTypes::BOOLEAN) {
-            bool* valueAsDouble = (bool*)Value;
-            bool* valueGetAsDouble = (bool*)value;
-            *valueAsDouble = *valueGetAsDouble;
-        }
+    template <typename T>
+    void Variable<T>::setVariableValueWithoutPropagation(T value) {
+        Value = value;
     }
 
-    void Variable::addLinkToVariable(Variable *variable) {
+    template <typename T>
+    void Variable<T>::addLinkToVariable(Variable *variable) {
         LinkedVariables.push_back(variable);
     }
 
-    int Variable::getValueAsInt() {
-        if(Type==SupportedTypes::INT) {
-            return *(int*)Value;
+    template <typename T>
+    int Variable<T>::getValueAsInt() {
+        if(std::same_as<T,int>) {
+            return Value;
         }
         else
             throw std::exception();
     }
 
-    char Variable::getValueAsChar() {
-        if(Type==SupportedTypes::CHAR) {
-            return *(char*)Value;
+    template<typename T>
+    char Variable<T>::getValueAsChar() {
+        if(std::same_as<T,char>) {
+            return Value;
         }
         else
             throw std::exception();
     }
 
-    double Variable::getValueAsDouble() {
-        if(Type==SupportedTypes::DOUBLE) {
-            return *(double*)Value;
+    template<typename T>
+    double Variable<T>::getValueAsDouble() {
+        if(std::same_as<T,double>) {
+            return Value;
         }
         else
             throw std::exception();
     }
 
-    void Variable::setNewValue(int value) {
-        if(Type != SupportedTypes::INT)
-            throw new std::exception();
-
-        *(int*)Value=value;
+    template<typename T>
+    void Variable<T>::setNewValue(T value) {
+        Value=value;
         updateLinkedVariables();
     }
 
-    void Variable::setNewValue(double value) {
-        if(Type != SupportedTypes::DOUBLE)
-            throw new std::exception();
-
-        *(double*)Value=value;
-        updateLinkedVariables();
-    }
-
-    void Variable::setNewValue(char value) {
-        if(Type != SupportedTypes::CHAR)
-            throw new std::exception();
-
-        *(char*)Value=value;
-        updateLinkedVariables();
-    }
-
-    void Variable::initValue() {
-        switch (Type) {
-            case CHAR:
-                Value = (void*)(new char);
-                break;
-            case INT:
-                Value = (void*)(new int);
-                break;
-            case DOUBLE:
-                Value = (void*)(new double);
-                break;
-            case BOOLEAN:
-                Value = (void*)(new bool);
-                break;
-        default:
-            std::cout << "Wrong Type given." << std::endl;
-            break;
-        	/*throw new std::exception();*/
-        }
-    }
-
-    bool Variable::getValueAsBoolean() {
-        if(Type==SupportedTypes::BOOLEAN) {
-            return *(bool*)Value;
-        }
-        else
-            throw std::exception();
-    }
-
-    void Variable::setNewValue(bool value) {
-        if(Type != SupportedTypes::BOOLEAN)
-            throw new std::exception();
-
-        *(bool *)Value=value;
-        updateLinkedVariables();
-    }
-
-    Variable* Variable::copy()
+    template <typename T>
+    T Variable<T>::getValue()
     {
-        return new Variable(Name, Type);
+        return Value;
+    }
+
+    template<typename T>
+    bool Variable<T>::getValueAsBoolean() {
+        if(std::same_as<T,bool>) {
+            return Value;
+        }
+        else
+            throw std::exception();
+    }
+
+    template<typename T>
+    Variable<T>* Variable<T>::copy()
+    {
+        return new Variable<T>(Name);
 
     }
 }

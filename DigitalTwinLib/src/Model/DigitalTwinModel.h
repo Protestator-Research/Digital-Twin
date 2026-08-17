@@ -8,10 +8,12 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <any>
 #include <functional>
 #include <boost/uuid/uuid.hpp>
 
 #include "../cpp_digital_twin_lib_global.h"
+#include "Entities/Variable.h"
 
 namespace SysMLv2::REST {
     class DigitalTwin;
@@ -27,7 +29,6 @@ namespace DigitalTwin {
 	    class Port;
 	    class IDigitalTwinElement;
         class Component;
-        class Variable;
     }
 }
 
@@ -44,7 +45,7 @@ namespace DigitalTwin::Model {
 
         std::vector<IDigitalTwinElement*> getAllComponents() const;
 
-        Variable* getVariableWithAddress(std::string address);
+        Variable<std::any>* getVariableWithAddress(std::string address);
         Component* getComponentWithAddress(std::string address);
 
         std::vector<std::string> getElementStrings();

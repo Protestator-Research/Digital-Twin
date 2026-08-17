@@ -3,13 +3,14 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <any>
 #include "IDigitalTwinElement.h"
 #include "../../cpp_digital_twin_lib_global.h"
+#include "Variable.h"
 
 namespace DigitalTwin::Model {
 	class Port;
 	class Component;
-	class Variable;
     /**
      * @class ICollectionType
      * @author Moritz Herzog
@@ -33,19 +34,19 @@ namespace DigitalTwin::Model {
 
         virtual void appendComponent(Component* compoonent) = 0;
         virtual void appendPort(Port* port) = 0;
-        virtual void appendAttribute(Variable* variable) = 0;
-        virtual void appendControllable(Variable* variable) = 0;
-        virtual void appendMeasurable(Variable* variable) = 0;
+        virtual void appendAttribute(Variable<std::any>* variable) = 0;
+        virtual void appendControllable(Variable<std::any>* variable) = 0;
+        virtual void appendMeasurable(Variable<std::any>* variable) = 0;
 
-        virtual Variable* resolveVariable(std::string name) = 0;
-        virtual Variable* resolveVariable(std::vector<std::string> domains, size_t index) = 0;
+        virtual Variable<std::any>* resolveVariable(std::string name) = 0;
+        virtual Variable<std::any>* resolveVariable(std::vector<std::string> domains, size_t index) = 0;
 
     protected:
     	std::map<std::string, Component*> ComponentMap;
     	std::map<std::string, Port*> PortMap;
-    	std::map<std::string, Variable*> Controllables;
-    	std::map<std::string, Variable*> Measurables;
-    	std::map<std::string, Variable*> Attributes;
+    	std::map<std::string, Variable<std::any>*> Controllables;
+    	std::map<std::string, Variable<std::any>*> Measurables;
+    	std::map<std::string, Variable<std::any>*> Attributes;
         
     };
 }

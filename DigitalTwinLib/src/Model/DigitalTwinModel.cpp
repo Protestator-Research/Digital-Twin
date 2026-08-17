@@ -116,7 +116,7 @@ namespace DigitalTwin::Model {
         return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getComponent(addressWithHigherIndex);
     }
 
-    Variable *DigitalTwinModel::getVariableWithAddress(std::string address) {
+    Variable<std::any>* DigitalTwinModel::getVariableWithAddress(std::string address) {
         const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
 
         if(splittedAdress.size()<2)

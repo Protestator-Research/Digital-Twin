@@ -12,34 +12,37 @@
 #include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model {
+    template<typename T>
     class CPPDIGITALTWINLIB_EXPORT Variable : public IDigitalTwinElement {
     public:
         Variable() = delete;
-        Variable(std::string name, SupportedTypes type);
+        Variable(std::string name);
+        Variable(std::string name, T value);
         ~Variable() override = default;
 
         void addLinkToVariable(Variable* variable);
 
+        [[deprecated("Use getValue() instead")]]
         int getValueAsInt();
+        [[deprecated("Use getValue() instead")]]
         char getValueAsChar();
+        [[deprecated("Use getValue() instead")]]
         double getValueAsDouble();
+        [[deprecated("Use getValue() instead")]]
         bool getValueAsBoolean();
 
-        void setNewValue(int value);
-        void setNewValue(char value);
-        void setNewValue(double value);
-        void setNewValue(bool value);
+        void setNewValue(T value);
+
+        T getValue();
 
         Variable* copy();
          
     private:
         void updateLinkedVariables();
-        void setVariableValueWithoutPropagation(void* value);
-        void initValue();
+        void setVariableValueWithoutPropagation(T value);
 
         std::vector<Variable*> LinkedVariables;
-        void* Value;
-        SupportedTypes Type;
+        T Value;
     };
 } // DigitalTwin::Model
 
