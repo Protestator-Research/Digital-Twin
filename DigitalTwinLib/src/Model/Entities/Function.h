@@ -4,20 +4,30 @@
 
 #pragma once
 
+#include <vector>
+#include <any>
+
 #include "IDigitalTwinElement.h"
+#include "Variable.hpp"
+#include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model
 {
-    class Function : public IDigitalTwinElement
+    class CPPDIGITALTWINLIB_EXPORT Function : public IDigitalTwinElement
     {
     public:
-        Function() = default;
+        Function() = delete;
 
         explicit Function(const std::string& name);
 
         ~Function() override;
 
+        std::vector<Variable<std::any>*> getParameters() const;
+        Variable<std::any>* getReturnVariable() const;
+
     private:
+        std::vector<Variable<std::any>*> Parameters;
+        Variable<std::any>* ReturnValue;
     };
 } // DigitalTwin::Model
 

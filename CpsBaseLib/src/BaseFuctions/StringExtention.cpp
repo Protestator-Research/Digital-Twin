@@ -34,4 +34,26 @@ namespace CPSBASELIB::STD_EXTENTION {
                        [](unsigned char c){ return std::tolower(c); });
         return string;
     }
+
+    std::string StringExtention::timepointToString(std::chrono::time_point<std::chrono::system_clock> timepoint)
+    {
+        auto ms = std::chrono::floor<std::chrono::milliseconds>(timepoint);
+
+        return std::format("{:%FT%TZ}", ms);
+    }
+
+    std::chrono::time_point<std::chrono::system_clock> StringExtention::timepointFromString(std::string timepointString)
+    {
+        std::chrono::sys_time<std::chrono::milliseconds> tp;
+
+        std::istringstream stream(timepointString);
+
+        stream >> std::chrono::parse("%FT%TZ", tp);
+
+        if (stream.fail()) {
+            throw std::runtime_error("Invalid timestamp: " + timepointString);
+        }
+
+        return tp;
+    }
 }

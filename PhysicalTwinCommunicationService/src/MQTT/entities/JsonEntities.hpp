@@ -9,7 +9,7 @@
 
 #include "../../cpp_physical_twin_communication_global.h"
 
-namespace PHYSICAL_TWIN_COMMUNICATION {
+namespace DigitalTwin::Communication {
     const char* DIGITAL_TWIN_ID_ENTITY = "twinID";
     const char* PROJECT_ID_ENTITY = "projectID";
     const char* VALUE_ENTITY = "value";

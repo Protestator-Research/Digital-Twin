@@ -1,0 +1,42 @@
+//
+// Created by herzog on 18.08.26.
+//
+
+#include <nlohmann/json.hpp>
+
+#include "IntegerValueEntity.h"
+#include <BaseFuctions/StringExtention.hpp>
+#include "JsonEntities.hpp"
+
+namespace DigitalTwin::Communication
+{
+    IntegerValueEntity::IntegerValueEntity(int value)
+    {
+        Value = value;
+    }
+
+    IntegerValueEntity::IntegerValueEntity(std::string jsonString)
+    {
+        nlohmann::json json = nlohmann::json::parse(jsonString);
+        Value = json[VALUE_ENTITY];
+        Timepoint = CPSBASELIB::STD_EXTENTION::StringExtention::timepointFromString(json[TIME_POINT_ENTITY]);
+    }
+
+    int IntegerValueEntity::getValue()
+    {
+        return Value;
+    }
+
+    std::string IntegerValueEntity::getJson() const
+    {
+        nlohmann::json json;
+        json[TIME_POINT_ENTITY] = CPSBASELIB::STD_EXTENTION::StringExtention::timepointToString(Timepoint);
+        json[VALUE_ENTITY] = Value;
+        return json.dump();
+    }
+
+    std::string IntegerValueEntity::getType() const
+    {
+        return "IntegerValue";
+    }
+} // PHYSICAL_TWIN_COMMUNICATION

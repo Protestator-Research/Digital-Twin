@@ -2,19 +2,25 @@
 // Created by Moritz Herzog on 14.01.25.
 //
 
-#ifndef DIGITALTWIN_VALUEENTITY_H
-#define DIGITALTWIN_VALUEENTITY_H
+#pragma once
 
-namespace PHYSICAL_TWIN_COMMUNICATION {
+#include <chrono>
+
+
+namespace DigitalTwin::Communication {
     class ValueEntity {
-    private:
-        ValueEntity() = default;
     public:
-        ValueEntity(int value);
-        ValueEntity(char element);
+        ValueEntity() = default;
+        virtual ~ValueEntity() = default;
 
+        std::chrono::time_point<std::chrono::system_clock> getTimepoint();
+
+        virtual std::string getJson() const = 0;
+
+        virtual std::string getType() const = 0;
+
+    protected:
+        std::chrono::time_point<std::chrono::system_clock> Timepoint = std::chrono::system_clock::now();
 
     };
 }
-
-#endif //DIGITALTWIN_VALUEENTITY_H

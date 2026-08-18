@@ -1,0 +1,14 @@
+//
+// Created by herzog on 18.08.26.
+//
+
+#ifndef DIGITALTWIN_RATIONALVALUEENTITY_H
+#define DIGITALTWIN_RATIONALVALUEENTITY_H
+
+
+class RationalValueEntity
+{
+};
+
+
+#endif //DIGITALTWIN_RATIONALVALUEENTITY_H

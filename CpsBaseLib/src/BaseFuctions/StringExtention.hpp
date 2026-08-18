@@ -13,6 +13,8 @@
 //---------------------------------------------------------
 // Internal Classes
 //---------------------------------------------------------
+#include <chrono>
+
 #include "../cps_base_global.h"
 //---------------------------------------------------------
 // Forwarding
@@ -24,7 +26,7 @@ namespace CPSBASELIB::STD_EXTENTION {
      * This class extends the standard libraries abilities to work with strings.
      *
      * @class StringExtention
-     * @version 1.0
+     * @version 1.1
      * @author Moritz Herzog <herzogm@rptu.de>
      */
     class CPSBASELIB_EXPORT StringExtention {
@@ -44,5 +46,20 @@ namespace CPSBASELIB::STD_EXTENTION {
          * @return The given string wil all lowercase characters.
          */
         static std::string toLower(std::string string);
+
+        /**
+         * Generates string from timepoint.
+         * @param timepoint The given timepoint as a std::chrono::time_point<std::chrono::system_clock>.
+         * @return A std::string of the given timepoint.
+         */
+        static std::string timepointToString(std::chrono::time_point<std::chrono::system_clock> timepoint);
+
+        /**
+         * Parses the given time point from a given string.
+         * @param timepointString The timepoint given as a String
+         * @return The timepoint as a std::chrono::time_point<std::chrono::system_clock>
+         */
+        static std::chrono::time_point<std::chrono::system_clock> timepointFromString(std::string timepointString);
+
     };
 }

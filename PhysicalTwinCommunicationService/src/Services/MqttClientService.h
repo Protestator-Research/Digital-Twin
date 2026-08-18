@@ -25,7 +25,7 @@
 
 using client_t = async_mqtt::client<async_mqtt::protocol_version::v5,async_mqtt::protocol::mqtt>;
 
-namespace PHYSICAL_TWIN_COMMUNICATION {
+namespace DigitalTwin::Communication {
     class CPPPHYSICALTWINCOMMUNICATION_EXPORT MqttClientService : public IMqttClientService {
     public:
         /**

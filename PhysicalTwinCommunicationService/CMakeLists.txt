@@ -14,13 +14,33 @@ add_library(PhysicalTwinCommunication
         src/MQTT/Topics.h
         src/MQTT/entities/ValueEntity.cpp
         src/MQTT/entities/ValueEntity.h
-        src/Services/IMqttClientService.h)
+        src/Services/IMqttClientService.h
+        src/MQTT/entities/IntegerValueEntity.cpp
+        src/MQTT/entities/IntegerValueEntity.h
+        src/MQTT/entities/BooleanValueEntity.cpp
+        src/MQTT/entities/BooleanValueEntity.h
+        src/MQTT/entities/StringValueEntity.cpp
+        src/MQTT/entities/StringValueEntity.h
+        src/MQTT/entities/ComplexValueEntity.cpp
+        src/MQTT/entities/ComplexValueEntity.h
+        src/MQTT/entities/RealValueEntity.cpp
+        src/MQTT/entities/RealValueEntity.h
+        src/MQTT/entities/RationalValueEntity.cpp
+        src/MQTT/entities/RationalValueEntity.h
+        src/MQTT/entities/NaturalValueEntity.cpp
+        src/MQTT/entities/NaturalValueEntity.h
+        src/MQTT/entities/PositiveValueEnitity.cpp
+        src/MQTT/entities/PositiveValueEnitity.h)
 
 target_link_libraries(PhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp
         nlohmann_json::nlohmann_json
         Threads::Threads
-        boost::boost)
+        boost::boost
+        CPSBaseLib)
+
+target_include_directories(PhysicalTwinCommunication PUBLIC
+        ../CpsBaseLib/src)
 
 install(TARGETS PhysicalTwinCommunication DESTINATION "."
         RUNTIME DESTINATION bin

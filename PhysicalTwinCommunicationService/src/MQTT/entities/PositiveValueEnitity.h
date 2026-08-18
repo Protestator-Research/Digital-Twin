@@ -1,0 +1,14 @@
+//
+// Created by herzog on 18.08.26.
+//
+
+#ifndef DIGITALTWIN_POSITIVEVALUEENITITY_H
+#define DIGITALTWIN_POSITIVEVALUEENITITY_H
+
+
+class PositiveValueEnitity
+{
+};
+
+
+#endif //DIGITALTWIN_POSITIVEVALUEENITITY_H

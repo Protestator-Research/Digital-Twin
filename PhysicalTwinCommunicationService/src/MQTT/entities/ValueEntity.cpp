@@ -3,3 +3,11 @@
 //
 
 #include "ValueEntity.h"
+
+namespace DigitalTwin::Communication
+{
+    std::chrono::time_point<std::chrono::system_clock> ValueEntity::getTimepoint()
+    {
+        return Timepoint;
+    }
+}

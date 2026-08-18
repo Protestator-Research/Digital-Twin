@@ -19,7 +19,7 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/use_awaitable.hpp>
 
-namespace PHYSICAL_TWIN_COMMUNICATION {
+namespace DigitalTwin::Communication {
     MqttClientService::MqttClientService(boost::asio::io_context* ioc, std::string server, std::string port, std::string clientId) : KeepAlive(60),
         Strand(ioc->get_executor()),
         Client(Strand),

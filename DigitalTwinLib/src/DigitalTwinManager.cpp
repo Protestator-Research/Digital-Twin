@@ -58,8 +58,11 @@ namespace DigitalTwin {
     void DigitalTwinManager::generateMQTTInterface(Model::DigitalTwinModel* digitalTwin) {
         std::string baseName = digitalTwin->digitalTwinName();
         for(const auto &elementName : digitalTwin->getElementStrings()) {
-            ClientService->publish(baseName + "/" + elementName, "value=0");
+            ClientService->publish(baseName + "/" + elementName, "{value=0,\r\n timepoint=\"\"}");
         }
+
+
     }
+
 
 }

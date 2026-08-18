@@ -8,7 +8,7 @@
 #include <nlohmann/json.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-namespace PHYSICAL_TWIN_COMMUNICATION {
+namespace DigitalTwin::Communication {
 
     DigitalTwinEntity::DigitalTwinEntity(boost::uuids::uuid digitalTwinId, boost::uuids::uuid projectId) :
     DigitalTwinId(digitalTwinId),ProjectId(projectId)

@@ -1,0 +1,14 @@
+//
+// Created by herzog on 18.08.26.
+//
+
+#ifndef DIGITALTWIN_COMPLEXVALUEENTITY_H
+#define DIGITALTWIN_COMPLEXVALUEENTITY_H
+
+
+class ComplexValueEntity
+{
+};
+
+
+#endif //DIGITALTWIN_COMPLEXVALUEENTITY_H
