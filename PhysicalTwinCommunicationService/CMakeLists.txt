@@ -9,7 +9,8 @@ add_library(PhysicalTwinCommunication
         src/Services/MqttClientService.h
         src/MQTT/entities/DigitalTwinEntity.cpp
         src/MQTT/entities/DigitalTwinEntity.h
-        src/MQTT/entities/JsonEntities.hpp
+        src/MQTT/entities/JsonEntities.h
+        src/MQTT/entities/JsonEntities.cpp
         src/cpp_physical_twin_communication_global.h
         src/MQTT/Topics.h
         src/MQTT/entities/ValueEntity.cpp

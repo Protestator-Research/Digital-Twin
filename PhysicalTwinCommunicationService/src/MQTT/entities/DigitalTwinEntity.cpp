@@ -3,7 +3,7 @@
 //
 
 #include "DigitalTwinEntity.h"
-#include "JsonEntities.hpp"
+#include "JsonEntities.h"
 
 #include <nlohmann/json.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -16,14 +16,14 @@ namespace DigitalTwin::Communication {
 
     DigitalTwinEntity::DigitalTwinEntity(std::string json) {
         nlohmann::json json_doc = nlohmann::json::parse(json);
-        DigitalTwinId = boost::uuids::string_generator()(json_doc[DIGITAL_TWIN_ID_ENTITY].get<std::string>());
-        ProjectId = boost::uuids::string_generator()(json_doc[PROJECT_ID_ENTITY].get<std::string>());
+        DigitalTwinId = boost::uuids::string_generator()(json_doc[JsonEntities::DIGITAL_TWIN_ID_ENTITY].get<std::string>());
+        ProjectId = boost::uuids::string_generator()(json_doc[JsonEntities::PROJECT_ID_ENTITY].get<std::string>());
     }
 
     std::string DigitalTwinEntity::serialize() {
         nlohmann::json json_doc;
-        json_doc[DIGITAL_TWIN_ID_ENTITY] = boost::uuids::to_string(DigitalTwinId);
-        json_doc[PROJECT_ID_ENTITY] = boost::uuids::to_string(ProjectId);
+        json_doc[JsonEntities::DIGITAL_TWIN_ID_ENTITY] = boost::uuids::to_string(DigitalTwinId);
+        json_doc[JsonEntities::PROJECT_ID_ENTITY] = boost::uuids::to_string(ProjectId);
         return json_doc.dump();
     }
 

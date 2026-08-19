@@ -33,7 +33,7 @@ namespace DigitalTwin::Client {
 		}
 	};
 
-	class MQTTConnectionThread : public QObject, public PHYSICAL_TWIN_COMMUNICATION::IMqttClientService {
+	class MQTTConnectionThread : public QObject, public DigitalTwin::Communication::IMqttClientService {
 		Q_OBJECT
 	public:
 		MQTTConnectionThread() = delete;

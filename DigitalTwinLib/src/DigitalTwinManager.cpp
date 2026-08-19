@@ -16,9 +16,10 @@
 #include <iostream>
 #include <sysmlv2/rest/entities/Project.h>
 
+
 namespace DigitalTwin {
 
-    DigitalTwinManager::DigitalTwinManager(BACKEND_COMMUNICATION::CommunicationService *communicationService, PHYSICAL_TWIN_COMMUNICATION::IMqttClientService* clientService, bool isClient) {
+    DigitalTwinManager::DigitalTwinManager(BACKEND_COMMUNICATION::CommunicationService *communicationService, DigitalTwin::Communication::IMqttClientService* clientService, bool isClient) {
         BackendCommunicationService = communicationService;
         ClientService = clientService;
         IsClient = isClient;
@@ -50,8 +51,8 @@ namespace DigitalTwin {
     Model::DigitalTwinModel* DigitalTwinManager::addDigitalTwinAndCreateModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin) {
         Model::DigitalTwinModel* returnValue = new Model::DigitalTwinModel(digitalTwin,this);
         DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(),returnValue));
-        PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(digitalTwin->getId(), digitalTwin->owningProject()->getId());
-        ClientService->publish(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN, entity.serialize());
+        DigitalTwin::Communication::DigitalTwinEntity entity(digitalTwin->getId(), digitalTwin->owningProject()->getId());
+        ClientService->publish(DigitalTwin::Communication::CONNECT_TO_TWIN, entity.serialize());
         return returnValue;
     }
 

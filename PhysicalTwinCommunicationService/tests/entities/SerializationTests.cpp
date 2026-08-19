@@ -11,7 +11,7 @@
 TEST(TestSerilization, TestDigitalTwinEntity){
     auto dtId = boost::uuids::random_generator()();
     auto proId = boost::uuids::random_generator()();
-    PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity entity(dtId,proId);
+    DigitalTwin::Communication::DigitalTwinEntity entity(dtId,proId);
 
     std::ostringstream stream;
     stream << "{\"projectID\":\""<<boost::uuids::to_string(entity.projectId())

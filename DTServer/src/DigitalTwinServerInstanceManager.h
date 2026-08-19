@@ -30,7 +30,7 @@ namespace DIGITAL_TWIN_SERVER {
     };
 
     /**
-     * Allows for the
+     * Allows for the Digital Twin Server to manage its instance.
      * @version 1.0
      * @author Moritz Herzog <herzogm@rptu.de>
      */
@@ -90,7 +90,7 @@ namespace DIGITAL_TWIN_SERVER {
 
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService = nullptr;
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
-        PHYSICAL_TWIN_COMMUNICATION::MqttClientService* ClientService = nullptr;
+        DigitalTwin::Communication::MqttClientService* ClientService = nullptr;
         MQTTBrokerService* BrokerService = nullptr;
 
         std::vector<SysMLv2::REST::Project*> Projects;
