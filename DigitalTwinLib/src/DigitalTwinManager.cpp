@@ -9,7 +9,7 @@
 #include <Services/MqttClientService.h>
 #include <entities/DigitalTwin.h>
 #include <kerml/root/elements/Element.h>
-#include <MQTT/entities/DigitalTwinEntity.h>
+#include <../../PhysicalTwinCommunicationService/src/MQTT/entities/DigitalTwinEntity.h>
 #include <sysmlv2/service/online/HttpException.h>
 #include <boost/uuid.hpp>
 #include <MQTT/Topics.h>

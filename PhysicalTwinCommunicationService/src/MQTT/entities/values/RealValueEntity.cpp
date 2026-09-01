@@ -2,32 +2,32 @@
 // Created by herzog on 18.08.26.
 //
 
-#include <nlohmann/json.hpp>
+#include "RealValueEntity.h"
+#include "../JsonEntities.hpp"
+#include "BaseFuctions/StringExtention.hpp"
 
-#include "IntegerValueEntity.h"
-#include <BaseFuctions/StringExtention.hpp>
-#include "JsonEntities.hpp"
+#include <nlohmann/json.hpp>
 
 namespace DigitalTwin::Communication
 {
-    IntegerValueEntity::IntegerValueEntity(int value)
+    RealValueEntity::RealValueEntity(double value)
     {
         Value = value;
     }
 
-    IntegerValueEntity::IntegerValueEntity(std::string jsonString)
+    RealValueEntity::RealValueEntity(std::string jsonString)
     {
         nlohmann::json json = nlohmann::json::parse(jsonString);
         Value = json[JsonEntities::VALUE_ENTITY];
         Timepoint = CPSBASELIB::STD_EXTENTION::StringExtention::timepointFromString(json[JsonEntities::TIME_POINT_ENTITY]);
     }
 
-    int IntegerValueEntity::getValue()
+    double RealValueEntity::getValue()
     {
         return Value;
     }
 
-    std::string IntegerValueEntity::getJson() const
+    std::string RealValueEntity::getJson() const
     {
         nlohmann::json json;
         json[JsonEntities::TIME_POINT_ENTITY] = CPSBASELIB::STD_EXTENTION::StringExtention::timepointToString(Timepoint);
@@ -35,8 +35,8 @@ namespace DigitalTwin::Communication
         return json.dump();
     }
 
-    std::string IntegerValueEntity::getType() const
+    std::string RealValueEntity::getType() const
     {
-        return "IntegerValue";
+        return "RealValueEntity";
     }
-} // PHYSICAL_TWIN_COMMUNICATION
+}

@@ -3,7 +3,7 @@
 //
 
 #include "RationalValueEntity.h"
-#include "JsonEntities.hpp"
+#include "../JsonEntities.hpp"
 #include "BaseFuctions/StringExtention.hpp"
 
 #include <nlohmann/json.hpp>

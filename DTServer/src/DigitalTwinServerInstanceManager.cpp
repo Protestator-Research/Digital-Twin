@@ -6,7 +6,7 @@
 #include <Model/DigitalTwinModel.h>
 #include <MQTT/Topics.h>
 #include <BaseFuctions/StringExtention.hpp>
-#include <MQTT/entities/DigitalTwinEntity.h>
+#include <../../PhysicalTwinCommunicationService/src/MQTT/entities/DigitalTwinEntity.h>
 #include <MQTT/Topics.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
