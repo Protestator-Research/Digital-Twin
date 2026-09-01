@@ -3,17 +3,18 @@
 //
 
 #pragma once
+
 #include "ValueEntity.h"
 
 namespace DigitalTwin::Communication
 {
-    class NaturalValueEntity : public ValueEntity
+    class PositiveValueEntity : public ValueEntity
     {
     public:
-        NaturalValueEntity() = delete;
-        explicit NaturalValueEntity(unsigned int value);
-        explicit NaturalValueEntity(std::string jsonString);
-        virtual ~NaturalValueEntity() = default;
+        PositiveValueEntity() = delete;
+        PositiveValueEntity(unsigned int value);
+        PositiveValueEntity(std::string jsonString);
+        virtual ~PositiveValueEntity() = default;
 
         unsigned int getValue();
 
@@ -24,5 +25,3 @@ namespace DigitalTwin::Communication
         unsigned int Value;
     };
 }
-
-

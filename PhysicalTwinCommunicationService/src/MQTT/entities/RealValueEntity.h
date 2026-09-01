@@ -2,13 +2,27 @@
 // Created by herzog on 18.08.26.
 //
 
-#ifndef DIGITALTWIN_REALVALUEENTITY_H
-#define DIGITALTWIN_REALVALUEENTITY_H
+#pragma once
 
+#include "ValueEntity.h"
 
-class RealValueEntity
+namespace DigitalTwin::Communication
 {
-};
+    class RealValueEntity : public ValueEntity
+    {
+    public:
+        RealValueEntity() = delete;
+        RealValueEntity(double value);
+        RealValueEntity(std::string jsonString);
+        virtual ~RealValueEntity() = default;
 
+        double getValue();
 
-#endif //DIGITALTWIN_REALVALUEENTITY_H
+        std::string getJson() const override;
+        std::string getType() const override;
+
+    private:
+        double Value;
+    };
+}
+

@@ -29,8 +29,9 @@ add_library(PhysicalTwinCommunication
         src/MQTT/entities/RationalValueEntity.h
         src/MQTT/entities/NaturalValueEntity.cpp
         src/MQTT/entities/NaturalValueEntity.h
-        src/MQTT/entities/PositiveValueEnitity.cpp
-        src/MQTT/entities/PositiveValueEnitity.h)
+        src/MQTT/entities/PositiveValueEntity.cpp
+        src/MQTT/entities/PositiveValueEntity.h
+        src/MQTT/entities/JsonEntities.cpp)
 
 target_link_libraries(PhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp

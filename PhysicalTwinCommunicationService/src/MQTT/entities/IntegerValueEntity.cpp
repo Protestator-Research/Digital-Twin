@@ -18,8 +18,8 @@ namespace DigitalTwin::Communication
     IntegerValueEntity::IntegerValueEntity(std::string jsonString)
     {
         nlohmann::json json = nlohmann::json::parse(jsonString);
-        Value = json[VALUE_ENTITY];
-        Timepoint = CPSBASELIB::STD_EXTENTION::StringExtention::timepointFromString(json[TIME_POINT_ENTITY]);
+        Value = json[JsonEntities::VALUE_ENTITY];
+        Timepoint = CPSBASELIB::STD_EXTENTION::StringExtention::timepointFromString(json[JsonEntities::TIME_POINT_ENTITY]);
     }
 
     int IntegerValueEntity::getValue()
@@ -30,8 +30,8 @@ namespace DigitalTwin::Communication
     std::string IntegerValueEntity::getJson() const
     {
         nlohmann::json json;
-        json[TIME_POINT_ENTITY] = CPSBASELIB::STD_EXTENTION::StringExtention::timepointToString(Timepoint);
-        json[VALUE_ENTITY] = Value;
+        json[JsonEntities::TIME_POINT_ENTITY] = CPSBASELIB::STD_EXTENTION::StringExtention::timepointToString(Timepoint);
+        json[JsonEntities::VALUE_ENTITY] = Value;
         return json.dump();
     }
 

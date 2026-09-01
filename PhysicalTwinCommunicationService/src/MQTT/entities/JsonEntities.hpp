@@ -10,10 +10,16 @@
 #include "../../cpp_physical_twin_communication_global.h"
 
 namespace DigitalTwin::Communication {
-    const char* DIGITAL_TWIN_ID_ENTITY = "twinID";
-    const char* PROJECT_ID_ENTITY = "projectID";
-    const char* VALUE_ENTITY = "value";
-    const char* TIME_POINT_ENTITY = "time_point";
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT JsonEntities
+    {
+    public:
+        static const char* DIGITAL_TWIN_ID_ENTITY;
+        static const char* PROJECT_ID_ENTITY;
+        static const char* VALUE_ENTITY;
+        static const char* TIME_POINT_ENTITY;
+        static const char* REAL_VALUE_ENTITY;
+        static const char* IMAGINARY_VALUE_ENTITY;
+    };
 }
 
 #endif //DIGITALTWIN_JSONENTITIES_HPP

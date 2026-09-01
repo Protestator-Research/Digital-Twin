@@ -2,13 +2,29 @@
 // Created by herzog on 18.08.26.
 //
 
-#ifndef DIGITALTWIN_COMPLEXVALUEENTITY_H
-#define DIGITALTWIN_COMPLEXVALUEENTITY_H
+#pragma once
+
+#include "ValueEntity.h"
+#include <complex>
 
 
-class ComplexValueEntity
+namespace DigitalTwin::Communication
 {
-};
+    class ComplexValueEntity : public ValueEntity
+    {
+    public:
+        ComplexValueEntity() = delete;
+        ComplexValueEntity(double real, double imaginary);
+        ComplexValueEntity(std::complex<double> value);
+        ComplexValueEntity(std::string jsonString);
+        virtual ~ComplexValueEntity() = default;
 
+        std::complex<double> getValue() const;
 
-#endif //DIGITALTWIN_COMPLEXVALUEENTITY_H
+        std::string getJson() const override;
+        std::string getType() const override;
+
+    private:
+        std::complex<double> Value;
+    };
+}

@@ -2,13 +2,28 @@
 // Created by herzog on 18.08.26.
 //
 
-#ifndef DIGITALTWIN_RATIONALVALUEENTITY_H
-#define DIGITALTWIN_RATIONALVALUEENTITY_H
+#pragma once
 
+#include "ValueEntity.h"
 
-class RationalValueEntity
+#include <boost/rational.hpp>
+
+namespace DigitalTwin::Communication
 {
-};
+    class RationalValueEntity : public ValueEntity
+    {
+    public:
+        RationalValueEntity() = delete;
+        RationalValueEntity(long numerator, long denominator);
+        RationalValueEntity(const boost::rational<long>& value);
+        RationalValueEntity(std::string jsonString);
 
+        boost::rational<long> getValue() const;
 
-#endif //DIGITALTWIN_RATIONALVALUEENTITY_H
+        std::string getJson() const override;
+        std::string getType() const override;
+
+    private:
+        boost::rational<long> Value;
+    };
+}
