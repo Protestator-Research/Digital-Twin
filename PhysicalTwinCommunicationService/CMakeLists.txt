@@ -13,25 +13,26 @@ add_library(PhysicalTwinCommunication
         src/MQTT/entities/JsonEntities.cpp
         src/cpp_physical_twin_communication_global.h
         src/MQTT/Topics.h
-        src/MQTT/entities/ValueEntity.cpp
-        src/MQTT/entities/ValueEntity.h
+        src/MQTT/entities/values/ValueEntity.cpp
+        src/MQTT/entities/values/ValueEntity.h
         src/Services/IMqttClientService.h
-        src/MQTT/entities/IntegerValueEntity.cpp
-        src/MQTT/entities/IntegerValueEntity.h
-        src/MQTT/entities/BooleanValueEntity.cpp
-        src/MQTT/entities/BooleanValueEntity.h
-        src/MQTT/entities/StringValueEntity.cpp
-        src/MQTT/entities/StringValueEntity.h
-        src/MQTT/entities/ComplexValueEntity.cpp
-        src/MQTT/entities/ComplexValueEntity.h
-        src/MQTT/entities/RealValueEntity.cpp
-        src/MQTT/entities/RealValueEntity.h
-        src/MQTT/entities/RationalValueEntity.cpp
-        src/MQTT/entities/RationalValueEntity.h
-        src/MQTT/entities/NaturalValueEntity.cpp
-        src/MQTT/entities/NaturalValueEntity.h
-        src/MQTT/entities/PositiveValueEnitity.cpp
-        src/MQTT/entities/PositiveValueEnitity.h)
+        src/MQTT/entities/values/IntegerValueEntity.cpp
+        src/MQTT/entities/values/IntegerValueEntity.h
+        src/MQTT/entities/values/BooleanValueEntity.cpp
+        src/MQTT/entities/values/BooleanValueEntity.h
+        src/MQTT/entities/values/StringValueEntity.cpp
+        src/MQTT/entities/values/StringValueEntity.h
+        src/MQTT/entities/values/ComplexValueEntity.cpp
+        src/MQTT/entities/values/ComplexValueEntity.h
+        src/MQTT/entities/values/RealValueEntity.cpp
+        src/MQTT/entities/values/RealValueEntity.h
+        src/MQTT/entities/values/RationalValueEntity.cpp
+        src/MQTT/entities/values/RationalValueEntity.h
+        src/MQTT/entities/values/NaturalValueEntity.cpp
+        src/MQTT/entities/values/NaturalValueEntity.h
+        src/MQTT/entities/values/PositiveValueEntity.cpp
+        src/MQTT/entities/values/PositiveValueEntity.h
+        src/MQTT/entities/JsonEntities.cpp)
 
 target_link_libraries(PhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp

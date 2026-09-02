@@ -6,7 +6,7 @@
 #include <Model/DigitalTwinModel.h>
 #include <MQTT/Topics.h>
 #include <BaseFuctions/StringExtention.hpp>
-#include <MQTT/entities/DigitalTwinEntity.h>
+#include <../../PhysicalTwinCommunicationService/src/MQTT/entities/DigitalTwinEntity.h>
 #include <MQTT/Topics.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -108,7 +108,7 @@ namespace DIGITAL_TWIN_SERVER {
     }
 
     void DigitalTwinServerInstanceManager::createDTTopicAndCallback() {
-        ClientService->publish(DigitalTwin::Communication::CONNECT_TO_TWIN, DigitalTwin::Communication::DigitalTwinEntity().serialize());
+        ClientService->publish(DigitalTwin::Communication::CONNECT_TO_TWIN,DigitalTwin::Communication::DigitalTwinEntity().serialize());
         ClientService->subscribe(DigitalTwin::Communication::CONNECT_TO_TWIN,[this]([[maybe_unused]] std::string topic,std::string payload)->void {
             const auto& dtEntity = DigitalTwin::Communication::DigitalTwinEntity(payload);
             DigitalTwinManager->downloadDigitalTwin(dtEntity.projectId(),dtEntity.digitalTwinId());

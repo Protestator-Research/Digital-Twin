@@ -7,8 +7,8 @@ add_library(DigitalTwinLib
         src/Model/DigitalTwinModel.h
         src/Model/Entities/Component.cpp
         src/Model/Entities/Component.h
-        src/Model/Entities/Variable.cpp
-        src/Model/Entities/Variable.hpp
+        src/Model/Entities/Variables/Variable.cpp
+        src/Model/Entities/Variables/Variable.hpp
         src/Model/Entities/IDigitalTwinElement.h
         src/cpp_digital_twin_lib_global.h
         src/Model/SupportedTypes/SupportedTypes.h
@@ -38,7 +38,23 @@ add_library(DigitalTwinLib
         src/Model/Entities/Function.cpp
         src/Model/Entities/Function.h
         src/Model/Entities/Bindings.cpp
-        src/Model/Entities/Bindings.h)
+        src/Model/Entities/Bindings.h
+        src/Model/Entities/Variables/BooleanVariable.cpp
+        src/Model/Entities/Variables/BooleanVariable.h
+        src/Model/Entities/Variables/StringVariable.cpp
+        src/Model/Entities/Variables/StringVariable.h
+        src/Model/Entities/Variables/ComplexVariable.cpp
+        src/Model/Entities/Variables/ComplexVariable.h
+        src/Model/Entities/Variables/RealVariable.cpp
+        src/Model/Entities/Variables/RealVariable.h
+        src/Model/Entities/Variables/RationalVariable.cpp
+        src/Model/Entities/Variables/RationalVariable.h
+        src/Model/Entities/Variables/IntegerVariable.cpp
+        src/Model/Entities/Variables/IntegerVariable.h
+        src/Model/Entities/Variables/NaturalVariable.cpp
+        src/Model/Entities/Variables/NaturalVariable.h
+        src/Model/Entities/Variables/PositiveVariable.cpp
+        src/Model/Entities/Variables/PositiveVariable.h)
 
 target_include_directories(DigitalTwinLib PUBLIC
         boost::boost

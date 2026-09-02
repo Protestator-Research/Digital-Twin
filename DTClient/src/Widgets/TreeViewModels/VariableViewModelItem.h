@@ -7,7 +7,7 @@
 
 #include <vector>
 #include <Model/Entities/Component.h>
-#include <Model/Entities/Variable.hpp>
+#include <Model/Entities/Variables/Variable.hpp>
 #include <QVariant>
 #include <any>
 
@@ -16,7 +16,7 @@ namespace DigitalTwin::Client {
     public:
         VariableViewModelItem() = default;
         explicit VariableViewModelItem(DigitalTwin::Model::Component* component, VariableViewModelItem* parent = nullptr);
-        explicit VariableViewModelItem(DigitalTwin::Model::Variable<std::any> *variable, VariableViewModelItem* parent = nullptr);
+        explicit VariableViewModelItem(DigitalTwin::Model::IVariable* variable, VariableViewModelItem* parent = nullptr);
         explicit VariableViewModelItem(std::string displayString, VariableViewModelItem* parent = nullptr);
 
         ~VariableViewModelItem() = default;
@@ -28,8 +28,8 @@ namespace DigitalTwin::Client {
         int row();
         VariableViewModelItem* parent();
 
-        void appendVariable(DigitalTwin::Model::Variable<std::any>* variable);
-        DigitalTwin::Model::Variable<std::any>* getVariable() const;
+        void appendVariable(DigitalTwin::Model::IVariable* variable);
+        DigitalTwin::Model::IVariable* getVariable() const;
         void appendComponent(DigitalTwin::Model::Component* component);
         DigitalTwin::Model::Component* getComponent() const;
 
@@ -41,7 +41,7 @@ namespace DigitalTwin::Client {
         std::vector<VariableViewModelItem*> ChildItems;
 
         DigitalTwin::Model::Component* Component = nullptr;
-        DigitalTwin::Model::Variable<std::any>* Variable = nullptr;
+        DigitalTwin::Model::IVariable* Variable = nullptr;
         std::string Text = "";
 
         enum VariableViewModelItemType {
