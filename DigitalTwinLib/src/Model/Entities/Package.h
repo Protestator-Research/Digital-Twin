@@ -20,17 +20,17 @@ namespace DigitalTwin::Model {
 
 		void appendComponent(Component* component) override;
 		void appendPort(Port* port) override;
-		void appendAttribute(Variable<std::any>* variable) override;
-		void appendMeasurable(Variable<std::any>* variable) override;
-		void appendControllable(Variable<std::any>* variable) override;
+		void appendAttribute(IVariable* variable) override;
+		void appendMeasurable(IVariable* variable) override;
+		void appendControllable(IVariable* variable) override;
 		void instantiateComponent(std::string instanceName, std::string componentName);
 
 		Component* getComponentDefinition(std::string name);
 		Port* getPort(std::string name);
-		Variable<std::any>* resolveVariable(std::string name) override;
-		Variable<std::any>* resolveVariable(std::vector<std::string> domains, size_t index) override;
-		Variable<std::any>* getMeasurable(std::string name);
-		Variable<std::any>* getControllable(std::string name);
+		IVariable* resolveVariable(std::string name) override;
+		IVariable* resolveVariable(std::vector<std::string> domains, size_t index) override;
+		IVariable* getMeasurable(std::string name);
+		IVariable* getControllable(std::string name);
 		Component* getIndividualInstance(std::string name);
 
 		std::vector<std::string> getAllMQTTTopics();

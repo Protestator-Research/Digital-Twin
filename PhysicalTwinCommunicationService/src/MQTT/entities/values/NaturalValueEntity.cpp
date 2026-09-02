@@ -3,7 +3,7 @@
 //
 
 #include "NaturalValueEntity.h"
-#include "../JsonEntities.hpp"
+#include "../JsonEntities.h"
 #include "BaseFuctions/StringExtention.hpp"
 
 #include <nlohmann/json.hpp>

@@ -45,7 +45,7 @@ namespace DigitalTwin::Model {
 
         std::vector<IDigitalTwinElement*> getAllComponents() const;
 
-        Variable<std::any>* getVariableWithAddress(std::string address);
+        IVariable* getVariableWithAddress(std::string address);
         Component* getComponentWithAddress(std::string address);
 
         std::vector<std::string> getElementStrings();

@@ -20,17 +20,17 @@ namespace DigitalTwin::Model
 		PortDefinitions.insert(std::make_pair(port->getName(), port));
 	}
 
-	void Package::appendAttribute(Variable<std::any>* variable)
+	void Package::appendAttribute(IVariable* variable)
 	{
 		Attributes.insert(std::make_pair(variable->getName(), variable));
 	}
 
-	void Package::appendMeasurable(Variable<std::any>* variable)
+	void Package::appendMeasurable(IVariable* variable)
 	{
 		Measurables.insert(std::make_pair(variable->getName(), variable));
 	}
 
-	void Package::appendControllable(Variable<std::any>* variable)
+	void Package::appendControllable(IVariable* variable)
 	{
 		Controllables.insert(std::make_pair(variable->getName(), variable));
 	}
@@ -51,7 +51,7 @@ namespace DigitalTwin::Model
 		return PortDefinitions.at(name);
 	}
 
-	Variable<std::any>* Package::resolveVariable(std::string name)
+	IVariable* Package::resolveVariable(std::string name)
 	{
 		auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '/');
 
@@ -61,7 +61,7 @@ namespace DigitalTwin::Model
 		return resolveVariable(splittedAdress, 0);
 	}
 
-	Variable<std::any>* Package::resolveVariable(std::vector<std::string> domains, size_t index)
+	IVariable* Package::resolveVariable(std::vector<std::string> domains, size_t index)
 	{
 		if (index >= domains.size())
 			throw DigitalTwinAddressException();
@@ -80,12 +80,12 @@ namespace DigitalTwin::Model
 		return dynamic_cast<Component*>(ComponentDefinitions[domains[index]])->resolveVariable(domains, index + 1);
 	}
 
-	Variable<std::any>* Package::getMeasurable(std::string name)
+	IVariable* Package::getMeasurable(std::string name)
 	{
 		return Measurables.at(name);
 	}
 
-	Variable<std::any>* Package::getControllable(std::string name)
+	IVariable* Package::getControllable(std::string name)
 	{
 		return Controllables.at(name);
 	}

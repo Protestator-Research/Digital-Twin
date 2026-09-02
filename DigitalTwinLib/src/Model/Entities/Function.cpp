@@ -17,12 +17,12 @@ namespace DigitalTwin
         {
         }
 
-        std::vector<Variable<std::any>*> Function::getParameters() const
+        std::vector<IVariable*> Function::getParameters() const
         {
             return Parameters;
         }
 
-        Variable<std::any>* Function::getReturnVariable() const
+        IVariable* Function::getReturnVariable() const
         {
             return ReturnValue;
         }

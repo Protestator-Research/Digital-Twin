@@ -8,10 +8,27 @@
 
 namespace DigitalTwin::Model
 {
-    class RealVariable
+    class RealVariable : public IVariable
     {
     public:
-        RealVariable();
+        RealVariable() = delete;
+
+        explicit RealVariable(std::string name);
+        explicit RealVariable(std::string name, double value);
+
+        virtual ~RealVariable() = default;
+
+        IVariable* copy() override;
+        std::string getType() override;
+
+        double getValue() const;
+        void setValue(const double& value);
+
+	protected:
+        void updateLinkedVariables() override;
+
+        void setValueWithoutPropagation(const double& value);
+
     private:
         double Value;
     };

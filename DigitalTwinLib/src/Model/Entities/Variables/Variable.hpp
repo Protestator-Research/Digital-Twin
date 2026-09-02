@@ -25,6 +25,10 @@ namespace DigitalTwin::Model {
             LinkedVariables.push_back(variable);
         }
 
+        virtual IVariable* copy() = 0;
+
+        virtual std::string getType() = 0;
+
     protected:
         virtual void updateLinkedVariables() = 0;
 

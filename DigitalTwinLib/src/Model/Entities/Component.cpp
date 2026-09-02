@@ -42,24 +42,24 @@ namespace DigitalTwin::Model {
         ComponentMap.insert(std::make_pair(component->Name, component));
     }
 
-    void Component::appendMeasurable(Variable<std::any>* variable) {
+    void Component::appendMeasurable(IVariable* variable) {
         Measurables.insert(std::make_pair(variable->getName(),variable));
     }
 
-    void Component::appendControllable(Variable<std::any>* variable) {
+    void Component::appendControllable(IVariable* variable) {
         Controllables.insert(std::make_pair(variable->getName(),variable));
     }
 
-    void Component::appendAttribute(Variable<std::any>* variable) {
+    void Component::appendAttribute(IVariable* variable) {
 
         Attributes.insert(std::make_pair(variable->getName(),variable));
     }
 
-    Variable<std::any>* Component::getControllable(std::string name) {
+    IVariable* Component::getControllable(std::string name) {
         return Controllables.at(name);
     }
 
-    Variable<std::any>* Component::getMeasurable(std::string name) {
+    IVariable* Component::getMeasurable(std::string name) {
         return Measurables.at(name);
     }
 
@@ -72,7 +72,7 @@ namespace DigitalTwin::Model {
         return PortMap.at(name);
     }
 
-    Variable<std::any>* Component::getAttribute(std::string name) {
+    IVariable* Component::getAttribute(std::string name) {
         return Attributes.at(name);
     }
 
@@ -85,8 +85,8 @@ namespace DigitalTwin::Model {
         return components;
     }
 
-    std::vector<Variable<std::any>*> Component::getAllVariables() {
-        std::vector<Variable<std::any>*> variables;
+    std::vector<IVariable*> Component::getAllVariables() {
+        std::vector<IVariable*> variables;
 
         for (const auto& elem : Attributes)
             variables.push_back(elem.second);
@@ -145,7 +145,7 @@ namespace DigitalTwin::Model {
         return comp;
     }
 
-    Variable<std::any>* Component::resolveVariable(std::string name) {
+    IVariable* Component::resolveVariable(std::string name) {
         auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '/');
 
         if (splittedAdress.size() == 1)
@@ -154,7 +154,7 @@ namespace DigitalTwin::Model {
         return resolveVariable(splittedAdress, 0);
     }
 
-    Variable<std::any>* Component::resolveVariable(std::vector<std::string> domains, size_t index)
+    IVariable* Component::resolveVariable(std::vector<std::string> domains, size_t index)
     {
         if (index >= domains.size())
             throw DigitalTwinAddressException();

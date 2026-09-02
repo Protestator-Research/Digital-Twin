@@ -3,7 +3,7 @@
 //
 
 #include "PositiveValueEntity.h"
-#include "../JsonEntities.hpp"
+#include "../JsonEntities.h"
 
 #include <nlohmann/json.hpp>
 

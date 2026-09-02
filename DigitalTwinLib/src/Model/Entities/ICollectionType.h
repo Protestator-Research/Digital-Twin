@@ -34,19 +34,19 @@ namespace DigitalTwin::Model {
 
         virtual void appendComponent(Component* compoonent) = 0;
         virtual void appendPort(Port* port) = 0;
-        virtual void appendAttribute(Variable<std::any>* variable) = 0;
-        virtual void appendControllable(Variable<std::any>* variable) = 0;
-        virtual void appendMeasurable(Variable<std::any>* variable) = 0;
+        virtual void appendAttribute(IVariable* variable) = 0;
+        virtual void appendControllable(IVariable* variable) = 0;
+        virtual void appendMeasurable(IVariable* variable) = 0;
 
-        virtual Variable<std::any>* resolveVariable(std::string name) = 0;
-        virtual Variable<std::any>* resolveVariable(std::vector<std::string> domains, size_t index) = 0;
+        virtual IVariable* resolveVariable(std::string name) = 0;
+        virtual IVariable* resolveVariable(std::vector<std::string> domains, size_t index) = 0;
 
     protected:
     	std::map<std::string, Component*> ComponentMap;
     	std::map<std::string, Port*> PortMap;
-    	std::map<std::string, Variable<std::any>*> Controllables;
-    	std::map<std::string, Variable<std::any>*> Measurables;
-    	std::map<std::string, Variable<std::any>*> Attributes;
+    	std::map<std::string, IVariable*> Controllables;
+    	std::map<std::string, IVariable*> Measurables;
+    	std::map<std::string, IVariable*> Attributes;
         
     };
 }

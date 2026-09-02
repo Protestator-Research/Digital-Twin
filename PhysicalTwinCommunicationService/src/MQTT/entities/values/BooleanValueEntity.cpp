@@ -6,7 +6,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "../JsonEntities.hpp"
+#include "../JsonEntities.h"
 #include "BaseFuctions/ListExtentions.h"
 #include "BaseFuctions/StringExtention.hpp"
 

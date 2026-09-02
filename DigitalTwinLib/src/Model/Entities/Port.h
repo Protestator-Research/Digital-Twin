@@ -23,14 +23,14 @@ namespace DigitalTwin::Model {
 
         ~Port() = default;
 
-        void appendAttribute(Variable<std::any>* variable) override;
-        Variable<std::any>* getAttribute(std::string variableName);
+        void appendAttribute(IVariable* variable) override;
+        IVariable* getAttribute(std::string variableName);
         void appendComponent(Component* compoonent) override;
         void appendPort(Port* port) override;
-        void appendControllable(Variable<std::any>* variable) override;
-        void appendMeasurable(Variable<std::any>* variable) override;
-        Variable<std::any>* resolveVariable(std::string name) override;
-        Variable<std::any>* resolveVariable(std::vector<std::string> domains, size_t index) override;
+        void appendControllable(IVariable* variable) override;
+        void appendMeasurable(IVariable* variable) override;
+        IVariable* resolveVariable(std::string name) override;
+        IVariable* resolveVariable(std::vector<std::string> domains, size_t index) override;
 
     private:
 
