@@ -13,7 +13,7 @@
 #include <boost/uuid/uuid.hpp>
 
 #include "../cpp_digital_twin_lib_global.h"
-#include "Entities/Variable.hpp"
+#include "Entities/Variables/Variable.hpp"
 
 namespace SysMLv2::REST {
     class DigitalTwin;

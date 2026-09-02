@@ -5,7 +5,7 @@
 #include "Port.h"
 #include "../Exceptions/DigitalTwinAddressException.h"
 #include "Component.h"
-#include "Variable.hpp"
+#include "Variables/Variable.hpp"
 #include "BaseFuctions/StringExtention.hpp"
 
 namespace DigitalTwin::Model {

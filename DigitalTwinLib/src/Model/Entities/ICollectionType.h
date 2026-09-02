@@ -6,7 +6,7 @@
 #include <any>
 #include "IDigitalTwinElement.h"
 #include "../../cpp_digital_twin_lib_global.h"
-#include "Variable.hpp"
+#include "Variables/Variable.hpp"
 
 namespace DigitalTwin::Model {
 	class Port;

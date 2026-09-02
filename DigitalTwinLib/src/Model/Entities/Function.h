@@ -8,7 +8,7 @@
 #include <any>
 
 #include "IDigitalTwinElement.h"
-#include "Variable.hpp"
+#include "Variables/Variable.hpp"
 #include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model
@@ -22,12 +22,12 @@ namespace DigitalTwin::Model
 
         ~Function() override;
 
-        std::vector<Variable<std::any>*> getParameters() const;
-        Variable<std::any>* getReturnVariable() const;
+        std::vector<IVariable*> getParameters() const;
+        IVariable* getReturnVariable() const;
 
     private:
-        std::vector<Variable<std::any>*> Parameters;
-        Variable<std::any>* ReturnValue;
+        std::vector<IVariable*> Parameters;
+        IVariable* ReturnValue;
     };
 } // DigitalTwin::Model
 
