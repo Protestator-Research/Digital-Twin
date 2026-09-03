@@ -6,7 +6,7 @@
 
 #include "IntegerValueEntity.h"
 #include <BaseFuctions/StringExtention.hpp>
-#include "JsonEntities.h"
+#include "../JsonEntities.h"
 
 namespace DigitalTwin::Communication
 {

@@ -3,3 +3,8 @@
 //
 
 #include "NaturalVariable.h"
+
+namespace DigitalTwin::Model
+{
+	
+}

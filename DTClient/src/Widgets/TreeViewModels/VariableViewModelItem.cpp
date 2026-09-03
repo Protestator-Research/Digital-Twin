@@ -13,7 +13,7 @@ namespace DigitalTwin::Client {
         generateComponentView();
     }
 
-    VariableViewModelItem::VariableViewModelItem(DigitalTwin::Model::Variable<std::any>* variable,
+    VariableViewModelItem::VariableViewModelItem(DigitalTwin::Model::IVariable* variable,
                                                  VariableViewModelItem *parent) {
         Parent = parent;
         Variable = variable;
@@ -71,11 +71,11 @@ namespace DigitalTwin::Client {
         return Parent;
     }
 
-    void VariableViewModelItem::appendVariable(DigitalTwin::Model::Variable<std::any>* variable) {
+    void VariableViewModelItem::appendVariable(DigitalTwin::Model::IVariable* variable) {
         ChildItems.push_back(new VariableViewModelItem(variable, this));
     }
 
-    DigitalTwin::Model::Variable<std::any>* VariableViewModelItem::getVariable() const {
+    DigitalTwin::Model::IVariable* VariableViewModelItem::getVariable() const {
         return Variable;
     }
 
