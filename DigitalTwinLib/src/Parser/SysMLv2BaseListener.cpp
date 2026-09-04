@@ -10,6 +10,9 @@
 #include "../Model/Entities/Component.h"
 #include "../Model/Entities/Package.h"
 #include "../Model/Entities/Port.h"
+#include "../Model/Entities/Variables/BooleanVariable.h"
+#include "../Model/Entities/Variables/IntegerVariable.h"
+#include "../Model/Entities/Variables/RealVariable.h"
 #include "../Model/Entities/Variables/Variable.hpp"
 #include "BaseFuctions/StringExtention.hpp"
 
@@ -51,24 +54,48 @@ void SysMLv2BaseListener::exitAttribute_usage(SysMLv2Parser::Attribute_usageCont
 	}
 	auto type = ctx->identification().back()->NAME()->toString();
 	auto name = ctx->identification().front()->NAME()->toString();
-	auto variable = new DigitalTwin::Model::IVariable(name);
+	DigitalTwin::Model::IVariable* variable = nullptr;
 
-	if (ParentStack.size() > 0) {
-		auto parentElement = dynamic_cast<DigitalTwin::Model::ICollectionType*>(ParentStack.top());
-		std::string usage_prefix_text = ctx->usage_prefix()->getText();
-		if (usage_prefix_text.find("measurable") != std::string::npos)
-		{
-			parentElement->appendMeasurable(variable);
+	const auto internalType = getTypeForString(type);
+
+	switch (internalType)
+	{
+	case DigitalTwin::Model::BOOLEAN:
+		variable = new DigitalTwin::Model::BooleanVariable(name);
+		break;
+	case DigitalTwin::Model::INT:
+		variable = new DigitalTwin::Model::IntegerVariable(name);
+		break;
+	case DigitalTwin::Model::CHAR:
+		break;
+	case DigitalTwin::Model::FLOAT:
+		break;
+	case DigitalTwin::Model::DOUBLE:
+		variable = new DigitalTwin::Model::RealVariable(name);
+		break;
+	case DigitalTwin::Model::NA:
+		break;
+	}
+
+	if (variable != nullptr)
+	{
+		if (ParentStack.size() > 0) {
+			auto parentElement = dynamic_cast<DigitalTwin::Model::ICollectionType*>(ParentStack.top());
+			std::string usage_prefix_text = ctx->usage_prefix()->getText();
+			if (usage_prefix_text.find("measurable") != std::string::npos)
+			{
+				parentElement->appendMeasurable(variable);
+			}
+			else if (usage_prefix_text.find("controllable") != std::string::npos)
+			{
+				parentElement->appendControllable(variable);
+			}
+			else
+			{
+				parentElement->appendAttribute(variable);
+			}
+			Elements.push_back(variable);
 		}
-		else if (usage_prefix_text.find("controllable") != std::string::npos)
-		{
-			parentElement->appendControllable(variable);
-		}
-		else
-		{
-			parentElement->appendAttribute(variable);
-		}
-		Elements.push_back(variable);
 	}
 }
 
