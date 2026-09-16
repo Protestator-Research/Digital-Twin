@@ -4,7 +4,7 @@
 #pragma once
 
 
-#include <antlr4-runtime.h>
+#include "antlr4-runtime.h"
 #include "SysMLv2Parser.h"
 
 
@@ -307,6 +307,9 @@ public:
 
   virtual void enterBinding_connector_as_usage(SysMLv2Parser::Binding_connector_as_usageContext *ctx) = 0;
   virtual void exitBinding_connector_as_usage(SysMLv2Parser::Binding_connector_as_usageContext *ctx) = 0;
+
+  virtual void enterBinding_end_usage_member(SysMLv2Parser::Binding_end_usage_memberContext *ctx) = 0;
+  virtual void exitBinding_end_usage_member(SysMLv2Parser::Binding_end_usage_memberContext *ctx) = 0;
 
   virtual void enterSuccession_as_usage(SysMLv2Parser::Succession_as_usageContext *ctx) = 0;
   virtual void exitSuccession_as_usage(SysMLv2Parser::Succession_as_usageContext *ctx) = 0;
@@ -908,6 +911,12 @@ public:
   virtual void enterExtended_usage(SysMLv2Parser::Extended_usageContext *ctx) = 0;
   virtual void exitExtended_usage(SysMLv2Parser::Extended_usageContext *ctx) = 0;
 
+  virtual void enterDefined_by(SysMLv2Parser::Defined_byContext *ctx) = 0;
+  virtual void exitDefined_by(SysMLv2Parser::Defined_byContext *ctx) = 0;
+
+  virtual void enterElements(SysMLv2Parser::ElementsContext *ctx) = 0;
+  virtual void exitElements(SysMLv2Parser::ElementsContext *ctx) = 0;
+
   virtual void enterIdentification(SysMLv2Parser::IdentificationContext *ctx) = 0;
   virtual void exitIdentification(SysMLv2Parser::IdentificationContext *ctx) = 0;
 
@@ -1109,8 +1118,8 @@ public:
   virtual void enterTypings(SysMLv2Parser::TypingsContext *ctx) = 0;
   virtual void exitTypings(SysMLv2Parser::TypingsContext *ctx) = 0;
 
-  virtual void enterOwned_typed_by(SysMLv2Parser::Owned_typed_byContext *ctx) = 0;
-  virtual void exitOwned_typed_by(SysMLv2Parser::Owned_typed_byContext *ctx) = 0;
+  virtual void enterTyped_by(SysMLv2Parser::Typed_byContext *ctx) = 0;
+  virtual void exitTyped_by(SysMLv2Parser::Typed_byContext *ctx) = 0;
 
   virtual void enterSubsettings(SysMLv2Parser::SubsettingsContext *ctx) = 0;
   virtual void exitSubsettings(SysMLv2Parser::SubsettingsContext *ctx) = 0;
@@ -1603,9 +1612,6 @@ public:
 
   virtual void enterMeta_assignment(SysMLv2Parser::Meta_assignmentContext *ctx) = 0;
   virtual void exitMeta_assignment(SysMLv2Parser::Meta_assignmentContext *ctx) = 0;
-
-  virtual void enterTyped_by(SysMLv2Parser::Typed_byContext *ctx) = 0;
-  virtual void exitTyped_by(SysMLv2Parser::Typed_byContext *ctx) = 0;
 
 
 };

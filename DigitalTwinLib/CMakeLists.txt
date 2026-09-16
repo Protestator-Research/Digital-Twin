@@ -30,8 +30,8 @@ add_library(DigitalTwinLib
         src/Parser/SysMLv2Listener.cpp
         src/Parser/SysMLv2Lexer.h
         src/Parser/SysMLv2Lexer.cpp
-        src/Parser/SysMLv2BaseListener.h
-        src/Parser/SysMLv2BaseListener.cpp
+        src/Parser/SysMLv2ListenerImplementation.h
+        src/Parser/SysMLv2ListenerImplementation.cpp
         src/Model/Entities/ICollectionType.h
         src/Model/Entities/Individual.cpp
         src/Model/Entities/Individual.h

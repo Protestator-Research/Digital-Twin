@@ -21,7 +21,7 @@
 #include "Exceptions/DigitalTwinAddressException.h"
 #include "../DigitalTwinManager.h"
 #include "entities/DigitalTwin.h"
-#include "../Parser/SysMLv2BaseListener.h"
+#include "../Parser/SysMLv2ListenerImplementation.h"
 #include "../Parser/SysMLv2Lexer.h"
 #include "../Parser/SysMLv2Parser.h"
 
@@ -50,7 +50,7 @@ namespace DigitalTwin::Model {
                 completeModel+=std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->body();
 
         antlr4::ANTLRInputStream input(completeModel);
-        auto listenerImplementation = new SysMLv2BaseListener();
+        auto listenerImplementation = new SysMLv2ListenerImplementation();
         SysMLv2Lexer lexer(&input);
         antlr4::CommonTokenStream tokens(&lexer);
         SysMLv2Parser parser(&tokens);

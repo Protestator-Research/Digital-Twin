@@ -35,7 +35,7 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("date/3.0.4")
         self.requires("qt/6.11.1")
         self.requires("md4c/0.5.2")
-        self.requires("sysmllib/2607beta")
+        self.requires("sysmllib/2609beta")
         self.requires("yaml-cpp/0.8.0")
         self.requires("openssl/3.6.3")
         self.requires("antlr4-cppruntime/4.13.2")
