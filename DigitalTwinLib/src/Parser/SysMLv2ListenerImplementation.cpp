@@ -206,8 +206,8 @@ void SysMLv2ListenerImplementation::exitPort_usage(SysMLv2Parser::Port_usageCont
 void SysMLv2ListenerImplementation::exitBinding_connector_as_usage(SysMLv2Parser::Binding_connector_as_usageContext* ctx)
 {
 
-	const auto firstVariableName = ctx->connector_end_member()->connector_end()->NAME()->getText();
-	const auto secondVariableName = ctx->binding_end_usage_member()->connector_end_member()->connector_end()->NAME()->getText();
+	const auto firstVariableName = ctx->connector_end_member()->connector_end()->getText();
+	const auto secondVariableName = ctx->binding_end_usage_member()->connector_end_member()->connector_end()->getText();
 
 
 	if (ParentStack.size() == 0) {

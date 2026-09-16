@@ -23,7 +23,7 @@ namespace DigitalTwin::Client {
     VariableViewModelItem::VariableViewModelItem(DigitalTwin::Model::Function* function, VariableViewModelItem* parent)
     {
         Parent = parent;
-        Function = function;
+        Function  = function;
         Type = FunctionType;
     }
 
