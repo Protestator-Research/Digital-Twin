@@ -49,6 +49,7 @@ namespace DigitalTwin::Model {
         std::vector<Component*> getAllComponents();
         std::vector<IVariable*> getAllVariables();
         std::vector<Port*> getAllPorts();
+        std::vector<Function*> getAllFunctions();
 
         std::vector<std::string> getAllMQTTTopics();
 

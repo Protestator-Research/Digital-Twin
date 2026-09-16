@@ -8,6 +8,7 @@
 #include "Component.h"
 
 #include "Port.h"
+#include "Function.h"
 #include "Variables/Variable.hpp"
 
 namespace DigitalTwin::Model {
@@ -110,6 +111,16 @@ namespace DigitalTwin::Model {
         return ports;
     }
 
+    std::vector<Function*> Component::getAllFunctions()
+    {
+        std::vector<Function*> functions;
+
+        for (auto element : Functions)
+            functions.push_back(element.second);
+
+        return functions;
+    }
+
     std::vector<std::string> Component::getAllMQTTTopics() {
         std::vector<std::string> returnValue;
 
@@ -121,6 +132,11 @@ namespace DigitalTwin::Model {
             returnValue.push_back(element.first);
 
         for(auto element : Measurables)
+            returnValue.push_back(element.first);
+
+        returnValue.push_back("functions/register");
+
+        for (auto element : Functions)
             returnValue.push_back(element.first);
 
         return returnValue;

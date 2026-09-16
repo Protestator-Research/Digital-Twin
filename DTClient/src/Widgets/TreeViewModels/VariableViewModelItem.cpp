@@ -20,6 +20,13 @@ namespace DigitalTwin::Client {
         Type = VariableType;
     }
 
+    VariableViewModelItem::VariableViewModelItem(DigitalTwin::Model::Function* function, VariableViewModelItem* parent)
+    {
+        Parent = parent;
+        Function = function;
+        Type = FunctionType;
+    }
+
     VariableViewModelItem::VariableViewModelItem(std::string displayString, VariableViewModelItem *parent) {
         Text = displayString;
         Parent = parent;
@@ -49,6 +56,9 @@ namespace DigitalTwin::Client {
                     return QVariant("Error: Component was null");
             case VariableType:
                 return QVariant(QString::fromStdString(Variable->getName()));
+            case FunctionType:
+                return QVariant(QString::fromStdString(Function->getName()));
+                break;
         }
         return QVariant();
     }
@@ -87,6 +97,16 @@ namespace DigitalTwin::Client {
         return Component;
     }
 
+    void VariableViewModelItem::appendFunction(DigitalTwin::Model::Function* function)
+    {
+        ChildItems.push_back(new VariableViewModelItem(function, this));
+    }
+
+    DigitalTwin::Model::Function* VariableViewModelItem::getFunction() const
+    {
+        return Function;
+    }
+
     void VariableViewModelItem::generateComponentView() {
         if(Component->getAllVariables().size()>0) {
             auto variableElement = new VariableViewModelItem("Variables", this);
@@ -100,6 +120,14 @@ namespace DigitalTwin::Client {
             ChildItems.push_back(componentElement);
             for (auto element: Component->getAllComponents())
                 componentElement->appendComponent(element);
+        }
+
+        if (Component->getAllFunctions().size()>0)
+        {
+            auto functionElement = new VariableViewModelItem("Functions", this);
+            ChildItems.push_back(functionElement);
+            for (auto element: Component->getAllFunctions())
+                functionElement->appendFunction(element);
         }
     }
 

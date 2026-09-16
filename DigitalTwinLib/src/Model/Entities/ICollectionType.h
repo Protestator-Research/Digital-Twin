@@ -11,6 +11,7 @@
 namespace DigitalTwin::Model {
 	class Port;
 	class Component;
+	class Function;
     /**
      * @class ICollectionType
      * @author Moritz Herzog
@@ -47,7 +48,7 @@ namespace DigitalTwin::Model {
     	std::map<std::string, IVariable*> Controllables;
     	std::map<std::string, IVariable*> Measurables;
     	std::map<std::string, IVariable*> Attributes;
-        
+        std::map<std::string, Function*> Functions;
     };
 }
 

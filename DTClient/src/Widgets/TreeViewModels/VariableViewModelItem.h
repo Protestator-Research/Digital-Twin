@@ -8,6 +8,7 @@
 #include <vector>
 #include <Model/Entities/Component.h>
 #include <Model/Entities/Variables/Variable.hpp>
+#include <Model/Entities/Function.h>
 #include <QVariant>
 #include <any>
 
@@ -17,6 +18,7 @@ namespace DigitalTwin::Client {
         VariableViewModelItem() = default;
         explicit VariableViewModelItem(DigitalTwin::Model::Component* component, VariableViewModelItem* parent = nullptr);
         explicit VariableViewModelItem(DigitalTwin::Model::IVariable* variable, VariableViewModelItem* parent = nullptr);
+        explicit VariableViewModelItem(DigitalTwin::Model::Function* function, VariableViewModelItem* parent = nullptr);
         explicit VariableViewModelItem(std::string displayString, VariableViewModelItem* parent = nullptr);
 
         ~VariableViewModelItem() = default;
@@ -32,6 +34,8 @@ namespace DigitalTwin::Client {
         DigitalTwin::Model::IVariable* getVariable() const;
         void appendComponent(DigitalTwin::Model::Component* component);
         DigitalTwin::Model::Component* getComponent() const;
+        void appendFunction(DigitalTwin::Model::Function* function);
+        DigitalTwin::Model::Function* getFunction() const;
 
     private:
         void generateComponentView();
@@ -42,12 +46,15 @@ namespace DigitalTwin::Client {
 
         DigitalTwin::Model::Component* Component = nullptr;
         DigitalTwin::Model::IVariable* Variable = nullptr;
+        DigitalTwin::Model::Function* Function = nullptr;
+
         std::string Text = "";
 
         enum VariableViewModelItemType {
             DisplayType,
             ComponentType,
-            VariableType
+            VariableType,
+            FunctionType
         };
 
         VariableViewModelItemType Type;
