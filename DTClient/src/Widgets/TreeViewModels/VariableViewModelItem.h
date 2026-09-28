@@ -12,11 +12,14 @@
 #include <QVariant>
 #include <any>
 
+#include "Model/Entities/Package.h"
+
 namespace DigitalTwin::Client {
     class VariableViewModelItem {
     public:
         VariableViewModelItem() = default;
         explicit VariableViewModelItem(DigitalTwin::Model::Component* component, VariableViewModelItem* parent = nullptr);
+        explicit VariableViewModelItem(DigitalTwin::Model::Package* package, VariableViewModelItem* parent = nullptr);
         explicit VariableViewModelItem(DigitalTwin::Model::IVariable* variable, VariableViewModelItem* parent = nullptr);
         explicit VariableViewModelItem(DigitalTwin::Model::Function* function, VariableViewModelItem* parent = nullptr);
         explicit VariableViewModelItem(std::string displayString, VariableViewModelItem* parent = nullptr);
@@ -36,9 +39,13 @@ namespace DigitalTwin::Client {
         DigitalTwin::Model::Component* getComponent() const;
         void appendFunction(DigitalTwin::Model::Function* function);
         DigitalTwin::Model::Function* getFunction() const;
+        void appendPakage(DigitalTwin::Model::Package* package);
+        DigitalTwin::Model::Package* getPackage() const;
+
 
     private:
         void generateComponentView();
+        void generatePackageView();
 
         VariableViewModelItem* Parent;
 
@@ -47,6 +54,7 @@ namespace DigitalTwin::Client {
         DigitalTwin::Model::Component* Component = nullptr;
         DigitalTwin::Model::IVariable* Variable = nullptr;
         DigitalTwin::Model::Function* Function = nullptr;
+        DigitalTwin::Model::Package* Package = nullptr;
 
         std::string Text = "";
 
@@ -54,7 +62,8 @@ namespace DigitalTwin::Client {
             DisplayType,
             ComponentType,
             VariableType,
-            FunctionType
+            FunctionType,
+            PackageType
         };
 
         VariableViewModelItemType Type;

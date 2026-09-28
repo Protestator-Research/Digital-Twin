@@ -111,4 +111,34 @@ namespace DigitalTwin::Model
 
 		return returnValue;
 	}
+
+	std::vector<Component*> Package::getAllComponents()
+	{
+		std::vector<Component*> components;
+
+		for (auto element : ComponentDefinitions)
+			components.push_back(element.second);
+
+		return components;
+	}
+
+	std::vector<Port*> Package::getAllPorts()
+	{
+		std::vector<Port*> components;
+
+		for (auto element : PortDefinitions)
+			components.push_back(element.second);
+
+		return components;
+	}
+
+	std::vector<Component*> Package::getAllInstances()
+	{
+		std::vector<Component*> components;
+
+		for (auto element : IndividualInstances)
+			components.push_back(element.second);
+
+		return components;
+	}
 }

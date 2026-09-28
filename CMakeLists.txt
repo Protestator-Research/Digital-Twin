@@ -22,6 +22,16 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Charts)
 find_package(md4c REQUIRED)
 find_package(Threads REQUIRED)
 
+include(FetchContent)
+
+# 1. CMRC via FetchContent laden
+FetchContent_Declare(
+    cmrc
+    GIT_REPOSITORY https://github.com/vector-of-bool/cmrc.git
+    GIT_TAG        master # oder ein fixer Commit/Tag für Reproduzierbarkeit
+)
+FetchContent_MakeAvailable(cmrc)
+
 include(CMakeDependentOption)
 
 option(RUN_TESTS "Build the tests" ON)

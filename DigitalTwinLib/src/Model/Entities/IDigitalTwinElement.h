@@ -38,7 +38,7 @@ namespace DigitalTwin::Model {
          * Gives access to the Digital Twin.
          * @return Name of the Element.
          */
-        std::string getName() {
+        std::string getName() const {
             return Name;
         }
 

@@ -6,11 +6,13 @@
 #include "ICollectionType.h"
 #include "IDigitalTwinElement.h"
 
+#include "../../cpp_digital_twin_lib_global.h"
+
 namespace DigitalTwin::Model {
 	class Component;
 	class Port;
 
-	class Package : public ICollectionType
+	class CPPDIGITALTWINLIB_EXPORT Package : public ICollectionType
 	{
 	public:
 		Package() = delete;
@@ -34,6 +36,10 @@ namespace DigitalTwin::Model {
 		Component* getIndividualInstance(std::string name);
 
 		std::vector<std::string> getAllMQTTTopics();
+
+		std::vector<Component*> getAllComponents();
+		std::vector<Port*> getAllPorts();
+		std::vector<Component*> getAllInstances();
 
 	private:
 		std::map<std::string, Component*> ComponentDefinitions;

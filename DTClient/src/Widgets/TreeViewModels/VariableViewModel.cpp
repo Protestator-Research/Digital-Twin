@@ -88,8 +88,23 @@ namespace DigitalTwin::Client {
             value = 0;
 
         beginInsertRows(QModelIndex(), 0, value);
-        for(const auto component : componentsVector){
+    	
+    	for(const auto component : componentsVector){
             RootItem->appendComponent(dynamic_cast<DigitalTwin::Model::Component*>(component));
+        }
+        endInsertRows();
+
+
+        auto packagesVector = Model->getAllPackages();
+
+        int size = packagesVector.size() - 1;
+        if (size < 0)
+            size = 0;
+
+        beginInsertRows(QModelIndex(), 0, size);
+
+        for (const auto package : packagesVector) {
+            RootItem->appendPakage(dynamic_cast<DigitalTwin::Model::Package*>(package));
         }
         endInsertRows();
     }
