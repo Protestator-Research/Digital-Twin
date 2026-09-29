@@ -18,6 +18,9 @@
 
 
 #include "DigitalTwinModel.h"
+
+#include <async_mqtt/protocol/impl/store.hpp>
+
 #include "Entities/IDigitalTwinElement.h"
 #include "Entities/ICollectionType.h"
 #include "Entities/Component.h"
@@ -28,9 +31,7 @@
 #include "Exceptions/DigitalTwinAddressException.h"
 #include "../DigitalTwinManager.h"
 #include "entities/DigitalTwin.h"
-#include "../Parser/SysMLv2ListenerImplementation.h"
-#include "../Parser/SysMLv2Lexer.h"
-#include "../Parser/SysMLv2Parser.h"
+#include "Entities/Function.h"
 
 #include "Entities/Port.h"
 
@@ -51,26 +52,6 @@ namespace DigitalTwin::Model {
 	void DigitalTwinModel::generateDigitalTwinBackend() {
 		buildDigitalTwinModel();
 
-
-		//antlr4::ANTLRInputStream input(completeModel);
-		//auto listenerImplementation = new SysMLv2ListenerImplementation();
-		//SysMLv2Lexer lexer(&input);
-		//antlr4::CommonTokenStream tokens(&lexer);
-		//SysMLv2Parser parser(&tokens);
-		//parser.addParseListener(listenerImplementation);
-		//parser.start();
-
-		//auto digitalTwinElements = listenerImplementation->getElements();
-
-		//for(auto dtElement : digitalTwinElements) {
-		//    auto component = dynamic_cast<Component*>(dtElement);
-		//    if (component != nullptr)
-		//        ComponentMap.insert(std::make_pair(component->getName(), component));
-
-		//    auto port = dynamic_cast<Port*>(dtElement);
-		//    if (port != nullptr)
-		//        PortMap.insert(std::make_pair(port->getName(), port));
-		//}
 	}
 
 	std::string DigitalTwinModel::digitalTwinName() {
@@ -160,6 +141,11 @@ namespace DigitalTwin::Model {
 					PackageMap.insert(std::make_pair(pack->getName(), pack));
 			};
 
+		std::function<void(ICollectionType*, Function*)> storeFunctionInModel = [this](ICollectionType* parent, Function* function)
+			{
+				parent->appendFunction(function);
+			};
+
 
 		if (element->getType() == "Namespace")
 		{
@@ -189,20 +175,32 @@ namespace DigitalTwin::Model {
 			}
 		}
 
+		if (element->getType() == "Function")
+		{
+			auto newParent = new Function(element->declaredName().value());
+			storeFunctionInModel(parent, newParent);
+			for (const auto& elem : element->ownedElements())
+			{
+				//TODO Variables need better view
+				if (elem->declaredName().has_value())
+					newParent->appendParameter(new RealVariable(elem->declaredName().value()));
+				else
+					newParent->setReturnVariable(new RealVariable("Return"));
+			}
+		}
+
+
 		if (element->getType() == "AttributeUsage")
 		{
 			const auto& attribute = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeUsage>(element);
-			//std::cout << "Create Attribute with properties of " << attribute->featuringType().front()->declaredName().value_or("error") << std::endl;
 			auto variable = new RealVariable(element->declaredName().value());
 			storeMeasurableInModel(parent, variable);
-			//auto newParent = new Component(element->declaredName().value());
-			//storeComponentInModel(parent, newParent);
-			//for (const auto& elem : element->ownedElements())
-			//{
-			//	generateDigitalTwinModelRecursively(elem, newParent);
-			//}
 		}
 
+		if (element->getType() == "OccurrenceUsage")
+		{
+			std::cout << "Create Instance" << std::endl;
+		}
 	}
 
 	std::vector<IDigitalTwinElement*> DigitalTwinModel::getAllComponents() const {

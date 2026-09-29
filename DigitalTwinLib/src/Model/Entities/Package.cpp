@@ -141,4 +141,14 @@ namespace DigitalTwin::Model
 
 		return components;
 	}
+
+	std::vector<Function*> Package::getAllFunctions()
+	{
+		std::vector<Function*> components;
+
+		for (auto element : Functions)
+			components.push_back(element.second);
+
+		return components;
+	}
 }

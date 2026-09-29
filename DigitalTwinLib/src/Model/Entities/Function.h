@@ -23,7 +23,9 @@ namespace DigitalTwin::Model
         ~Function() override;
 
         std::vector<IVariable*> getParameters() const;
+        void appendParameter(IVariable* variable);
         IVariable* getReturnVariable() const;
+        void setReturnVariable(IVariable* variable);
 
     private:
         std::vector<IVariable*> Parameters;

@@ -22,9 +22,19 @@ namespace DigitalTwin
             return Parameters;
         }
 
+        void Function::appendParameter(IVariable* variable)
+        {
+            Parameters.push_back(variable);
+        }
+
         IVariable* Function::getReturnVariable() const
         {
             return ReturnValue;
+        }
+
+        void Function::setReturnVariable(IVariable* variable)
+        {
+            ReturnValue = variable;
         }
     } // Model
 } // DigitalTwin

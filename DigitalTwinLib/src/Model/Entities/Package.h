@@ -40,6 +40,7 @@ namespace DigitalTwin::Model {
 		std::vector<Component*> getAllComponents();
 		std::vector<Port*> getAllPorts();
 		std::vector<Component*> getAllInstances();
+		std::vector<Function*> getAllFunctions();
 
 	private:
 		std::map<std::string, Component*> ComponentDefinitions;

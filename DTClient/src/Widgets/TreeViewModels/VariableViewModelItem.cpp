@@ -162,10 +162,18 @@ namespace DigitalTwin::Client {
 
 		if (Package->getAllInstances().size() > 0)
 		{
-			auto functionElement = new VariableViewModelItem("Functions", this);
+			auto functionElement = new VariableViewModelItem("Instances", this);
 			ChildItems.push_back(functionElement);
 			for (auto element : Package->getAllInstances())
 				functionElement->appendComponent(element);
+		}
+
+		if (Package->getAllFunctions().size() > 0)
+		{
+			auto functionElement = new VariableViewModelItem("Functions", this);
+			ChildItems.push_back(functionElement);
+			for (auto element : Package->getAllFunctions())
+				functionElement->appendFunction(element);
 		}
 	}
 }

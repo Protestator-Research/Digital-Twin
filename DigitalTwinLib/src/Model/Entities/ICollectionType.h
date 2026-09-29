@@ -4,6 +4,8 @@
 #include <vector>
 #include <map>
 #include <any>
+
+#include "Function.h"
 #include "IDigitalTwinElement.h"
 #include "../../cpp_digital_twin_lib_global.h"
 #include "Variables/Variable.hpp"
@@ -38,6 +40,10 @@ namespace DigitalTwin::Model {
         virtual void appendAttribute(IVariable* variable) = 0;
         virtual void appendControllable(IVariable* variable) = 0;
         virtual void appendMeasurable(IVariable* variable) = 0;
+        virtual void appendFunction(Function* function)
+        {
+            Functions.insert(std::make_pair(function->getName(), function));
+        }
 
         virtual IVariable* resolveVariable(std::string name) = 0;
         virtual IVariable* resolveVariable(std::vector<std::string> domains, size_t index) = 0;
