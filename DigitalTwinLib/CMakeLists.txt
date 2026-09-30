@@ -24,14 +24,14 @@ add_library(DigitalTwinLib
         src/Model/Itelligence/AiSecurityBreachDetector.h
         src/Model/Itelligence/OutlierDetection.cpp
         src/Model/Itelligence/OutlierDetection.h
-        src/Parser/SysMLv2Parser.h
-        src/Parser/SysMLv2Parser.cpp
-        src/Parser/SysMLv2Listener.h
-        src/Parser/SysMLv2Listener.cpp
-        src/Parser/SysMLv2Lexer.h
-        src/Parser/SysMLv2Lexer.cpp
-        src/Parser/SysMLv2ListenerImplementation.h
-        src/Parser/SysMLv2ListenerImplementation.cpp
+#        src/Parser/SysMLv2Parser.h
+#        src/Parser/SysMLv2Parser.cpp
+#        src/Parser/SysMLv2Listener.h
+#        src/Parser/SysMLv2Listener.cpp
+#        src/Parser/SysMLv2Lexer.h
+#        src/Parser/SysMLv2Lexer.cpp
+#        src/Parser/SysMLv2ListenerImplementation.h
+#        src/Parser/SysMLv2ListenerImplementation.cpp
         src/Model/Entities/ICollectionType.h
         src/Model/Entities/Individual.cpp
         src/Model/Entities/Individual.h

@@ -13,12 +13,15 @@
 #include <sysmlv2/rest/entities/Project.h>
 #include <sysml/attributes/AttributeUsage.h>
 #include <kerml/root/namespaces/NamespaceImport.h>
+#include <kerml/core/types/Type.h>
+#include <kerml/kernel/datatypes/DataType.h>
 #include <kerml/root/namespaces/Namespace.h>
 #include <sysml/occurrences/OccurrenceUsage.h>
 
 
 #include "DigitalTwinModel.h"
 
+#include <async_mqtt/protocol/impl/buffer_to_packet_variant.ipp>
 #include <async_mqtt/protocol/impl/store.hpp>
 
 #include "Entities/IDigitalTwinElement.h"
@@ -34,6 +37,13 @@
 #include "Entities/Function.h"
 
 #include "Entities/Port.h"
+#include "Entities/Variables/BooleanVariable.h"
+#include "Entities/Variables/ComplexVariable.h"
+#include "Entities/Variables/IntegerVariable.h"
+#include "Entities/Variables/NaturalVariable.h"
+#include "Entities/Variables/PositiveVariable.h"
+#include "Entities/Variables/RationalVariable.h"
+#include "Entities/Variables/StringVariable.h"
 
 namespace DigitalTwin::Model {
 	DigitalTwinModel::DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager* manager) :
@@ -78,8 +88,11 @@ namespace DigitalTwin::Model {
 
 		for (const auto& elem : DigitalTwinModelElements)
 		{
-		    std::cout << "Element name: " << elem->declaredName().value_or("unnamed") << std::endl;
-		    std::cout << "Element type: " << elem->getType() << std::endl;
+			if (elem->qualifiedName().has_value())
+			{
+				std::cout << "Element name: " << elem->qualifiedName().value_or("isssue") << std::endl;
+				std::cout << "Element type: " << elem->getType() << std::endl;
+			}
 
 		    //if (elem->getType()=="Package")
 		    //{
@@ -120,17 +133,17 @@ namespace DigitalTwin::Model {
 			};
 
 
-		std::function<void(ICollectionType*, IVariable*)> storeAttributeInModel = [this](ICollectionType* parent, IVariable* var)
+		std::function<void(ICollectionType*, IVariable*)> storeAttributeInModel = [](ICollectionType* parent, IVariable* var)
 			{
 				parent->appendAttribute(var);
 			};
 
-		std::function<void(ICollectionType*, IVariable*)> storeMeasurableInModel = [this](ICollectionType* parent, IVariable* var)
+		std::function<void(ICollectionType*, IVariable*)> storeMeasurableInModel = [](ICollectionType* parent, IVariable* var)
 			{
 				parent->appendMeasurable(var);
 			};
 
-		std::function<void(ICollectionType*, IVariable*)> storeControllableInModel = [this](ICollectionType* parent, IVariable* var)
+		std::function<void(ICollectionType*, IVariable*)> storeControllableInModel = [](ICollectionType* parent, IVariable* var)
 			{
 				parent->appendControllable(var);
 			};
@@ -141,7 +154,7 @@ namespace DigitalTwin::Model {
 					PackageMap.insert(std::make_pair(pack->getName(), pack));
 			};
 
-		std::function<void(ICollectionType*, Function*)> storeFunctionInModel = [this](ICollectionType* parent, Function* function)
+		std::function<void(ICollectionType*, Function*)> storeFunctionInModel = [](ICollectionType* parent, Function* function)
 			{
 				parent->appendFunction(function);
 			};
@@ -149,7 +162,7 @@ namespace DigitalTwin::Model {
 
 		if (element->getType() == "Namespace")
 		{
-			for (const auto& elem : element->ownedElements())
+			for (const auto& elem : std::dynamic_pointer_cast<KerML::Entities::Namespace>(element)->ownedMember())
 			{
 				generateDigitalTwinModelRecursively(elem, parent);
 			}
@@ -193,14 +206,71 @@ namespace DigitalTwin::Model {
 		if (element->getType() == "AttributeUsage")
 		{
 			const auto& attribute = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeUsage>(element);
-			auto variable = new RealVariable(element->declaredName().value());
-			storeMeasurableInModel(parent, variable);
+			if (!attribute->attributeDefinition().empty())
+			{
+				[[maybe_unused]] IVariable* variable = nullptr;
+				switch (getTypeOfSysMLType(attribute->attributeDefinition().front()))
+				{
+				case BOOLEAN:
+					variable = new BooleanVariable(attribute->declaredName().value());
+					break;
+				case STRING:
+					variable = new StringVariable(attribute->declaredName().value());
+					break;
+				case COMPLEX:
+					variable = new ComplexVariable(attribute->declaredName().value());
+					break;
+				case REAL:
+					variable = new RealVariable(attribute->declaredName().value());
+					break;
+				case RATIONAL:
+					variable = new RationalVariable(attribute->declaredName().value());
+					break;
+				case INTEGER:
+					variable = new IntegerVariable(attribute->declaredName().value());
+					break;
+				case NATURAL:
+					//variable = new NaturalVariable(attribute->declaredName().value());
+					variable = new IntegerVariable(attribute->declaredName().value());
+					break;
+				case POSITIVE:
+					variable = new PositiveVariable(attribute->declaredName().value());
+					break;
+				case NA:
+				default:
+					return;
+				}
+
+				storeMeasurableInModel(parent, variable);
+			}
 		}
 
 		if (element->getType() == "OccurrenceUsage")
 		{
 			std::cout << "Create Instance" << std::endl;
 		}
+	}
+
+	DigitalTwin::Model::SupportedTypes DigitalTwinModel::getTypeOfSysMLType(
+		std::shared_ptr<KerML::Entities::DataType>& type)
+	{
+		if (type->qualifiedName().value() == "ScalarValues::Real")
+			return SupportedTypes::REAL;
+		if (type->qualifiedName().value() == "ScalarValues::Boolean")
+			return SupportedTypes::BOOLEAN;
+		if (type->qualifiedName().value() == "ScalarValues::String")
+			return SupportedTypes::STRING;
+		if (type->qualifiedName().value() == "ScalarValues::Integer")
+			return SupportedTypes::INTEGER;
+		if (type->qualifiedName().value() == "ScalarValues::Complex")
+			return SupportedTypes::COMPLEX;
+		if (type->qualifiedName().value() == "ScalarValues::Rational")
+			return SupportedTypes::RATIONAL;
+		if (type->qualifiedName().value() == "ScalarValues::Natural")
+			return SupportedTypes::NATURAL;
+		if (type->qualifiedName().value() == "ScalarValues::Positive")
+			return SupportedTypes::POSITIVE;
+		return SupportedTypes::NA;
 	}
 
 	std::vector<IDigitalTwinElement*> DigitalTwinModel::getAllComponents() const {

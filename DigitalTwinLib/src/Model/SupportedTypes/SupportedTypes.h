@@ -7,10 +7,13 @@
 namespace DigitalTwin::Model {
     enum SupportedTypes {
         BOOLEAN,
-        INT,
-        CHAR,
-        FLOAT,
-        DOUBLE,
+        STRING,
+        COMPLEX,
+        REAL,
+        RATIONAL,
+        INTEGER,
+        NATURAL,
+        POSITIVE,
         NA
     };
 }

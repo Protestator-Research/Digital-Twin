@@ -21,7 +21,7 @@ class CppDigitalTwinRecipe(ConanFile):
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": True, "fPIC": False}
+    default_options = {"shared": True, "fPIC": True}
 
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "CMakeLists.txt", "CppDigitalTwin/*"
@@ -46,7 +46,7 @@ class CppDigitalTwinRecipe(ConanFile):
 
     def configure(self):
         if self.options.shared:
-            self.options.rm_safe("fPIC")
+            #self.options.rm_safe("fPIC")
             self.options["boost/*"].shared = True
             self.options["gtest/*"].shared = True
             self.options["redboltz-mqtt_cpp/*"].shared = True

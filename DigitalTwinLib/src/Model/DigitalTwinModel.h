@@ -23,6 +23,7 @@ namespace SysMLv2::REST {
 namespace KerML::Entities {
     class Element;
     class NamespaceImport;
+    class DataType;
 }
 
 namespace DigitalTwin {
@@ -62,6 +63,7 @@ namespace DigitalTwin::Model {
         void buildDigitalTwinModel();
 
         void generateDigitalTwinModelRecursively(const std::shared_ptr<KerML::Entities::Element>& element, ICollectionType* parent);
+        DigitalTwin::Model::SupportedTypes getTypeOfSysMLType(std::shared_ptr<KerML::Entities::DataType>& type);
 
 
         std::shared_ptr<SysMLv2::REST::DigitalTwin> DigitalTwin;
