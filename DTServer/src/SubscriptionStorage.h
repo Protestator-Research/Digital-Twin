@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <string_view>
 
 namespace DIGITAL_TWIN_SERVER
 {
@@ -22,6 +23,7 @@ namespace DIGITAL_TWIN_SERVER
 		~SubscriptionStorage() = default;
 
 		void add(Session* session, std::string filter, bool no_local);
+		void remove(Session* session, std::string_view filter);
 		void removeAll(Session* session);
 		bool matchFilter(std::string_view filter, std::string_view topic);
 		static std::vector<std::string_view>  split(std::string_view s);

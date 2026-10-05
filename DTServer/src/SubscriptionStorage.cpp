@@ -8,7 +8,24 @@ namespace DIGITAL_TWIN_SERVER
 	void SubscriptionStorage::add(Session* session, std::string filter, bool no_local)
 	{
 		std::lock_guard lg(Mutex);
+		for (auto& existing : Subscriptions)
+		{
+			if (existing._Session == session && existing.Filter == filter)
+			{
+				existing.NoLocal = no_local;
+				return;
+			}
+		}
 		Subscriptions.push_back(SubscriptionEntry{ session,std::move(filter), no_local });
+	}
+
+	void SubscriptionStorage::remove(Session* session, std::string_view filter)
+	{
+		std::lock_guard lg(Mutex);
+		Subscriptions.erase(std::remove_if(Subscriptions.begin(), Subscriptions.end(), [&](SubscriptionEntry const& elem)
+		{
+			return elem._Session == session && elem.Filter == filter;
+		}), Subscriptions.end());
 	}
 
 	void SubscriptionStorage::removeAll(Session* session)
@@ -49,8 +66,20 @@ namespace DIGITAL_TWIN_SERVER
 	}
 
 	void SubscriptionStorage::broadcast(std::string topic, std::string payload) {
-		for (const auto& subscription : Subscriptions) {
-			subscription._Session->send_qos0_publish(topic, payload);
+		std::vector<Session*> targets;
+		{
+			std::lock_guard lg(Mutex);
+			for (const auto& subscription : Subscriptions) {
+				if (!subscription._Session)
+					continue;
+				if (std::find(targets.begin(), targets.end(), subscription._Session) != targets.end())
+					continue;
+				if (matchFilter(subscription.Filter, topic))
+					targets.push_back(subscription._Session);
+			}
+		}
+		for (auto* session : targets) {
+			session->send_qos0_publish(topic, payload);
 		}
 	}
 

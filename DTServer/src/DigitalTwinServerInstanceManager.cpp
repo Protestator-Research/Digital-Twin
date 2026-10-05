@@ -108,10 +108,11 @@ namespace DIGITAL_TWIN_SERVER {
     }
 
     void DigitalTwinServerInstanceManager::createDTTopicAndCallback() {
-        ClientService->publish(DigitalTwin::Communication::CONNECT_TO_TWIN,DigitalTwin::Communication::DigitalTwinEntity().serialize());
-        ClientService->subscribe(DigitalTwin::Communication::CONNECT_TO_TWIN,[this]([[maybe_unused]] std::string topic,std::string payload)->void {
+        const auto subscriptionFunction = [this]([[maybe_unused]] std::string topic,std::string payload)->void {
             const auto& dtEntity = DigitalTwin::Communication::DigitalTwinEntity(payload);
             DigitalTwinManager->downloadDigitalTwin(dtEntity.projectId(),dtEntity.digitalTwinId());
-        });
+        };
+
+        ClientService->subscribe(DigitalTwin::Communication::CONNECT_TO_TWIN,subscriptionFunction);
     }
 }

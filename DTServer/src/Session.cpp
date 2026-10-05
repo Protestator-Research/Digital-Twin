@@ -12,7 +12,6 @@ namespace DIGITAL_TWIN_SERVER
     }
 
     void Session::start() {
-        _subscriptionStorage.add(this,"",false);
         recv_connect();
     }
 
@@ -59,11 +58,26 @@ namespace DIGITAL_TWIN_SERVER
                     self->ServerEndpoint->async_send(resp, [](async_mqtt::error_code const&) {});
                 },
                 [&](async_mqtt::v5::subscribe_packet const& sp) {
+                    for (auto const& entry : sp.entries()) {
+                        bool no_local = entry.opts().get_nl() == async_mqtt::sub::nl::yes;
+                        self->_subscriptionStorage.add(self, std::string(entry.topic()), no_local);
+                    }
                     std::vector<async_mqtt::suback_reason_code> reasons(
                         sp.entries().size(),
                         async_mqtt::suback_reason_code::granted_qos_0
                     );
                     async_mqtt::v5::suback_packet ack{sp.packet_id(), reasons};
+                    self->ServerEndpoint->async_send(ack, [](async_mqtt::error_code const&) {});
+                },
+                [&](async_mqtt::v5::unsubscribe_packet const& up) {
+                    for (auto const& entry : up.entries()) {
+                        self->_subscriptionStorage.remove(self, entry.topic());
+                    }
+                    std::vector<async_mqtt::unsuback_reason_code> reasons(
+                        up.entries().size(),
+                        async_mqtt::unsuback_reason_code::success
+                    );
+                    async_mqtt::v5::unsuback_packet ack{up.packet_id(), reasons};
                     self->ServerEndpoint->async_send(ack, [](async_mqtt::error_code const&) {});
                 },
                 [&](async_mqtt::v5::publish_packet const& pp) {
@@ -103,7 +117,8 @@ namespace DIGITAL_TWIN_SERVER
             async_mqtt::qos::at_most_once
         };
         ServerEndpoint->async_send(out, [](async_mqtt::error_code const& code) {
-            std::cout << "MQTT Error: " << code<<std::endl;
+            if (code)
+                std::cout << "MQTT Error: " << code << std::endl;
             });
     }
 
