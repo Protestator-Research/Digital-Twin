@@ -18,21 +18,37 @@ namespace DIGITAL_TWIN_SERVER {
 
     MQTTBrokerService::MQTTBrokerService(boost::asio::io_context* ioc, unsigned serverPort, std::string serverCertPath, std::string serverCertPrivKeyPath) :
     Context(ioc),
-    Acceptor(*ioc,boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), serverPort))
+    Acceptor(*ioc)
     {
         ServerPort = serverPort;
         assert(!(!serverCertPath.empty() && serverCertPrivKeyPath.empty()));
         ServerCertPath = serverCertPath;
         ServerCertPrivKeyPath = serverCertPrivKeyPath;
+        openAcceptor(serverPort);
     }
 
     MQTTBrokerService::MQTTBrokerService(boost::asio::io_context* ioc, std::string serverCertPath, std::string serverCertPrivKeyPath):
-    Context(ioc),
-    Acceptor(*ioc,boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 1883))
+    MQTTBrokerService(ioc, 1883, std::move(serverCertPath), std::move(serverCertPrivKeyPath))
     {
-        assert(!(!serverCertPath.empty() && serverCertPrivKeyPath.empty()));
-        ServerCertPath = serverCertPath;
-        ServerCertPrivKeyPath = serverCertPrivKeyPath;
+    }
+
+    void MQTTBrokerService::openAcceptor(unsigned port)
+    {
+        // Prefer a dual-stack (IPv6 + IPv4-mapped) listener, fall back to IPv4 only.
+        boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v6(), static_cast<unsigned short>(port));
+        boost::system::error_code ec;
+        Acceptor.open(endpoint.protocol(), ec);
+        if (!ec) Acceptor.set_option(boost::asio::ip::v6_only(false), ec);
+        if (!ec) Acceptor.set_option(boost::asio::socket_base::reuse_address(true), ec);
+        if (ec) {
+            boost::system::error_code ignored;
+            Acceptor.close(ignored);
+            endpoint = boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), static_cast<unsigned short>(port));
+            Acceptor.open(endpoint.protocol());
+            Acceptor.set_option(boost::asio::socket_base::reuse_address(true));
+        }
+        Acceptor.bind(endpoint);
+        Acceptor.listen();
     }
 
     void MQTTBrokerService::setUpTLS()
