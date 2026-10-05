@@ -17,7 +17,9 @@
 #include <kerml/kernel/datatypes/DataType.h>
 #include <kerml/root/namespaces/Namespace.h>
 #include <sysml/occurrences/OccurrenceUsage.h>
-
+#include <sysml/attibutes/AttributeDefinition.h>
+#include <kerml/core/classifiers/Subclassification.h>
+#include <sysml/metadata/MetadataUsage.h>
 
 #include "DigitalTwinModel.h"
 
@@ -194,9 +196,14 @@ namespace DigitalTwin::Model {
 			storeFunctionInModel(parent, newParent);
 			for (const auto& elem : element->ownedElements())
 			{
-				//TODO Variables need better view
 				if (elem->declaredName().has_value())
-					newParent->appendParameter(new RealVariable(elem->declaredName().value()));
+				{
+					if (elem->getType()=="Feature")
+					{
+						auto feature = std::dynamic_pointer_cast<KerML::Entities::Feature>(elem);
+						newParent->appendParameter(buildVariableOfFeature(feature));
+					}
+				}
 				else
 					newParent->setReturnVariable(new RealVariable("Return"));
 			}
@@ -205,70 +212,198 @@ namespace DigitalTwin::Model {
 
 		if (element->getType() == "AttributeUsage")
 		{
-			const auto& attribute = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeUsage>(element);
-			if (!attribute->attributeDefinition().empty())
+			auto attribute = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeUsage>(element);
+			auto variable = buildVariableOfDataType(attribute);
+			if (variable)
 			{
-				[[maybe_unused]] IVariable* variable = nullptr;
-				switch (getTypeOfSysMLType(attribute->attributeDefinition().front()))
+				ElementType type = ElementType::Variable;
+				for (const auto& elem : attribute->member())
 				{
-				case BOOLEAN:
-					variable = new BooleanVariable(attribute->declaredName().value());
-					break;
-				case STRING:
-					variable = new StringVariable(attribute->declaredName().value());
-					break;
-				case COMPLEX:
-					variable = new ComplexVariable(attribute->declaredName().value());
-					break;
-				case REAL:
-					variable = new RealVariable(attribute->declaredName().value());
-					break;
-				case RATIONAL:
-					variable = new RationalVariable(attribute->declaredName().value());
-					break;
-				case INTEGER:
-					variable = new IntegerVariable(attribute->declaredName().value());
-					break;
-				case NATURAL:
-					//variable = new NaturalVariable(attribute->declaredName().value());
-					variable = new IntegerVariable(attribute->declaredName().value());
-					break;
-				case POSITIVE:
-					variable = new PositiveVariable(attribute->declaredName().value());
-					break;
-				case NA:
-				default:
-					return;
+					if (elem->getType()=="MetadataUsage")
+					{
+						type = getElementTypeOfMetaDataUsage(std::dynamic_pointer_cast<SysMLv2::Entities::MetadataUsage>(elem));
+					}
 				}
-
-				storeMeasurableInModel(parent, variable);
-			}
+				switch (type)
+				{
+				case Measurable:
+					storeMeasurableInModel(parent, variable);
+					break;
+				case Controllable:
+					storeControllableInModel(parent, variable);
+					break;
+				case Constant:
+				case Variable:
+					storeAttributeInModel(parent, variable);
+					break;
+					default:
+					break;
+				}
+			}else if (attribute->ownedElements().size()>0)
+			{
+				 variable = buildVariableOfOwnedElements(attribute);
+				if (variable)
+					storeMeasurableInModel(parent, variable);
+			}else
+				std::cerr << "Issue with the type of the given Attribute." << std::endl;
 		}
 
 		if (element->getType() == "OccurrenceUsage")
 		{
-			std::cout << "Create Instance" << std::endl;
+			const auto& occurrence = std::dynamic_pointer_cast<SysMLv2::Entities::OccurrenceUsage>(element);
+			std::cout << "Create Instance of " << occurrence->type().front()->declaredName().value() << std::endl;
+			dynamic_cast<Package*>(parent)->instantiateComponent(occurrence->declaredName().value(),occurrence->type().front()->declaredName().value());
 		}
+	}
+
+	IVariable* DigitalTwinModel::buildVariableOfDataType(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& attribute)
+	{
+		IVariable* variable = nullptr;
+		if (!attribute->attributeDefinition().empty())
+		{
+			switch (getTypeOfSysMLType(attribute->attributeDefinition().front()))
+			{
+			case BOOLEAN:
+				variable = new BooleanVariable(attribute->declaredName().value());
+				break;
+			case STRING:
+				variable = new StringVariable(attribute->declaredName().value());
+				break;
+			case COMPLEX:
+				variable = new ComplexVariable(attribute->declaredName().value());
+				break;
+			case REAL:
+				variable = new RealVariable(attribute->declaredName().value());
+				break;
+			case RATIONAL:
+				variable = new RationalVariable(attribute->declaredName().value());
+				break;
+			case INTEGER:
+				variable = new IntegerVariable(attribute->declaredName().value());
+				break;
+			case NATURAL:
+				//variable = new NaturalVariable(attribute->declaredName().value());
+				variable = new IntegerVariable(attribute->declaredName().value());
+				break;
+			case POSITIVE:
+				variable = new PositiveVariable(attribute->declaredName().value());
+				break;
+			case NA:
+			default:
+				break;
+			}
+		}
+		return variable;
+	}
+
+	IVariable* DigitalTwinModel::buildVariableOfOwnedElements(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& attribute)
+	{
+		IVariable* variable = nullptr;
+		auto featureTyping = std::dynamic_pointer_cast<KerML::Entities::FeatureTyping>(attribute->ownedElements().front());
+		if (featureTyping)
+		{
+			auto attributeDefinition = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeDefinition>(featureTyping->type());
+			if (attributeDefinition)
+			{
+				const auto subclassification = attributeDefinition->ownedSubclassification().back();
+				if (subclassification->general()->declaredName().has_value())
+				{
+					if (subclassification->general()->declaredName().value() == "ScalarQuantityValue")
+						variable = new RealVariable(attribute->declaredName().value());
+				}
+			}
+		}
+		return variable;
+	}
+
+	IVariable* DigitalTwinModel::buildVariableOfFeature(std::shared_ptr<KerML::Entities::Feature>& feature)
+	{
+		const auto featureType = feature->type().back();
+		if (featureType)
+		{
+			IVariable* variable = nullptr;
+			if (!featureType->declaredName().has_value())
+			{
+				switch (getTypeOfSysMLType(featureType->declaredName().value()))
+				{
+				case BOOLEAN:
+					variable = new BooleanVariable(feature->declaredName().value());
+					break;
+				case STRING:
+					variable = new StringVariable(feature->declaredName().value());
+					break;
+				case COMPLEX:
+					variable = new ComplexVariable(feature->declaredName().value());
+					break;
+				case REAL:
+					variable = new RealVariable(feature->declaredName().value());
+					break;
+				case RATIONAL:
+					variable = new RationalVariable(feature->declaredName().value());
+					break;
+				case INTEGER:
+					variable = new IntegerVariable(feature->declaredName().value());
+					break;
+				case NATURAL:
+					//variable = new NaturalVariable(feature->declaredName().value());
+					variable = new IntegerVariable(feature->declaredName().value());
+					break;
+				case POSITIVE:
+					variable = new PositiveVariable(feature->declaredName().value());
+					break;
+				case NA:
+				default:
+					break;
+				}
+			}
+			return variable;
+		}
+		return nullptr;
+	}
+
+	ElementType DigitalTwinModel::getElementTypeOfMetaDataUsage(
+		std::shared_ptr<SysMLv2::Entities::MetadataUsage> metaDataUsage)
+	{
+		if (metaDataUsage)
+		{
+			if (metaDataUsage->occurrenceDefinition().front())
+			{
+				if (metaDataUsage->occurrenceDefinition().front()->declaredName() == "Measurable")
+				{
+					return Measurable;
+				}
+				if (metaDataUsage->occurrenceDefinition().front()->declaredName() == "Controllable")
+				{
+					return Controllable;
+				}
+			}
+		}
+		return Variable;
 	}
 
 	DigitalTwin::Model::SupportedTypes DigitalTwinModel::getTypeOfSysMLType(
 		std::shared_ptr<KerML::Entities::DataType>& type)
 	{
-		if (type->qualifiedName().value() == "ScalarValues::Real")
+		return getTypeOfSysMLType(type->qualifiedName().value());
+	}
+
+	DigitalTwin::Model::SupportedTypes DigitalTwinModel::getTypeOfSysMLType(std::string value)
+	{
+		if (value == "ScalarValues::Real")
 			return SupportedTypes::REAL;
-		if (type->qualifiedName().value() == "ScalarValues::Boolean")
+		if (value == "ScalarValues::Boolean")
 			return SupportedTypes::BOOLEAN;
-		if (type->qualifiedName().value() == "ScalarValues::String")
+		if (value == "ScalarValues::String")
 			return SupportedTypes::STRING;
-		if (type->qualifiedName().value() == "ScalarValues::Integer")
+		if (value == "ScalarValues::Integer")
 			return SupportedTypes::INTEGER;
-		if (type->qualifiedName().value() == "ScalarValues::Complex")
+		if (value == "ScalarValues::Complex")
 			return SupportedTypes::COMPLEX;
-		if (type->qualifiedName().value() == "ScalarValues::Rational")
+		if (value == "ScalarValues::Rational")
 			return SupportedTypes::RATIONAL;
-		if (type->qualifiedName().value() == "ScalarValues::Natural")
+		if (value == "ScalarValues::Natural")
 			return SupportedTypes::NATURAL;
-		if (type->qualifiedName().value() == "ScalarValues::Positive")
+		if (value == "ScalarValues::Positive")
 			return SupportedTypes::POSITIVE;
 		return SupportedTypes::NA;
 	}

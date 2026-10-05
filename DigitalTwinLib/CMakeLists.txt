@@ -54,7 +54,10 @@ add_library(DigitalTwinLib
         src/Model/Entities/Variables/NaturalVariable.cpp
         src/Model/Entities/Variables/NaturalVariable.h
         src/Model/Entities/Variables/PositiveVariable.cpp
-        src/Model/Entities/Variables/PositiveVariable.h)
+        src/Model/Entities/Variables/PositiveVariable.h
+        src/Model/Entities/Variables/ScalarQuantities.cpp
+        src/Model/Entities/Variables/ScalarQuantities.h
+        src/Model/Entities/ElementType.h)
 
 target_include_directories(DigitalTwinLib PUBLIC
         boost::boost

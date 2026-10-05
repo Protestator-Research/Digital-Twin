@@ -16,14 +16,23 @@
 #include "Entities/Variables/Variable.hpp"
 #include <sysmlv2/service/implementation/InstanceManager.h>
 
+#include "Entities/ElementType.h"
+
 namespace SysMLv2::REST {
     class DigitalTwin;
+}
+
+namespace SysMLv2::Entities
+{
+    class AttributeUsage;
+    class MetadataUsage;
 }
 
 namespace KerML::Entities {
     class Element;
     class NamespaceImport;
     class DataType;
+    class Feature;
 }
 
 namespace DigitalTwin {
@@ -63,7 +72,12 @@ namespace DigitalTwin::Model {
         void buildDigitalTwinModel();
 
         void generateDigitalTwinModelRecursively(const std::shared_ptr<KerML::Entities::Element>& element, ICollectionType* parent);
+        IVariable* buildVariableOfDataType(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& element);
+        IVariable* buildVariableOfOwnedElements(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& element);
+        IVariable* buildVariableOfFeature(std::shared_ptr<KerML::Entities::Feature>& feature);
+        ElementType getElementTypeOfMetaDataUsage(std::shared_ptr<SysMLv2::Entities::MetadataUsage> metaDataUsage);
         DigitalTwin::Model::SupportedTypes getTypeOfSysMLType(std::shared_ptr<KerML::Entities::DataType>& type);
+        DigitalTwin::Model::SupportedTypes getTypeOfSysMLType(std::string value);
 
 
         std::shared_ptr<SysMLv2::REST::DigitalTwin> DigitalTwin;
