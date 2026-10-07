@@ -38,7 +38,7 @@ namespace DigitalTwin::Model
 	void Package::instantiateComponent(std::string instanceName, std::string componentName)
 	{
 		const auto componentInstance = ComponentDefinitions.at(componentName)->instantiate(instanceName);
-		ComponentDefinitions.insert(std::make_pair(instanceName, componentInstance));
+		IndividualInstances.insert(std::make_pair(instanceName, componentInstance));
 	}
 
 	Component* Package::getComponentDefinition(std::string name)
@@ -100,14 +100,17 @@ namespace DigitalTwin::Model
 		std::vector<std::string> returnValue;
 
 		for (const auto& [name, _] : Controllables)
-			returnValue.push_back(getName() + "/" + name);
+			returnValue.push_back(name);
 		
 		for (const auto& [name, _] : Measurables)
-			returnValue.push_back(getName() + "/" + name);
+			returnValue.push_back(name);
 
 		for (const auto& [_, instance] : IndividualInstances)
 			for (const auto& topic : instance->getAllMQTTTopics())
-				returnValue.push_back(getName() + "/" + topic);
+				returnValue.push_back(instance->getName() + "/" + topic);
+
+		for (const auto& [name, _] : Functions)
+			returnValue.push_back(name);
 
 		return returnValue;
 	}

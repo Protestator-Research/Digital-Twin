@@ -44,6 +44,10 @@ namespace DigitalTwin {
         class ICollectionType;
         class Component;
     }
+    namespace Communication
+    {
+        class FunctionRegistrationRequest;
+    }
 }
 
 namespace DigitalTwin::Model {
@@ -63,7 +67,9 @@ namespace DigitalTwin::Model {
         IVariable* getVariableWithAddress(std::string address);
         Component* getComponentWithAddress(std::string address);
 
+
         std::vector<std::string> getElementStrings();
+        void registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest registrationRequest);
 
         void setUpdateModelFunction(std::function<void()> updateModel);
 

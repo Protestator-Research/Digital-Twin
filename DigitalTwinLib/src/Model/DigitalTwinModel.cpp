@@ -46,6 +46,7 @@
 #include "Entities/Variables/PositiveVariable.h"
 #include "Entities/Variables/RationalVariable.h"
 #include "Entities/Variables/StringVariable.h"
+#include "MQTT/entities/FunctionRegistrationRequest.hpp"
 
 namespace DigitalTwin::Model {
 	DigitalTwinModel::DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager* manager) :
@@ -87,31 +88,6 @@ namespace DigitalTwin::Model {
 
 		Instance->parseModel(completeModel);
 		DigitalTwinModelElements = Instance->getElements();
-
-		for (const auto& elem : DigitalTwinModelElements)
-		{
-			if (elem->qualifiedName().has_value())
-			{
-				std::cout << "Element name: " << elem->qualifiedName().value_or("isssue") << std::endl;
-				std::cout << "Element type: " << elem->getType() << std::endl;
-			}
-
-		    //if (elem->getType()=="Package")
-		    //{
-		    //    std::cout << "Create package with Name: " << elem->declaredName().value_or("unnamed") << std::endl;
-		    //}
-
-		    //if (elem->getType() == "PartDefinition")
-		    //{
-		    //    std::cout << "Create component with Name: " << elem->declaredName().value_or("unnamed") << std::endl;
-		    //}
-
-		    //if (elem->getType() == "OccurrenceUsage")
-		    //{
-		    //    const auto& occurance = std::dynamic_pointer_cast<SysMLv2::Entities::OccurrenceUsage>(elem);
-		    //    std::cout << "Create instance of " << /*occurance->occurrenceDefinition().front()->declaredName().value_or("issue") <<*/ "with name " << occurance->declaredName().value_or("unnamed") << std::endl;
-		    //}
-		}
 
 		generateDigitalTwinModelRecursively(Instance->getRootNamespace(), nullptr);
 	}
@@ -440,6 +416,11 @@ namespace DigitalTwin::Model {
 				elements.push_back(element.first + "/" + string);
 
 		return elements;
+	}
+
+	void DigitalTwinModel::registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest )
+	{
+
 	}
 
 	Component* DigitalTwinModel::getComponentWithAddress(std::string address) {

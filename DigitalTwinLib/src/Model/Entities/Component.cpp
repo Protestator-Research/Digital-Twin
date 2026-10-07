@@ -156,7 +156,7 @@ namespace DigitalTwin::Model {
             comp->appendMeasurable(measurable);
 
         for (auto [_, attribute] : Attributes)
-            comp->appendMeasurable(attribute);
+            comp->appendAttribute(attribute);
 
         return comp;
     }
