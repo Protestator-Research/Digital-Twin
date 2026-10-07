@@ -33,12 +33,14 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("async-mqtt/10.2.8")
         self.requires("paho-mqtt-cpp/1.6.0")
         self.requires("date/3.0.4")
-        self.requires("qt/6.11.1")
         self.requires("md4c/0.5.2")
-        self.requires("sysmllib/2610.1")
+        self.requires("sysmllib/2609.3")
         self.requires("yaml-cpp/0.8.0")
         self.requires("openssl/3.6.3")
         self.requires("antlr4-cppruntime/4.13.2")
+
+        if self.settings.os == "Linux":
+            self.requires("qt/6.11.1")
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -55,8 +57,11 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["date/*"].shared = True
             self.options["antlr4-cppruntime/*"].shared = True
             self.options["sysmllib/*"].shared=True
-            self.options["qt/*"].shared = True
             self.options["antlr4-cppruntime/*"].shared = True
+
+            if self.settings.os == "Linux":
+                self.options["qt/*"].shared = True
+
         else:
             self.options["boost/*"].shared = False
             self.options["gtest/*"].shared = False
@@ -66,13 +71,13 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["date/*"].shared = False
             self.options["antlr4-cppruntime/*"].shared = False
             self.options["sysmllib/*"].shared=False
-            self.options["qt/*"].shared = False
             self.options["antlr4-cppruntime/*"].shared = False
 
+            if self.settings.os == "Linux":
+                self.options["qt/*"].shared = False
 
-        self.options["qt/*"].qtcharts = True
-        # self.options["qt/*"].qthttpserver = True
-        # self.options["qt/*"].qtmqtt = True
+        if self.settings.os == "Linux":
+            self.options["qt/*"].qtcharts = True
 
     
     def layout(self):
@@ -91,7 +96,6 @@ class CppDigitalTwinRecipe(ConanFile):
         cmake.build()
 
     def build_requirements(self):
-        # self.tool_requires("qt/6.11.1")
         self.tool_requires("cmake/[>=3.30.0 <5]")
         self.test_requires("gtest/[>=1.14.0 <2]")
 
