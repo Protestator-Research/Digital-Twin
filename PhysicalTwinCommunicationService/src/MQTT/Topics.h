@@ -9,5 +9,6 @@
 
 namespace DigitalTwin::Communication {
     const std::string CONNECT_TO_TWIN = "connectToTwin";
+    const std::string REGISTER_FUNCTION = "registerFunction";
 }
 #endif //DIGITALTWIN_TOPICS_H

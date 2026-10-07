@@ -44,16 +44,41 @@ namespace CPSBASELIB::STD_EXTENTION {
 
     std::chrono::time_point<std::chrono::system_clock> StringExtention::timepointFromString(std::string timepointString)
     {
-        std::chrono::sys_time<std::chrono::milliseconds> tp;
-
-        std::istringstream stream(timepointString);
-
-        stream >> std::chrono::parse("%FT%TZ", tp);
-
-        if (stream.fail()) {
+        int y, mo, d, h, mi, s;
+        int consumed = 0;
+        if (std::sscanf(timepointString.c_str(), "%4d-%2d-%2dT%2d:%2d:%2d%n",
+                        &y, &mo, &d, &h, &mi, &s, &consumed) != 6)
             throw std::runtime_error("Invalid timestamp: " + timepointString);
-        }
 
-        return tp;
+        // optionale Sekundenbruchteile (.123), auf Millisekunden normiert
+        const char* p = timepointString.c_str() + consumed;
+        std::chrono::milliseconds frac{0};
+        if (*p == '.') {
+            int digits = 0, value = 0;
+            for (++p; *p >= '0' && *p <= '9'; ++p)
+                if (digits < 3) { value = value * 10 + (*p - '0'); ++digits; }
+            while (digits++ < 3) value *= 10;
+            frac = std::chrono::milliseconds{value};
+        }
+        if (*p != 'Z' || *(p + 1) != '\0')
+            throw std::runtime_error("Invalid timestamp: " + timepointString);
+
+        std::chrono::year_month_day ymd{std::chrono::year{y}, std::chrono::month{static_cast<unsigned>(mo)}, std::chrono::day{static_cast<unsigned>(d)}};
+        if (!ymd.ok())
+            throw std::runtime_error("Invalid timestamp: " + timepointString);
+
+        return std::chrono::sys_days{ymd} + std::chrono::hours{h} + std::chrono::minutes{mi} + std::chrono::seconds{s} + frac;
+    }
+
+    std::string StringExtention::replaceAll(std::string str, const std::string& from, const std::string& to)
+    {
+        if (from.empty()) return str;   // sonst Endlosschleife
+
+        std::size_t pos = 0;
+        while ((pos = str.find(from, pos)) != std::string::npos) {
+            str.replace(pos, from.length(), to);
+            pos += to.length();          // hinter die Ersetzung springen
+        }
+        return str;
     }
 }

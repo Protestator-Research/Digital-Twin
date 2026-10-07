@@ -61,5 +61,13 @@ namespace CPSBASELIB::STD_EXTENTION {
          */
         static std::chrono::time_point<std::chrono::system_clock> timepointFromString(std::string timepointString);
 
+        /**
+         * Replaces all occurrences of from with to in str.
+         * @param str The string the where parts are replaced.
+         * @param from The string that is replaced.
+         * @param to The string that the parts are replaced with.
+         * @return The reset string.
+         */
+        static std::string replaceAll(std::string str, const std::string& from, const std::string& to);
     };
 }

@@ -7,10 +7,16 @@
 #include <string>
 #include <cstdlib>
 #include <map>
+#include <set>
+#include <mutex>
+#include <memory>
+#include <boost/asio/thread_pool.hpp>
+#include <boost/uuid/uuid.hpp>
 #include <BECommunicationService.h>
 #include <DigitalTwinManager.h>
 #include <Services/MqttClientService.h>
 #include "MqttBrokerService.h"
+#include "BrokerLimits.h"
 
 
 namespace DIGITAL_TWIN_SERVER {
@@ -92,6 +98,17 @@ namespace DIGITAL_TWIN_SERVER {
         DigitalTwin::DigitalTwinManager* DigitalTwinManager = nullptr;
         DigitalTwin::Communication::MqttClientService* ClientService = nullptr;
         MQTTBrokerService* BrokerService = nullptr;
+        /** The broker has its own io_context, the MQTT client service owns another one. */
+        std::unique_ptr<boost::asio::io_context> BrokerContext;
+        BrokerLimits Limits;
+
+        /** Number of threads of the pool for blocking work (HTTP calls to the backend). */
+        static constexpr unsigned DownloadThreadCount = 4;
+        /** Digital twin ids with a running download, at most one download per twin. */
+        std::set<boost::uuids::uuid> DownloadsInProgress;
+        std::mutex DownloadsInProgressMutex;
+        // Declared last: destroyed (and joined) first, so tasks never see destroyed members.
+        boost::asio::thread_pool DownloadPool{DownloadThreadCount};
 
         std::vector<SysMLv2::REST::Project*> Projects;
         std::map<ARGUMENTS,std::string> ArgumentsMap;

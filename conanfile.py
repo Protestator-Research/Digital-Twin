@@ -34,10 +34,9 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("paho-mqtt-cpp/1.6.0")
         self.requires("date/3.0.4")
         self.requires("md4c/0.5.2")
-        self.requires("sysmllib/2609.3")
+        self.requires("sysmllib/2610.1")
         self.requires("yaml-cpp/0.8.0")
         self.requires("openssl/3.6.3")
-        self.requires("antlr4-cppruntime/4.13.2")
 
         if self.settings.os == "Linux":
             self.requires("qt/6.11.1")
@@ -55,7 +54,6 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["libcurl/*"].shared = True
             self.options["nlohmann_json/*"].shared = True
             self.options["date/*"].shared = True
-            self.options["antlr4-cppruntime/*"].shared = True
             self.options["sysmllib/*"].shared=True
             self.options["antlr4-cppruntime/*"].shared = True
 
@@ -69,7 +67,6 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["libcurl/*"].shared = False
             self.options["nlohmann_json/*"].shared = False
             self.options["date/*"].shared = False
-            self.options["antlr4-cppruntime/*"].shared = False
             self.options["sysmllib/*"].shared=False
             self.options["antlr4-cppruntime/*"].shared = False
 

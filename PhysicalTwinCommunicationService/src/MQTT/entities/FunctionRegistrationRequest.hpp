@@ -32,7 +32,7 @@ namespace DigitalTwin::Communication
             LinkedReturnQualifiedName = json["linked_variable_return"];
         }
 
-        std::string toJsonString()
+        std::string toJsonString() const
         {
             nlohmann::json json;
             json["qualified_name"] = QualifiedName;

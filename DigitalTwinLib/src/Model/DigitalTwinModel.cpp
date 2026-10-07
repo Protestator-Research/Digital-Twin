@@ -418,8 +418,24 @@ namespace DigitalTwin::Model {
 		return elements;
 	}
 
-	void DigitalTwinModel::registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest )
+	void DigitalTwinModel::registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest functionRegistrationRequest)
 	{
+		std::string functionName = functionRegistrationRequest.getQualifiedName();
+		std::string functionPartsInDTCode = CPSBASELIB::STD_EXTENTION::StringExtention::replaceAll(functionName, "::", "/");
+
+		const auto parts = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(functionPartsInDTCode,'/');
+
+		std::string componentPath = "";
+		for (size_t i = 0; i < parts.size() - 1; i++)
+		{
+			componentPath += parts[i];
+			if (i < (parts.size() - 2))
+				componentPath += "/";
+		}
+
+		const auto component = getComponentWithAddress(componentPath);
+		//TODO append component;
+		std::cout << "Component: " << component->getName() << std::endl;
 
 	}
 

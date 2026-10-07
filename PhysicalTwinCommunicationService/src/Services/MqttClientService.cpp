@@ -21,11 +21,11 @@
 #include <boost/asio/use_awaitable.hpp>
 
 namespace DigitalTwin::Communication {
-    MqttClientService::MqttClientService(boost::asio::io_context* ioc, std::string server, std::string port, std::string clientId) : KeepAlive(60),
-        Strand(ioc->get_executor()),
+    MqttClientService::MqttClientService(std::string server, std::string port, std::string clientId) : KeepAlive(60),
+        Strand(IoContext.get_executor()),
         Client(Strand),
         ClientStarted(false),
-        Connected(std::atomic<bool>(false)) {
+        Connected(false) {
         Server = server;
         Port = port;
         ClientId = clientId;
@@ -36,34 +36,37 @@ namespace DigitalTwin::Communication {
     }
 
     void MqttClientService::start() {
-        if (ClientStarted == true) return;
-        WorkerThread = std::thread([this] {
-            boost::asio::co_spawn(Strand, [this]() -> boost::asio::awaitable<void> { co_await run(); }, [](std::exception_ptr ep) {
-                if (ep) {
-                    try {
-                        std::rethrow_exception(ep);
-                    } catch (std::exception const& e) {
-                        std::cerr << "MQTT client receive loop terminated: " << e.what() << std::endl;
-                    } catch (...) {
-                        std::cerr << "MQTT client receive loop terminated: unknown exception" << std::endl;
-                    }
+        if (ClientStarted.exchange(true)) return;
+        WorkGuard.emplace(boost::asio::make_work_guard(IoContext));
+        boost::asio::co_spawn(Strand, [this]() -> boost::asio::awaitable<void> { co_await run(); }, [](std::exception_ptr ep) {
+            if (ep) {
+                try {
+                    std::rethrow_exception(ep);
+                } catch (std::exception const& e) {
+                    std::cerr << "MQTT client receive loop terminated: " << e.what() << std::endl;
+                } catch (...) {
+                    std::cerr << "MQTT client receive loop terminated: unknown exception" << std::endl;
                 }
-            });
+            }
+        });
+        WorkerThread = std::thread([this] {
             IoContext.run();
         });
-        ClientStarted = true;
     }
 
     void MqttClientService::stop() {
-        if (!ClientStarted) return;
+        if (!ClientStarted.exchange(false)) return;
         boost::asio::post(Strand, [this] {
             boost::asio::co_spawn(Strand, [this]() -> boost::asio::awaitable<void> {
                 try { co_await Client.async_close(boost::asio::use_awaitable); } catch (...) {}
+                Connected = false;
+                WorkGuard.reset();
                 IoContext.stop();
                 co_return;
             }, boost::asio::detached);
         });
-        if (WorkerThread.joinable()) WorkerThread.join();
+        if (WorkerThread.joinable() && WorkerThread.get_id() != std::this_thread::get_id())
+            WorkerThread.join();
     }
 
     void MqttClientService::publish(std::string topic, std::string payload) {
@@ -188,6 +191,23 @@ namespace DigitalTwin::Communication {
         );
         (void)connack_opt;
         Connected = true;
+
+        // Subscriptions registered before the connection was established have to be sent now.
+        // No suspension point between Connected = true and the snapshot, so subscribe() cannot subscribe twice.
+        std::vector<std::string> pendingTopics;
+        for (auto const& entry : Callbacks)
+            pendingTopics.push_back(entry.first);
+        // The SUBACK is delivered via async_recv below, so the subscriptions run as separate coroutines.
+        for (auto const& pendingTopic : pendingTopics) {
+            boost::asio::co_spawn(Strand, [this, pendingTopic]() -> boost::asio::awaitable<void> {
+                auto pid = co_await Client.async_acquire_unique_packet_id_wait_until(boost::asio::use_awaitable);
+                if (!pid) co_return;
+                std::vector<async_mqtt::topic_subopts> entries{{pendingTopic, async_mqtt::qos::at_most_once}};
+                co_await Client.async_subscribe(async_mqtt::v5::subscribe_packet{pid, async_mqtt::force_move(entries)},
+                                                boost::asio::use_awaitable);
+                co_return;
+            }, boost::asio::detached);
+        }
 
         // 3) Receive dispatcher (holt PUBLISH/DISCONNECT/AUTH aus interner Queue) :contentReference[oaicite:7]{index=7}
         while (ClientStarted) {

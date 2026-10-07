@@ -1,41 +1,85 @@
-﻿#include "SubscriptionStorage.h"
+#include "SubscriptionStorage.h"
 #include <algorithm>
 
 #include "Session.h"
 
 namespace DIGITAL_TWIN_SERVER
 {
-	void SubscriptionStorage::add(Session* session, std::string filter, bool no_local)
+	SubscriptionResult SubscriptionStorage::add(std::shared_ptr<Session> const& session, std::string filter, bool no_local, std::size_t maxSubscriptions)
 	{
 		std::lock_guard lg(Mutex);
-		for (auto& existing : Subscriptions)
+		Session* raw = session.get();
+		auto& entries = Subscriptions[filter];
+		for (auto& existing : entries)
 		{
-			if (existing._Session == session && existing.Filter == filter)
+			if (existing.RawSession == raw)
 			{
 				existing.NoLocal = no_local;
-				return;
+				return SubscriptionResult::Updated;
 			}
 		}
-		Subscriptions.push_back(SubscriptionEntry{ session,std::move(filter), no_local });
+
+		auto& owned = FiltersBySession[raw];
+		if (owned.size() >= maxSubscriptions)
+		{
+			if (owned.empty())
+				FiltersBySession.erase(raw);
+			if (entries.empty())
+				Subscriptions.erase(filter);
+			return SubscriptionResult::QuotaExceeded;
+		}
+
+		entries.push_back(SubscriptionEntry{ session, raw, no_local });
+		owned.insert(std::move(filter));
+		return SubscriptionResult::Added;
 	}
 
 	void SubscriptionStorage::remove(Session* session, std::string_view filter)
 	{
 		std::lock_guard lg(Mutex);
-		Subscriptions.erase(std::remove_if(Subscriptions.begin(), Subscriptions.end(), [&](SubscriptionEntry const& elem)
+		auto it = Subscriptions.find(std::string(filter));
+		if (it == Subscriptions.end())
+			return;
+		auto& entries = it->second;
+		entries.erase(std::remove_if(entries.begin(), entries.end(), [&](SubscriptionEntry const& elem)
 		{
-			return elem._Session == session && elem.Filter == filter;
-		}), Subscriptions.end());
+			return elem.RawSession == session;
+		}), entries.end());
+		if (entries.empty())
+			Subscriptions.erase(it);
+		eraseFromReverseIndex(session, std::string(filter));
 	}
 
 	void SubscriptionStorage::removeAll(Session* session)
 	{
 		std::lock_guard lg(Mutex);
-		Subscriptions.erase(std::remove_if(Subscriptions.begin(), Subscriptions.end(), [&](SubscriptionEntry elem)
+		auto rev = FiltersBySession.find(session);
+		if (rev == FiltersBySession.end())
+			return;
+		for (auto const& filter : rev->second)
 		{
-			auto session_lock = elem._Session;
-			return !session_lock || session_lock == session;
-		}), Subscriptions.end());
+			auto it = Subscriptions.find(filter);
+			if (it == Subscriptions.end())
+				continue;
+			auto& entries = it->second;
+			entries.erase(std::remove_if(entries.begin(), entries.end(), [&](SubscriptionEntry const& elem)
+			{
+				return elem.RawSession == session;
+			}), entries.end());
+			if (entries.empty())
+				Subscriptions.erase(it);
+		}
+		FiltersBySession.erase(rev);
+	}
+
+	void SubscriptionStorage::eraseFromReverseIndex(Session* session, std::string const& filter)
+	{
+		auto rev = FiltersBySession.find(session);
+		if (rev == FiltersBySession.end())
+			return;
+		rev->second.erase(filter);
+		if (rev->second.empty())
+			FiltersBySession.erase(rev);
 	}
 
 	bool SubscriptionStorage::matchFilter(std::string_view filter, std::string_view topic)
@@ -65,43 +109,44 @@ namespace DIGITAL_TWIN_SERVER
 		return out;
 	}
 
-	void SubscriptionStorage::broadcast(std::string topic, std::string payload) {
-		std::vector<Session*> targets;
+	void SubscriptionStorage::broadcast(std::string topic, std::string payload, Session const* publisher) {
+		std::vector<std::shared_ptr<Session>> targets;
 		{
 			std::lock_guard lg(Mutex);
-			for (const auto& subscription : Subscriptions) {
-				if (!subscription._Session)
-					continue;
-				if (std::find(targets.begin(), targets.end(), subscription._Session) != targets.end())
-					continue;
-				if (matchFilter(subscription.Filter, topic))
-					targets.push_back(subscription._Session);
-			}
-		}
-		for (auto* session : targets) {
-			session->send_qos0_publish(topic, payload);
-		}
-	}
+			std::unordered_set<Session const*> seen;
+			for (auto it = Subscriptions.begin(); it != Subscriptions.end();) {
+				auto& entries = it->second;
+				// Prune expired sessions.
+				entries.erase(std::remove_if(entries.begin(), entries.end(), [&](SubscriptionEntry const& elem)
+				{
+					if (!elem._Session.expired())
+						return false;
+					eraseFromReverseIndex(elem.RawSession, it->first);
+					return true;
+				}), entries.end());
 
-	template <class F>
-	void SubscriptionStorage::forEachMatch(std::string_view topic, Session const* publisher, F&& function)
-	{
-		std::lock_guard lg(Mutex);
-		for (auto it = Subscriptions.begin(); it != Subscriptions.end();)
-		{
-			auto session_lock = it->_Session;
-			if (!session_lock)
-			{
-				it = Subscriptions.erase(it);
-				continue;
-			}
-			if (it->NoLocal && session_lock == publisher)
-			{
+				if (entries.empty()) {
+					it = Subscriptions.erase(it);
+					continue;
+				}
+
+				if (matchFilter(it->first, topic)) {
+					for (auto const& entry : entries) {
+						if (entry.NoLocal && entry.RawSession == publisher)
+							continue;
+						if (seen.count(entry.RawSession))
+							continue;
+						if (auto locked = entry._Session.lock()) {
+							seen.insert(entry.RawSession);
+							targets.push_back(std::move(locked));
+						}
+					}
+				}
 				++it;
-				continue;
 			}
-			if (matchFilter(it->Filter, topic))
-				function(session_lock);
+		}
+		for (auto const& session : targets) {
+			session->send_qos0_publish(topic, payload);
 		}
 	}
 }

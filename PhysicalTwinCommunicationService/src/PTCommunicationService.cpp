@@ -17,15 +17,11 @@ namespace DigitalTwin::Communication {
 
     CommunicationService::CommunicationService(std::string mqttPort) {
         MqttPort=std::stoi(mqttPort);
-        ClientService = new MqttClientService(new boost::asio::io_context(),"localhost",std::to_string(MqttPort),"");
+        ClientService = new MqttClientService("localhost",std::to_string(MqttPort),"");
     }
 
     void CommunicationService::startThreads() {
         try {
-            // ServerThread = std::thread([this]{
-            //     MQTTBrokerService::runBroker(MqttPort);
-            // });
-
             ClientThread = std::thread([this] {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 ClientService->start();

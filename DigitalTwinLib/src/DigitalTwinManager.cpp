@@ -16,6 +16,8 @@
 #include <iostream>
 #include <sysmlv2/rest/entities/Project.h>
 
+#include "MQTT/entities/FunctionRegistrationRequest.hpp"
+
 
 namespace DigitalTwin {
 
@@ -36,7 +38,10 @@ namespace DigitalTwin {
             for (auto digitalTwin: digitalTwins)
                 if (digitalTwin->getId() == digitalTwinId) {
                     auto returnValue = new Model::DigitalTwinModel(digitalTwin, this);
-                    DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), returnValue));
+                    {
+                        std::lock_guard lg(DigitalTwinModelMapMutex);
+                        DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(), returnValue));
+                    }
                     generateMQTTInterface(returnValue);
                 }
         } catch(SysMLv2::API::EXCEPTIONS::HTTPException& ex) {
@@ -50,7 +55,10 @@ namespace DigitalTwin {
 
     Model::DigitalTwinModel* DigitalTwinManager::addDigitalTwinAndCreateModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin) {
         Model::DigitalTwinModel* returnValue = new Model::DigitalTwinModel(digitalTwin,this);
-        DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(),returnValue));
+        {
+            std::lock_guard lg(DigitalTwinModelMapMutex);
+            DigitalTwinModelMap.insert(std::make_pair(digitalTwin->getId(),returnValue));
+        }
         DigitalTwin::Communication::DigitalTwinEntity entity(digitalTwin->getId(), digitalTwin->owningProject()->getId());
         ClientService->publish(DigitalTwin::Communication::CONNECT_TO_TWIN, entity.serialize());
         return returnValue;
@@ -61,7 +69,12 @@ namespace DigitalTwin {
         for(const auto &elementName : digitalTwin->getElementStrings()) {
             ClientService->publish(baseName + "/" + elementName, "{value=0,\r\n timepoint=\"\"}");
         }
+        const auto DTFunctionRegistrationReq = DigitalTwin::Communication::FunctionRegistrationRequest("",{},"");
+        ClientService->publish(baseName + "/" + DigitalTwin::Communication::REGISTER_FUNCTION, DTFunctionRegistrationReq.toJsonString());
+        const auto registerFunctionFunction = []([[maybe_unused]] std::string topic, [[maybe_unused]] std::string payload)->void {
 
+        };
+        dynamic_cast<DigitalTwin::Communication::MqttClientService*>(ClientService)->subscribe(baseName + "/" + DigitalTwin::Communication::REGISTER_FUNCTION, registerFunctionFunction);
 
     }
 

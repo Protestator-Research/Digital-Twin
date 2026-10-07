@@ -11,6 +11,10 @@
 #include <memory>
 #include <cstdint>
 #include <coroutine>
+#include <atomic>
+#include <thread>
+#include <future>
+#include <optional>
 
 #include <async_mqtt/all.hpp>
 
@@ -33,15 +37,22 @@ namespace DigitalTwin::Communication {
          */
         MqttClientService() = delete;
         /**
-         * Constructor needed for the connection to a Server.
+         * Constructor needed for the connection to a Server. The service owns its io_context, which is run
+         * on a dedicated thread after start().
          * @param server The Server URL or IP
          * @param port The Port on the server, where the DT Server is running.
          */
-        MqttClientService(boost::asio::io_context* ioc, std::string server, std::string port, std::string clientId);
+        MqttClientService(std::string server, std::string port, std::string clientId);
 
         virtual ~MqttClientService();
 
+        /**
+         * Starts the dedicated io_context thread and connects. Returns immediately. Idempotent.
+         */
         void start();
+        /**
+         * Closes the connection and joins the worker thread. Idempotent.
+         */
         void stop();
 
         void publish(std::string topic, std::string payload) override;
@@ -55,7 +66,9 @@ namespace DigitalTwin::Communication {
         static std::vector<uint8_t> makeCorrelationData();
         static std::optional<std::string> extractCorrelationKey(async_mqtt::v5::publish_packet const& packet);
 
+        // IoContext has to be declared before Strand and Client, they depend on it.
         boost::asio::io_context IoContext;
+        std::optional<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> WorkGuard;
         std::string Server;
         std::string Port;
         std::string ClientId;
@@ -66,8 +79,8 @@ namespace DigitalTwin::Communication {
         std::thread WorkerThread;
         async_mqtt::client<async_mqtt::protocol_version::v5, async_mqtt::protocol::mqtt> Client;
 
-        bool ClientStarted;
-        bool Connected;
+        std::atomic<bool> ClientStarted;
+        std::atomic<bool> Connected;
 
         std::unordered_map<std::string, std::function<void(std::string topic, std::string payload)>> Subscriptions;
         std::unordered_map<std::string, std::promise<std::string>> Pending;

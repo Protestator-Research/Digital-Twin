@@ -6,6 +6,7 @@
 #define DIGITALTWIN_DIGITALTWINMANAGER_H
 
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 #include <boost/uuid/uuid.hpp>
@@ -53,6 +54,8 @@ namespace DigitalTwin {
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService;
         DigitalTwin::Communication::IMqttClientService* ClientService;
 
+        // Protects DigitalTwinModelMap, downloads for different twins may run in parallel.
+        std::mutex DigitalTwinModelMapMutex;
         std::map<boost::uuids::uuid, Model::DigitalTwinModel*> DigitalTwinModelMap;
 
         bool IsClient = true;
