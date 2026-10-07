@@ -8,7 +8,8 @@
 #include "Component.h"
 
 #include "Port.h"
-#include "Variable.h"
+#include "Function.h"
+#include "Variables/Variable.hpp"
 
 namespace DigitalTwin::Model {
     Component::Component(std::string name) : ICollectionType(name) {
@@ -42,24 +43,24 @@ namespace DigitalTwin::Model {
         ComponentMap.insert(std::make_pair(component->Name, component));
     }
 
-    void Component::appendMeasurable(Variable *variable) {
+    void Component::appendMeasurable(IVariable* variable) {
         Measurables.insert(std::make_pair(variable->getName(),variable));
     }
 
-    void Component::appendControllable(Variable *variable) {
+    void Component::appendControllable(IVariable* variable) {
         Controllables.insert(std::make_pair(variable->getName(),variable));
     }
 
-    void Component::appendAttribute(Variable *variable) {
+    void Component::appendAttribute(IVariable* variable) {
 
         Attributes.insert(std::make_pair(variable->getName(),variable));
     }
 
-    Variable *Component::getControllable(std::string name) {
+    IVariable* Component::getControllable(std::string name) {
         return Controllables.at(name);
     }
 
-    Variable *Component::getMeasurable(std::string name) {
+    IVariable* Component::getMeasurable(std::string name) {
         return Measurables.at(name);
     }
 
@@ -72,7 +73,7 @@ namespace DigitalTwin::Model {
         return PortMap.at(name);
     }
 
-    Variable *Component::getAttribute(std::string name) {
+    IVariable* Component::getAttribute(std::string name) {
         return Attributes.at(name);
     }
 
@@ -85,8 +86,8 @@ namespace DigitalTwin::Model {
         return components;
     }
 
-    std::vector<Variable *> Component::getAllVariables() {
-        std::vector<Variable*> variables;
+    std::vector<IVariable*> Component::getAllVariables() {
+        std::vector<IVariable*> variables;
 
         for (const auto& elem : Attributes)
             variables.push_back(elem.second);
@@ -110,6 +111,16 @@ namespace DigitalTwin::Model {
         return ports;
     }
 
+    std::vector<Function*> Component::getAllFunctions()
+    {
+        std::vector<Function*> functions;
+
+        for (auto element : Functions)
+            functions.push_back(element.second);
+
+        return functions;
+    }
+
     std::vector<std::string> Component::getAllMQTTTopics() {
         std::vector<std::string> returnValue;
 
@@ -123,6 +134,11 @@ namespace DigitalTwin::Model {
         for(auto element : Measurables)
             returnValue.push_back(element.first);
 
+        returnValue.push_back("functions/register");
+
+        for (auto element : Functions)
+            returnValue.push_back(element.first);
+
         return returnValue;
     }
 
@@ -130,8 +146,8 @@ namespace DigitalTwin::Model {
     {
         auto comp = new Component(name);
         
-        for (const auto& [name, component] : ComponentMap)
-            comp->appendComponent(component->instantiate(name));
+        for (const auto& [comp_name, component] : ComponentMap)
+            comp->appendComponent(component->instantiate(comp_name));
 
         for (auto [_, controllable] : Controllables)
             comp->appendControllable(controllable->copy());
@@ -140,27 +156,12 @@ namespace DigitalTwin::Model {
             comp->appendMeasurable(measurable);
 
         for (auto [_, attribute] : Attributes)
-            comp->appendMeasurable(attribute);
+            comp->appendAttribute(attribute);
 
         return comp;
     }
 
-    Variable *Component::resolveVariable(std::string name) {
-        //const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '/');
-
-        //if(splittedAdress.size()<1)
-        //    throw DigitalTwinAddressException();
-
-        //if(splittedAdress.size()==1)
-        //    return dynamic_cast<Variable*>(ComponentMap[splittedAdress[0]]);
-
-        //std::string addressWithHigherIndex="";
-        //for(size_t i = 1; i<splittedAdress.size(); i++){
-        //    addressWithHigherIndex+=splittedAdress[i];
-        //    if(i<(splittedAdress.size()-1))
-        //        addressWithHigherIndex+="/";
-        //}
-
+    IVariable* Component::resolveVariable(std::string name) {
         auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(name, '/');
 
         if (splittedAdress.size() == 1)
@@ -169,7 +170,7 @@ namespace DigitalTwin::Model {
         return resolveVariable(splittedAdress, 0);
     }
 
-    Variable* Component::resolveVariable(std::vector<std::string> domains, size_t index)
+    IVariable* Component::resolveVariable(std::vector<std::string> domains, size_t index)
     {
         if (index >= domains.size())
             throw DigitalTwinAddressException();

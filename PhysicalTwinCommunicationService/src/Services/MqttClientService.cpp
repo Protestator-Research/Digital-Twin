@@ -8,6 +8,7 @@
 #include "../MQTT/Topics.h"
 
 #include <iostream>
+#include <exception>
 #include <async_mqtt/all.hpp>
 #include <thread>
 #include <optional>
@@ -19,7 +20,7 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/use_awaitable.hpp>
 
-namespace PHYSICAL_TWIN_COMMUNICATION {
+namespace DigitalTwin::Communication {
     MqttClientService::MqttClientService(boost::asio::io_context* ioc, std::string server, std::string port, std::string clientId) : KeepAlive(60),
         Strand(ioc->get_executor()),
         Client(Strand),
@@ -37,7 +38,17 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
     void MqttClientService::start() {
         if (ClientStarted == true) return;
         WorkerThread = std::thread([this] {
-            boost::asio::co_spawn(Strand, [this]() -> boost::asio::awaitable<void> { co_await run(); }, boost::asio::detached);
+            boost::asio::co_spawn(Strand, [this]() -> boost::asio::awaitable<void> { co_await run(); }, [](std::exception_ptr ep) {
+                if (ep) {
+                    try {
+                        std::rethrow_exception(ep);
+                    } catch (std::exception const& e) {
+                        std::cerr << "MQTT client receive loop terminated: " << e.what() << std::endl;
+                    } catch (...) {
+                        std::cerr << "MQTT client receive loop terminated: unknown exception" << std::endl;
+                    }
+                }
+            });
             IoContext.run();
         });
         ClientStarted = true;
@@ -198,9 +209,14 @@ namespace PHYSICAL_TWIN_COMMUNICATION {
                     }
 
                     // normale subscriptions (hier nur exact match)
-                    if (auto it = Subscriptions.find(topic); it != Subscriptions.end()) {
-                        //it->second(topic, payload);
-                        Callbacks.at(topic)(topic,payload);
+                    if (auto it = Callbacks.find(topic); it != Callbacks.end()) {
+                        try {
+                            it->second(topic, payload);
+                        } catch (std::exception const& e) {
+                            std::cerr << "Exception in subscription callback for topic '" << topic << "': " << e.what() << std::endl;
+                        } catch (...) {
+                            std::cerr << "Unknown exception in subscription callback for topic '" << topic << "'" << std::endl;
+                        }
                     }
                 },
                 [&](async_mqtt::v5::disconnect_packet&) {

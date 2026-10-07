@@ -12,7 +12,7 @@
 #include "cpp_physical_twin_communication_global.h"
 
 
-namespace PHYSICAL_TWIN_COMMUNICATION {
+namespace DigitalTwin::Communication {
     /**
      * @author Moritz Herzog
      * Creates the MQTT Communication Service for the Server or the Client.

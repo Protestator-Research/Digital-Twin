@@ -7,8 +7,8 @@ add_library(DigitalTwinLib
         src/Model/DigitalTwinModel.h
         src/Model/Entities/Component.cpp
         src/Model/Entities/Component.h
-        src/Model/Entities/Variable.cpp
-        src/Model/Entities/Variable.h
+        src/Model/Entities/Variables/Variable.cpp
+        src/Model/Entities/Variables/Variable.hpp
         src/Model/Entities/IDigitalTwinElement.h
         src/cpp_digital_twin_lib_global.h
         src/Model/SupportedTypes/SupportedTypes.h
@@ -24,21 +24,40 @@ add_library(DigitalTwinLib
         src/Model/Itelligence/AiSecurityBreachDetector.h
         src/Model/Itelligence/OutlierDetection.cpp
         src/Model/Itelligence/OutlierDetection.h
-        src/Parser/SysMLv2Parser.h
-        src/Parser/SysMLv2Parser.cpp
-        src/Parser/SysMLv2Listener.h
-        src/Parser/SysMLv2Listener.cpp
-        src/Parser/SysMLv2Lexer.h
-        src/Parser/SysMLv2Lexer.cpp
-        src/Parser/SysMLv2BaseListener.h
-        src/Parser/SysMLv2BaseListener.cpp
+#        src/Parser/SysMLv2Parser.h
+#        src/Parser/SysMLv2Parser.cpp
+#        src/Parser/SysMLv2Listener.h
+#        src/Parser/SysMLv2Listener.cpp
+#        src/Parser/SysMLv2Lexer.h
+#        src/Parser/SysMLv2Lexer.cpp
+#        src/Parser/SysMLv2ListenerImplementation.h
+#        src/Parser/SysMLv2ListenerImplementation.cpp
         src/Model/Entities/ICollectionType.h
         src/Model/Entities/Individual.cpp
         src/Model/Entities/Individual.h
         src/Model/Entities/Function.cpp
         src/Model/Entities/Function.h
         src/Model/Entities/Bindings.cpp
-        src/Model/Entities/Bindings.h)
+        src/Model/Entities/Bindings.h
+        src/Model/Entities/Variables/BooleanVariable.cpp
+        src/Model/Entities/Variables/BooleanVariable.h
+        src/Model/Entities/Variables/StringVariable.cpp
+        src/Model/Entities/Variables/StringVariable.h
+        src/Model/Entities/Variables/ComplexVariable.cpp
+        src/Model/Entities/Variables/ComplexVariable.h
+        src/Model/Entities/Variables/RealVariable.cpp
+        src/Model/Entities/Variables/RealVariable.h
+        src/Model/Entities/Variables/RationalVariable.cpp
+        src/Model/Entities/Variables/RationalVariable.h
+        src/Model/Entities/Variables/IntegerVariable.cpp
+        src/Model/Entities/Variables/IntegerVariable.h
+        src/Model/Entities/Variables/NaturalVariable.cpp
+        src/Model/Entities/Variables/NaturalVariable.h
+        src/Model/Entities/Variables/PositiveVariable.cpp
+        src/Model/Entities/Variables/PositiveVariable.h
+        src/Model/Entities/Variables/ScalarQuantities.cpp
+        src/Model/Entities/Variables/ScalarQuantities.h
+        src/Model/Entities/ElementType.h)
 
 target_include_directories(DigitalTwinLib PUBLIC
         boost::boost

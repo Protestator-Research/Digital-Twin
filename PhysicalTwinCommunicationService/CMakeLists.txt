@@ -9,18 +9,41 @@ add_library(PhysicalTwinCommunication
         src/Services/MqttClientService.h
         src/MQTT/entities/DigitalTwinEntity.cpp
         src/MQTT/entities/DigitalTwinEntity.h
-        src/MQTT/entities/JsonEntities.hpp
+        src/MQTT/entities/JsonEntities.h
+        src/MQTT/entities/JsonEntities.cpp
         src/cpp_physical_twin_communication_global.h
         src/MQTT/Topics.h
-        src/MQTT/entities/ValueEntity.cpp
-        src/MQTT/entities/ValueEntity.h
-        src/Services/IMqttClientService.h)
+        src/MQTT/entities/values/ValueEntity.cpp
+        src/MQTT/entities/values/ValueEntity.h
+        src/Services/IMqttClientService.h
+        src/MQTT/entities/values/IntegerValueEntity.cpp
+        src/MQTT/entities/values/IntegerValueEntity.h
+        src/MQTT/entities/values/BooleanValueEntity.cpp
+        src/MQTT/entities/values/BooleanValueEntity.h
+        src/MQTT/entities/values/StringValueEntity.cpp
+        src/MQTT/entities/values/StringValueEntity.h
+        src/MQTT/entities/values/ComplexValueEntity.cpp
+        src/MQTT/entities/values/ComplexValueEntity.h
+        src/MQTT/entities/values/RealValueEntity.cpp
+        src/MQTT/entities/values/RealValueEntity.h
+        src/MQTT/entities/values/RationalValueEntity.cpp
+        src/MQTT/entities/values/RationalValueEntity.h
+        src/MQTT/entities/values/NaturalValueEntity.cpp
+        src/MQTT/entities/values/NaturalValueEntity.h
+        src/MQTT/entities/values/PositiveValueEntity.cpp
+        src/MQTT/entities/values/PositiveValueEntity.h
+        src/MQTT/entities/JsonEntities.cpp
+        src/MQTT/entities/FunctionRegistrationRequest.hpp)
 
 target_link_libraries(PhysicalTwinCommunication
         mqtt_cpp::mqtt_cpp
         nlohmann_json::nlohmann_json
         Threads::Threads
-        boost::boost)
+        boost::boost
+        CPSBaseLib)
+
+target_include_directories(PhysicalTwinCommunication PUBLIC
+        ../CpsBaseLib/src)
 
 install(TARGETS PhysicalTwinCommunication DESTINATION "."
         RUNTIME DESTINATION bin

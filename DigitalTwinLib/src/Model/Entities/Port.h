@@ -16,8 +16,6 @@
 #include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model {
-    class Variable;
-
     class CPPDIGITALTWINLIB_EXPORT Port : public ICollectionType {
     public:
         Port() = delete;
@@ -25,14 +23,14 @@ namespace DigitalTwin::Model {
 
         ~Port() = default;
 
-        void appendAttribute(Variable* variable) override;
-        Variable* getAttribute(std::string variableName);
+        void appendAttribute(IVariable* variable) override;
+        IVariable* getAttribute(std::string variableName);
         void appendComponent(Component* compoonent) override;
         void appendPort(Port* port) override;
-        void appendControllable(Variable* variable) override;
-        void appendMeasurable(Variable* variable) override;
-        Variable* resolveVariable(std::string name) override;
-        Variable* resolveVariable(std::vector<std::string> domains, size_t index) override;
+        void appendControllable(IVariable* variable) override;
+        void appendMeasurable(IVariable* variable) override;
+        IVariable* resolveVariable(std::string name) override;
+        IVariable* resolveVariable(std::vector<std::string> domains, size_t index) override;
 
     private:
 

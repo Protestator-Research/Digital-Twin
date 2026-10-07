@@ -6,7 +6,7 @@
 #include <Model/DigitalTwinModel.h>
 #include <MQTT/Topics.h>
 #include <BaseFuctions/StringExtention.hpp>
-#include <MQTT/entities/DigitalTwinEntity.h>
+#include <../../PhysicalTwinCommunicationService/src/MQTT/entities/DigitalTwinEntity.h>
 #include <MQTT/Topics.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -37,7 +37,7 @@ namespace DIGITAL_TWIN_SERVER {
 
         BrokerService = new MQTTBrokerService(ioc, std::stoi(ArgumentsMap[INSTANCE_MQTT_PORT]));
 
-        ClientService = new PHYSICAL_TWIN_COMMUNICATION::MqttClientService(ioc,"localhost", ArgumentsMap[INSTANCE_MQTT_PORT], "digital-twin-server");
+        ClientService = new DigitalTwin::Communication::MqttClientService(ioc,"localhost", ArgumentsMap[INSTANCE_MQTT_PORT], "digital-twin-server");
         DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunicationService, ClientService, false);
     }
 
@@ -108,10 +108,11 @@ namespace DIGITAL_TWIN_SERVER {
     }
 
     void DigitalTwinServerInstanceManager::createDTTopicAndCallback() {
-        ClientService->publish(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN,PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity().serialize());
-        ClientService->subscribe(PHYSICAL_TWIN_COMMUNICATION::CONNECT_TO_TWIN,[this]([[maybe_unused]] std::string topic,std::string payload)->void {
-            const auto& dtEntity = PHYSICAL_TWIN_COMMUNICATION::DigitalTwinEntity(payload);
+        const auto subscriptionFunction = [this]([[maybe_unused]] std::string topic,std::string payload)->void {
+            const auto& dtEntity = DigitalTwin::Communication::DigitalTwinEntity(payload);
             DigitalTwinManager->downloadDigitalTwin(dtEntity.projectId(),dtEntity.digitalTwinId());
-        });
+        };
+
+        ClientService->subscribe(DigitalTwin::Communication::CONNECT_TO_TWIN,subscriptionFunction);
     }
 }

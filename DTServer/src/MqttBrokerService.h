@@ -42,6 +42,7 @@ namespace DIGITAL_TWIN_SERVER {
 
     private:
         void accept_one(SubscriptionStorage& hub);
+        void openAcceptor(unsigned port);
 
         boost::asio::io_context* Context;
         boost::asio::ssl::context TLS_Context{ boost::asio::ssl::context::tls_server };

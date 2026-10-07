@@ -39,7 +39,7 @@ namespace DigitalTwin {
     class CPPDIGITALTWINLIB_EXPORT DigitalTwinManager {
     public:
         DigitalTwinManager() = delete;
-        explicit DigitalTwinManager(BACKEND_COMMUNICATION::CommunicationService* communicationService, PHYSICAL_TWIN_COMMUNICATION::IMqttClientService* clientService,  bool isClient = true);
+        explicit DigitalTwinManager(BACKEND_COMMUNICATION::CommunicationService* communicationService, DigitalTwin::Communication::IMqttClientService* clientService,  bool isClient = true);
         virtual ~DigitalTwinManager();
 
         void downloadDigitalTwin(boost::uuids::uuid projectId, boost::uuids::uuid digitalTwinId);
@@ -51,7 +51,7 @@ namespace DigitalTwin {
     private:
         void generateMQTTInterface(Model::DigitalTwinModel* digitalTwin);
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService;
-        PHYSICAL_TWIN_COMMUNICATION::IMqttClientService* ClientService;
+        DigitalTwin::Communication::IMqttClientService* ClientService;
 
         std::map<boost::uuids::uuid, Model::DigitalTwinModel*> DigitalTwinModelMap;
 

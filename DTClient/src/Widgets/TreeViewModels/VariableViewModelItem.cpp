@@ -5,102 +5,175 @@
 #include "VariableViewModelItem.h"
 namespace DigitalTwin::Client {
 
-    VariableViewModelItem::VariableViewModelItem(DigitalTwin::Model::Component *component,
-                                                 VariableViewModelItem *parent) {
-        Parent = parent;
-        Component = component;
-        Type = ComponentType;
-        generateComponentView();
-    }
+	VariableViewModelItem::VariableViewModelItem(DigitalTwin::Model::Component* component,
+		VariableViewModelItem* parent) {
+		Parent = parent;
+		Component = component;
+		Type = ComponentType;
+		generateComponentView();
+	}
 
-    VariableViewModelItem::VariableViewModelItem(DigitalTwin::Model::Variable *variable,
-                                                 VariableViewModelItem *parent) {
-        Parent = parent;
-        Variable = variable;
-        Type = VariableType;
-    }
+	VariableViewModelItem::VariableViewModelItem(DigitalTwin::Model::Package* package, VariableViewModelItem* parent)
+	{
+		Parent = parent;
+		Package = package;
+		Type = PackageType;
+		generatePackageView();
+	}
 
-    VariableViewModelItem::VariableViewModelItem(std::string displayString, VariableViewModelItem *parent) {
-        Text = displayString;
-        Parent = parent;
-        Type = DisplayType;
-    }
+	VariableViewModelItem::VariableViewModelItem(DigitalTwin::Model::IVariable* variable,
+		VariableViewModelItem* parent) {
+		Parent = parent;
+		Variable = variable;
+		Type = VariableType;
+	}
 
-    VariableViewModelItem *VariableViewModelItem::child(int row) {
-        return row >= 0 && row < childCount() ? ChildItems.at(row) : nullptr;;
-    }
+	VariableViewModelItem::VariableViewModelItem(DigitalTwin::Model::Function* function, VariableViewModelItem* parent)
+	{
+		Parent = parent;
+		Function = function;
+		Type = FunctionType;
+	}
 
-    int VariableViewModelItem::childCount() {
-        return int(ChildItems.size());
-    }
+	VariableViewModelItem::VariableViewModelItem(std::string displayString, VariableViewModelItem* parent) {
+		Text = displayString;
+		Parent = parent;
+		Type = DisplayType;
+	}
 
-    int VariableViewModelItem::columnCount() {
-        return 1;
-    }
+	VariableViewModelItem* VariableViewModelItem::child(int row) {
+		return row >= 0 && row < childCount() ? ChildItems.at(row) : nullptr;;
+	}
 
-    QVariant VariableViewModelItem::data() {
-        switch (Type) {
-            case DisplayType:
-                return QVariant(QString::fromStdString(Text));
-            case ComponentType:
-                if(Component!= nullptr)
-                    return QVariant(QString::fromStdString(Component->getName()));
-                else
-                    return QVariant("Error: Component was null");
-            case VariableType:
-                return QVariant(QString::fromStdString(Variable->getName()));
-        }
-        return QVariant();
-    }
+	int VariableViewModelItem::childCount() {
+		return int(ChildItems.size());
+	}
 
-    int VariableViewModelItem::row() {
-        if(Parent == nullptr)
-            return 0;
-        const auto it = std::find_if(Parent->ChildItems.cbegin(),Parent->ChildItems.cend(),
-                                     [this](VariableViewModelItem *treeItem){
-                                         return treeItem==this;
-                                    });
-        if(it!=Parent->ChildItems.cend())
-            return std::distance(Parent->ChildItems.cbegin(),it);
+	int VariableViewModelItem::columnCount() {
+		return 1;
+	}
 
-        Q_ASSERT(false);
-        return -1;
-    }
+	QVariant VariableViewModelItem::data() {
+		switch (Type) {
+		case DisplayType:
+			return QVariant(QString::fromStdString(Text));
+		case ComponentType:
+			if (Component != nullptr)
+				return QVariant(QString::fromStdString(Component->getName()));
+			else
+				return QVariant("Error: Component was null");
+		case VariableType:
+			return QVariant(QString::fromStdString(Variable->getName()));
+		case FunctionType:
+			return QVariant(QString::fromStdString(Function->getName()));
+		case PackageType:
+			return QVariant(QString::fromStdString(Package->getName()));
+			break;
+		}
+		return QVariant();
+	}
 
-    VariableViewModelItem *VariableViewModelItem::parent() {
-        return Parent;
-    }
+	int VariableViewModelItem::row() {
+		if (Parent == nullptr)
+			return 0;
+		const auto it = std::find_if(Parent->ChildItems.cbegin(), Parent->ChildItems.cend(),
+			[this](VariableViewModelItem* treeItem) {
+				return treeItem == this;
+			});
+		if (it != Parent->ChildItems.cend())
+			return std::distance(Parent->ChildItems.cbegin(), it);
 
-    void VariableViewModelItem::appendVariable(DigitalTwin::Model::Variable *variable) {
-        ChildItems.push_back(new VariableViewModelItem(variable, this));
-    }
+		Q_ASSERT(false);
+		return -1;
+	}
 
-    DigitalTwin::Model::Variable *VariableViewModelItem::getVariable() const {
-        return Variable;
-    }
+	VariableViewModelItem* VariableViewModelItem::parent() {
+		return Parent;
+	}
 
-    void VariableViewModelItem::appendComponent(DigitalTwin::Model::Component *component) {
-        ChildItems.push_back(new VariableViewModelItem(component, this));
-    }
+	void VariableViewModelItem::appendVariable(DigitalTwin::Model::IVariable* variable) {
+		ChildItems.push_back(new VariableViewModelItem(variable, this));
+	}
 
-    DigitalTwin::Model::Component *VariableViewModelItem::getComponent() const {
-        return Component;
-    }
+	DigitalTwin::Model::IVariable* VariableViewModelItem::getVariable() const {
+		return Variable;
+	}
 
-    void VariableViewModelItem::generateComponentView() {
-        if(Component->getAllVariables().size()>0) {
-            auto variableElement = new VariableViewModelItem("Variables", this);
-            ChildItems.push_back(variableElement);
-            for (auto element: Component->getAllVariables())
-                variableElement->appendVariable(element);
-        }
+	void VariableViewModelItem::appendComponent(DigitalTwin::Model::Component* component) {
+		ChildItems.push_back(new VariableViewModelItem(component, this));
+	}
 
-        if(Component->getAllComponents().size()>0) {
-            auto componentElement = new VariableViewModelItem("Components", this);
-            ChildItems.push_back(componentElement);
-            for (auto element: Component->getAllComponents())
-                componentElement->appendComponent(element);
-        }
-    }
+	DigitalTwin::Model::Component* VariableViewModelItem::getComponent() const {
+		return Component;
+	}
 
+	void VariableViewModelItem::appendFunction(DigitalTwin::Model::Function* function)
+	{
+		ChildItems.push_back(new VariableViewModelItem(function, this));
+	}
+
+	DigitalTwin::Model::Function* VariableViewModelItem::getFunction() const
+	{
+		return Function;
+	}
+
+	void VariableViewModelItem::appendPakage(DigitalTwin::Model::Package* package)
+	{
+		ChildItems.push_back(new VariableViewModelItem(package, this));
+	}
+
+	DigitalTwin::Model::Package* VariableViewModelItem::getPackage() const
+	{
+		return Package;
+	}
+
+	void VariableViewModelItem::generateComponentView() {
+		if (Component->getAllVariables().size() > 0) {
+			auto variableElement = new VariableViewModelItem("Variables", this);
+			ChildItems.push_back(variableElement);
+			for (auto element : Component->getAllVariables())
+				variableElement->appendVariable(element);
+		}
+
+		if (Component->getAllComponents().size() > 0) {
+			auto componentElement = new VariableViewModelItem("Components", this);
+			ChildItems.push_back(componentElement);
+			for (auto element : Component->getAllComponents())
+				componentElement->appendComponent(element);
+		}
+
+		if (Component->getAllFunctions().size() > 0)
+		{
+			auto functionElement = new VariableViewModelItem("Functions", this);
+			ChildItems.push_back(functionElement);
+			for (auto element : Component->getAllFunctions())
+				functionElement->appendFunction(element);
+		}
+	}
+
+	void VariableViewModelItem::generatePackageView()
+	{
+		if (Package->getAllComponents().size() > 0) {
+			auto variableElement = new VariableViewModelItem("Component Definitions", this);
+			ChildItems.push_back(variableElement);
+			for (auto element : Package->getAllComponents())
+				variableElement->appendComponent(element);
+		}
+
+		if (Package->getAllInstances().size() > 0)
+		{
+			auto functionElement = new VariableViewModelItem("Instances", this);
+			ChildItems.push_back(functionElement);
+			for (auto element : Package->getAllInstances())
+				functionElement->appendComponent(element);
+		}
+
+		if (Package->getAllFunctions().size() > 0)
+		{
+			auto functionElement = new VariableViewModelItem("Functions", this);
+			ChildItems.push_back(functionElement);
+			for (auto element : Package->getAllFunctions())
+				functionElement->appendFunction(element);
+		}
+	}
 }

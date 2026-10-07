@@ -7,7 +7,7 @@
 
 #include <string>
 
-namespace PHYSICAL_TWIN_COMMUNICATION {
+namespace DigitalTwin::Communication {
     const std::string CONNECT_TO_TWIN = "connectToTwin";
 }
 #endif //DIGITALTWIN_TOPICS_H

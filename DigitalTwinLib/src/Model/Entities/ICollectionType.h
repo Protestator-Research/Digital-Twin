@@ -3,13 +3,17 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <any>
+
+#include "Function.h"
 #include "IDigitalTwinElement.h"
 #include "../../cpp_digital_twin_lib_global.h"
+#include "Variables/Variable.hpp"
 
 namespace DigitalTwin::Model {
 	class Port;
 	class Component;
-	class Variable;
+	class Function;
     /**
      * @class ICollectionType
      * @author Moritz Herzog
@@ -33,20 +37,24 @@ namespace DigitalTwin::Model {
 
         virtual void appendComponent(Component* compoonent) = 0;
         virtual void appendPort(Port* port) = 0;
-        virtual void appendAttribute(Variable* variable) = 0;
-        virtual void appendControllable(Variable* variable) = 0;
-        virtual void appendMeasurable(Variable* variable) = 0;
+        virtual void appendAttribute(IVariable* variable) = 0;
+        virtual void appendControllable(IVariable* variable) = 0;
+        virtual void appendMeasurable(IVariable* variable) = 0;
+        virtual void appendFunction(Function* function)
+        {
+            Functions.insert(std::make_pair(function->getName(), function));
+        }
 
-        virtual Variable* resolveVariable(std::string name) = 0;
-        virtual Variable* resolveVariable(std::vector<std::string> domains, size_t index) = 0;
+        virtual IVariable* resolveVariable(std::string name) = 0;
+        virtual IVariable* resolveVariable(std::vector<std::string> domains, size_t index) = 0;
 
     protected:
     	std::map<std::string, Component*> ComponentMap;
     	std::map<std::string, Port*> PortMap;
-    	std::map<std::string, Variable*> Controllables;
-    	std::map<std::string, Variable*> Measurables;
-    	std::map<std::string, Variable*> Attributes;
-        
+    	std::map<std::string, IVariable*> Controllables;
+    	std::map<std::string, IVariable*> Measurables;
+    	std::map<std::string, IVariable*> Attributes;
+        std::map<std::string, Function*> Functions;
     };
 }
 
