@@ -89,9 +89,6 @@ namespace DigitalTwin::Model {
 		Instance->parseModel(completeModel);
 		DigitalTwinModelElements = Instance->getElements();
 
-		//for (const auto elem : DigitalTwinModelElements)
-			//std::cout << "Element Type: " << elem->getType() << std::endl;
-
 		generateDigitalTwinModelRecursively(Instance->getRootNamespace(), nullptr);
 	}
 
