@@ -8,14 +8,14 @@ from sys import platform
 
 class CppDigitalTwinRecipe(ConanFile):
     name = "digitaltwin"
-    version = "2607"
+    version = "2610"
     package_type = "application"
 
     # Optional metadata
     license = "<Put the package license here>"
     author = "Moritz Herzog <herzogm@rptu.de>"
     url = "<Package recipe repository url here, for issues about the package>"
-    description = "<Description of digitwester package here>"
+    description = "<Description of digitaltwin package here>"
     topics = ("<Put some tag here>", "<here>", "<and here>")
 
     # Binary configuration
@@ -34,7 +34,7 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("paho-mqtt-cpp/1.6.0")
         self.requires("date/3.0.4")
         self.requires("md4c/0.5.2")
-        self.requires("sysmllib/2610.1")
+        self.requires("sysmllib/2610.2")
         self.requires("yaml-cpp/0.8.0")
         self.requires("openssl/3.6.3")
 

@@ -89,6 +89,9 @@ namespace DigitalTwin::Model {
 		Instance->parseModel(completeModel);
 		DigitalTwinModelElements = Instance->getElements();
 
+		//for (const auto elem : DigitalTwinModelElements)
+			//std::cout << "Element Type: " << elem->getType() << std::endl;
+
 		generateDigitalTwinModelRecursively(Instance->getRootNamespace(), nullptr);
 	}
 
@@ -174,7 +177,7 @@ namespace DigitalTwin::Model {
 			{
 				if (elem->declaredName().has_value())
 				{
-					if (elem->getType()=="Feature")
+					if (elem->getType() == "Feature")
 					{
 						auto feature = std::dynamic_pointer_cast<KerML::Entities::Feature>(elem);
 						newParent->appendParameter(buildVariableOfFeature(feature));
@@ -190,14 +193,26 @@ namespace DigitalTwin::Model {
 		{
 			auto attribute = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeUsage>(element);
 			auto variable = buildVariableOfDataType(attribute);
-			if (variable)
+
+			if ((variable == nullptr) && (attribute->ownedElements().size() > 0))
 			{
+				variable = buildVariableOfOwnedElements(attribute);
+				if (variable)
+					storeMeasurableInModel(parent, variable);
+			}
+
+			if (variable) {
 				ElementType type = ElementType::Variable;
 				for (const auto& elem : attribute->member())
 				{
-					if (elem->getType()=="MetadataUsage")
+					if (elem->getType() == "MetadataUsage")
 					{
 						type = getElementTypeOfMetaDataUsage(std::dynamic_pointer_cast<SysMLv2::Entities::MetadataUsage>(elem));
+					}
+					if (elem->getType() == "InvocationExpression")
+					{
+						const auto invocationExpression = std::dynamic_pointer_cast<KerML::Entities::InvocationExpression>(elem);
+						std::cout << "Invocation of: " << invocationExpression->instantiatedType()->qualifiedName().value_or("unnamed") << std::endl;
 					}
 				}
 				switch (type)
@@ -212,15 +227,11 @@ namespace DigitalTwin::Model {
 				case Variable:
 					storeAttributeInModel(parent, variable);
 					break;
-					default:
+				default:
 					break;
 				}
-			}else if (attribute->ownedElements().size()>0)
-			{
-				 variable = buildVariableOfOwnedElements(attribute);
-				if (variable)
-					storeMeasurableInModel(parent, variable);
-			}else
+			}
+			else
 				std::cerr << "Issue with the type of the given Attribute." << std::endl;
 		}
 
@@ -228,7 +239,7 @@ namespace DigitalTwin::Model {
 		{
 			const auto& occurrence = std::dynamic_pointer_cast<SysMLv2::Entities::OccurrenceUsage>(element);
 			std::cout << "Create Instance of " << occurrence->type().front()->declaredName().value() << std::endl;
-			dynamic_cast<Package*>(parent)->instantiateComponent(occurrence->declaredName().value(),occurrence->type().front()->declaredName().value());
+			dynamic_cast<Package*>(parent)->instantiateComponent(occurrence->declaredName().value(), occurrence->type().front()->declaredName().value());
 		}
 	}
 
@@ -275,18 +286,14 @@ namespace DigitalTwin::Model {
 	IVariable* DigitalTwinModel::buildVariableOfOwnedElements(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& attribute)
 	{
 		IVariable* variable = nullptr;
-		auto featureTyping = std::dynamic_pointer_cast<KerML::Entities::FeatureTyping>(attribute->ownedElements().front());
-		if (featureTyping)
+		auto attributeDefinition = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeDefinition>(attribute->attributeDefinition().back());
+		if (attributeDefinition)
 		{
-			auto attributeDefinition = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeDefinition>(featureTyping->type());
-			if (attributeDefinition)
+			const auto subclassification = attributeDefinition->ownedSubclassification().back();
+			if (subclassification->general()->declaredName().has_value())
 			{
-				const auto subclassification = attributeDefinition->ownedSubclassification().back();
-				if (subclassification->general()->declaredName().has_value())
-				{
-					if (subclassification->general()->declaredName().value() == "ScalarQuantityValue")
-						variable = new RealVariable(attribute->declaredName().value());
-				}
+				if (subclassification->general()->declaredName().value() == "ScalarQuantityValue")
+					variable = new RealVariable(attribute->declaredName().value());
 			}
 		}
 		return variable;
@@ -423,7 +430,7 @@ namespace DigitalTwin::Model {
 		std::string functionName = functionRegistrationRequest.getQualifiedName();
 		std::string functionPartsInDTCode = CPSBASELIB::STD_EXTENTION::StringExtention::replaceAll(functionName, "::", "/");
 
-		const auto parts = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(functionPartsInDTCode,'/');
+		const auto parts = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(functionPartsInDTCode, '/');
 
 		std::string componentPath = "";
 		for (size_t i = 0; i < parts.size() - 1; i++)
