@@ -16,6 +16,7 @@
 #include <kerml/core/types/Type.h>
 #include <kerml/kernel/datatypes/DataType.h>
 #include <kerml/root/namespaces/Namespace.h>
+#include <kerml/kernel/expressions/FeatureReferenceExpression.h>
 #include <sysml/occurrences/OccurrenceUsage.h>
 #include <sysml/attibutes/AttributeDefinition.h>
 #include <kerml/core/classifiers/Subclassification.h>
@@ -210,6 +211,11 @@ namespace DigitalTwin::Model {
 					{
 						const auto invocationExpression = std::dynamic_pointer_cast<KerML::Entities::InvocationExpression>(elem);
 						std::cout << "Invocation of: " << invocationExpression->instantiatedType()->qualifiedName().value_or("unnamed") << std::endl;
+						for (const auto elem : invocationExpression->argument())
+						{
+							const auto reference = std::dynamic_pointer_cast<KerML::Entities::FeatureReferenceExpression>(elem);
+							std::cout << "With Argument: " << reference->referent()->qualifiedName().value_or("unnamed") << std::endl;
+						}
 					}
 				}
 				switch (type)
