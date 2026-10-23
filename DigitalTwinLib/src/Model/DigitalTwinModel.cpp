@@ -514,7 +514,6 @@ namespace DigitalTwin::Model {
 	}
 
 	IVariable* DigitalTwinModel::getVariableWithAddress(std::string address) {
-		//TODO needs refresh with Packages
 		const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
 
 		if (splittedAdress.size() < 2)
@@ -527,7 +526,10 @@ namespace DigitalTwin::Model {
 				addressWithHigherIndex += "/";
 		}
 
-		return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
+		if (ComponentMap.contains(splittedAdress[0]))
+			return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
+		else
+			return dynamic_cast<Package*>(PackageMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
 	}
 
 	ICollectionType* DigitalTwinModel::getComponentOrPackageWithAddress(std::string address)
