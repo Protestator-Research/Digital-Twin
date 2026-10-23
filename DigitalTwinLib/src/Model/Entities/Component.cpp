@@ -134,8 +134,6 @@ namespace DigitalTwin::Model {
         for(auto element : Measurables)
             returnValue.push_back(element.first);
 
-        returnValue.push_back("functions/register");
-
         for (auto element : Functions)
             returnValue.push_back(element.first);
 

@@ -65,16 +65,20 @@ namespace DigitalTwin::Model {
         std::vector<IDigitalTwinElement*> getAllPackages() const;
 
         IVariable* getVariableWithAddress(std::string address);
-        Component* getComponentWithAddress(std::string address);
-
+        ICollectionType* getComponentOrPackageWithAddress(std::string address);
 
         std::vector<std::string> getElementStrings();
-        void registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest registrationRequest);
+        void registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest* registrationRequest);
 
         void setUpdateModelFunction(std::function<void()> updateModel);
 
+        boost::uuids::uuid getId() const;
+
 
     private:
+        Component* getComponentWithAddress(std::string address);
+        Package* getPackageWithAddress(std::string address);
+
         void buildDigitalTwinModel();
 
         void generateDigitalTwinModelRecursively(const std::shared_ptr<KerML::Entities::Element>& element, ICollectionType* parent);

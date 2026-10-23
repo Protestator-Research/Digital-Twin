@@ -50,6 +50,7 @@ namespace DigitalTwin {
         std::vector<std::shared_ptr<KerML::Entities::Element>> downloadDigitalTwinModel(boost::uuids::uuid projectId, boost::uuids::uuid commitId);
 
     private:
+
         void generateMQTTInterface(Model::DigitalTwinModel* digitalTwin);
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService;
         DigitalTwin::Communication::IMqttClientService* ClientService;

@@ -76,6 +76,11 @@ namespace DigitalTwin::Model {
 		UpdateModelFunction = updateModel;
 	}
 
+	boost::uuids::uuid DigitalTwinModel::getId() const
+	{
+		return DigitalTwin->getId();
+	}
+
 	void DigitalTwinModel::buildDigitalTwinModel()
 	{
 		const auto& textualRepresentations = Manager->downloadDigitalTwinModel(DigitalTwin->owningProject()->getId(), DigitalTwin->referencedCommit()->getId());
@@ -211,7 +216,7 @@ namespace DigitalTwin::Model {
 					{
 						const auto invocationExpression = std::dynamic_pointer_cast<KerML::Entities::InvocationExpression>(elem);
 						std::cout << "Invocation of: " << invocationExpression->instantiatedType()->qualifiedName().value_or("unnamed") << std::endl;
-						for (const auto elem : invocationExpression->argument())
+						for (const auto& elem : invocationExpression->argument())
 						{
 							const auto reference = std::dynamic_pointer_cast<KerML::Entities::FeatureReferenceExpression>(elem);
 							std::cout << "With Argument: " << reference->referent()->qualifiedName().value_or("unnamed") << std::endl;
@@ -428,9 +433,10 @@ namespace DigitalTwin::Model {
 		return elements;
 	}
 
-	void DigitalTwinModel::registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest functionRegistrationRequest)
+	void DigitalTwinModel::registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest* functionRegistrationRequest)
 	{
-		std::string functionName = functionRegistrationRequest.getQualifiedName();
+		std::string functionName = functionRegistrationRequest->getQualifiedName();
+		std::cout<<"Registering Function: "<<functionName<<std::endl;
 		std::string functionPartsInDTCode = CPSBASELIB::STD_EXTENTION::StringExtention::replaceAll(functionName, "::", "/");
 
 		const auto parts = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(functionPartsInDTCode, '/');
@@ -443,9 +449,9 @@ namespace DigitalTwin::Model {
 				componentPath += "/";
 		}
 
-		const auto component = getComponentWithAddress(componentPath);
-		//TODO append component;
-		std::cout << "Component: " << component->getName() << std::endl;
+		const auto element = getComponentOrPackageWithAddress(componentPath);
+		if (element)
+			std::cout<<"Registration Element: "<<element->getName()<<std::endl;
 
 	}
 
@@ -468,7 +474,29 @@ namespace DigitalTwin::Model {
 		return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getComponent(addressWithHigherIndex);
 	}
 
+	Package* DigitalTwinModel::getPackageWithAddress(std::string address)
+	{
+		const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
+
+		if (splittedAdress.size() < 1)
+			throw DigitalTwinAddressException();
+
+		if (splittedAdress.size() == 1)
+			return dynamic_cast<Package*>(PackageMap[splittedAdress[0]]);
+
+		// std::string addressWithHigherIndex = "";
+		// for (size_t i = 1; i < splittedAdress.size(); i++) {
+		// 	addressWithHigherIndex += splittedAdress[i];
+		// 	if (i < (splittedAdress.size() - 1))
+		// 		addressWithHigherIndex += "/";
+		// }
+		//
+		// return dynamic_cast<Component*>(PackageMap[splittedAdress[0]])->getComponent(addressWithHigherIndex);
+		return nullptr;
+	}
+
 	IVariable* DigitalTwinModel::getVariableWithAddress(std::string address) {
+		//TODO needs refresh with Packages
 		const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
 
 		if (splittedAdress.size() < 2)
@@ -482,5 +510,14 @@ namespace DigitalTwin::Model {
 		}
 
 		return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
+	}
+
+	ICollectionType* DigitalTwinModel::getComponentOrPackageWithAddress(std::string address)
+	{
+		ICollectionType* returnValue = getComponentWithAddress(address);
+		if (!returnValue)
+			returnValue = getPackageWithAddress(address);
+
+		return returnValue;
 	}
 }

@@ -57,7 +57,7 @@ namespace DigitalTwin::Client {
             refreshProjects();
 
         }catch (std::exception &ex){
-            qDebug()<<ex.what();
+            qDebug()<<QString::fromStdString(BACKEND_COMMUNICATION::CommunicationService::describeBackendError(ex));
         }
     }
 

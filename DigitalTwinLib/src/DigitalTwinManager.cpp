@@ -71,12 +71,11 @@ namespace DigitalTwin {
         }
         const auto DTFunctionRegistrationReq = DigitalTwin::Communication::FunctionRegistrationRequest("",{},"");
         ClientService->publish(baseName + "/" + DigitalTwin::Communication::REGISTER_FUNCTION, DTFunctionRegistrationReq.toJsonString());
-        const auto registerFunctionFunction = []([[maybe_unused]] std::string topic, [[maybe_unused]] std::string payload)->void {
-
+        const auto registerFunctionFunction = [digitalTwin, this]([[maybe_unused]] std::string topic, [[maybe_unused]] std::string payload)->void {
+            DigitalTwin::Communication::FunctionRegistrationRequest* request = new DigitalTwin::Communication::FunctionRegistrationRequest(payload);
+            DigitalTwinModelMap[digitalTwin->getId()]->registerFunction(request);
         };
         dynamic_cast<DigitalTwin::Communication::MqttClientService*>(ClientService)->subscribe(baseName + "/" + DigitalTwin::Communication::REGISTER_FUNCTION, registerFunctionFunction);
 
     }
-
-
 }
