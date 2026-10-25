@@ -17,11 +17,13 @@
 #include <kerml/kernel/datatypes/DataType.h>
 #include <kerml/root/namespaces/Namespace.h>
 #include <kerml/kernel/expressions/FeatureReferenceExpression.h>
+#include <kerml/kernel/expressions/OperatorExpression.h>
 #include <sysml/occurrences/OccurrenceUsage.h>
 #include <sysml/attibutes/AttributeDefinition.h>
 #include <kerml/core/classifiers/Subclassification.h>
 #include <sysml/metadata/MetadataUsage.h>
-
+#include <kerml/kernel/packages/Package.h>
+#include <sysml/parts/PartDefinition.h>
 #include "DigitalTwinModel.h"
 
 #include <async_mqtt/protocol/impl/buffer_to_packet_variant.ipp>
@@ -143,26 +145,32 @@ namespace DigitalTwin::Model {
 				parent->appendFunction(function);
 			};
 
-
-		if (element->getType() == "Namespace")
+		auto namespaceRepresentation = std::dynamic_pointer_cast<KerML::Entities::Namespace>(element);
+		auto package = std::dynamic_pointer_cast<KerML::Entities::Package>(element);
+		auto partDefintion = std::dynamic_pointer_cast<SysMLv2::Entities::PartDefinition>(element);
+		
+		
+		if ((namespaceRepresentation)&&(namespaceRepresentation->getType()=="Namespace"))
 		{
-			for (const auto& elem : std::dynamic_pointer_cast<KerML::Entities::Namespace>(element)->ownedMember())
+			for (const auto& elem : namespaceRepresentation->ownedMember())
 			{
 				generateDigitalTwinModelRecursively(elem, parent);
 			}
+			return;
 		}
 
-		if (element->getType() == "Package")
+		if ((package)&&(!partDefintion))
 		{
-			auto newParent = new Package(element->declaredName().value());
+			auto newParent = new Package(package->declaredName().value());
 			storePackageInModel(parent, newParent);
-			for (const auto& elem : element->ownedElements())
+			for (const auto& elem : package->ownedElements())
 			{
 				generateDigitalTwinModelRecursively(elem, newParent);
 			}
+			return;
 		}
 
-		if (element->getType() == "PartDefinition")
+		if (partDefintion)
 		{
 			auto newParent = new Component(element->declaredName().value());
 			storeComponentInModel(parent, newParent);
@@ -170,9 +178,11 @@ namespace DigitalTwin::Model {
 			{
 				generateDigitalTwinModelRecursively(elem, newParent);
 			}
+			return;
 		}
 
-		if (element->getType() == "Function")
+		auto function = std::dynamic_pointer_cast<KerML::Entities::Function>(element);
+		if (function)
 		{
 			auto newParent = new Function(element->declaredName().value());
 			storeFunctionInModel(parent, newParent);
@@ -189,12 +199,12 @@ namespace DigitalTwin::Model {
 				else
 					newParent->setReturnVariable(new RealVariable("Return"));
 			}
+			return;
 		}
 
-
-		if (element->getType() == "AttributeUsage")
+		auto attribute = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeUsage>(element);
+		if (attribute)
 		{
-			auto attribute = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeUsage>(element);
 			auto variable = buildVariableOfDataType(attribute);
 
 			if ((variable == nullptr) && (attribute->ownedElements().size() > 0))
@@ -208,13 +218,19 @@ namespace DigitalTwin::Model {
 				ElementType type = ElementType::Variable;
 				for (const auto& elem : attribute->member())
 				{
-					if (elem->getType() == "MetadataUsage")
+					auto metadataUsage = std::dynamic_pointer_cast<SysMLv2::Entities::MetadataUsage>(elem);
+					if (metadataUsage)
 					{
-						type = getElementTypeOfMetaDataUsage(std::dynamic_pointer_cast<SysMLv2::Entities::MetadataUsage>(elem));
+						type = getElementTypeOfMetaDataUsage(metadataUsage);
 					}
-					if (elem->getType() == "InvocationExpression")
+					const auto operatorExpression = std::dynamic_pointer_cast<KerML::Entities::OperatorExpression > (elem);
+					if (operatorExpression)
 					{
-						const auto invocationExpression = std::dynamic_pointer_cast<KerML::Entities::InvocationExpression>(elem);
+						
+					}
+					const auto invocationExpression = std::dynamic_pointer_cast<KerML::Entities::InvocationExpression>(elem);
+					if ((invocationExpression) && (!operatorExpression))
+					{
 						std::cout << "Invocation of: " << invocationExpression->instantiatedType()->qualifiedName().value_or("unnamed") << std::endl;
 						for (const auto& elem : invocationExpression->argument())
 						{
@@ -241,13 +257,15 @@ namespace DigitalTwin::Model {
 			}
 			else
 				std::cerr << "Issue with the type of the given Attribute." << std::endl;
+
+			return;
 		}
 
-		if (element->getType() == "OccurrenceUsage")
+		const auto& occurrence = std::dynamic_pointer_cast<SysMLv2::Entities::OccurrenceUsage>(element);
+		if (occurrence)
 		{
-			const auto& occurrence = std::dynamic_pointer_cast<SysMLv2::Entities::OccurrenceUsage>(element);
-			std::cout << "Create Instance of " << occurrence->type().front()->declaredName().value() << std::endl;
 			dynamic_cast<Package*>(parent)->instantiateComponent(occurrence->declaredName().value(), occurrence->type().front()->declaredName().value());
+			return;
 		}
 	}
 
