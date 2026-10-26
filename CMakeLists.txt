@@ -35,6 +35,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
 
 
+# Top level, so that `ctest --test-dir build/Debug` finds the tests of all subdirectories.
+if(RUN_TESTS)
+    enable_testing()
+endif()
+
 add_subdirectory(./CpsBaseLib)
 add_subdirectory(./BackendCommunicationService)
 add_subdirectory(./DigitalTwinLib)

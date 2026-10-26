@@ -5,6 +5,8 @@ add_library(DigitalTwinLib
         src/DigitalTwinManager.h
         src/Model/DigitalTwinModel.cpp
         src/Model/DigitalTwinModel.h
+        src/Model/ModelBlocks.cpp
+        src/Model/ModelBlocks.h
         src/Model/Entities/Component.cpp
         src/Model/Entities/Component.h
         src/Model/Entities/Variables/Variable.cpp

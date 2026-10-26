@@ -12,6 +12,7 @@
 #include <kerml/root/elements/Element.h>
 #include <sysmlv2/rest/entities/Commit.h>
 #include <sysmlv2/rest/entities/Project.h>
+#include <sysmlv2/rest/entities/CommitRequest.h>
 #include <BECommunicationService.h>
 
 namespace DigitalTwin::Client {
@@ -55,6 +56,8 @@ namespace DigitalTwin::Client {
 
         std::shared_ptr<SysMLv2::REST::Commit> Commit;
         std::shared_ptr<SysMLv2::REST::Project> Project;
+        /// The commit of a created project whose upload failed; the next attempt repeats only this commit.
+        std::shared_ptr<SysMLv2::REST::CommitRequest> PendingCommitRequest;
 
         UploadProjectFileToBackendStatus Status;
 

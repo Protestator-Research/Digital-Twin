@@ -202,8 +202,8 @@ namespace BACKEND_COMMUNICATION {
 
         /**
          * Creates a short, user facing English message for an exception thrown by this class or the library.
-         * Distinguishes HTTP 401 (session expired), 403 (password change required / no permission), 404, 409, 429 and
-         * connection errors; all other exceptions result in their what().
+         * Distinguishes HTTP 400 (invalid request), 401 (session expired), 403 (password change required / no permission), 404, 409, 429 and
+         * connection errors; the "error" field of the JSON body of the server is appended if there is one. All other exceptions result in their what().
          * @param exception The caught exception.
          * @return The message that can be shown to the user.
          */

@@ -55,7 +55,6 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["nlohmann_json/*"].shared = True
             self.options["date/*"].shared = True
             self.options["sysmllib/*"].shared=True
-            self.options["antlr4-cppruntime/*"].shared = True
 
             if self.settings.os == "Linux":
                 self.options["qt/*"].shared = True
@@ -68,7 +67,6 @@ class CppDigitalTwinRecipe(ConanFile):
             self.options["nlohmann_json/*"].shared = False
             self.options["date/*"].shared = False
             self.options["sysmllib/*"].shared=False
-            self.options["antlr4-cppruntime/*"].shared = False
 
             if self.settings.os == "Linux":
                 self.options["qt/*"].shared = False

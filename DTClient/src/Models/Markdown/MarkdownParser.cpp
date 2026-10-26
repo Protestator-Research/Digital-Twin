@@ -12,6 +12,7 @@
 
 #include <QFile>
 #include <regex>
+#include <cstdlib>
 
 
 namespace DigitalTwin::Client {
@@ -41,66 +42,35 @@ namespace DigitalTwin::Client {
 
     std::vector<std::shared_ptr<KerML::Entities::Element>> MarkdownParser::getElementsOfProject() {
         std::vector<std::shared_ptr<KerML::Entities::Element>> returnValue;
-        auto child = cmark_node_first_child(MarkdownDocument);
-        switch (cmark_node_get_type(child)) {
-            case CMARK_NODE_NONE:
-                break;
-            case CMARK_NODE_HTML_BLOCK:
-            case CMARK_NODE_CODE_BLOCK:
-            case CMARK_NODE_CODE:
-                returnValue.push_back(createElement(cmark_node_get_fence_info(child),cmark_node_get_literal(child)));
-                break;
-            case CMARK_NODE_CUSTOM_BLOCK:
-            case CMARK_NODE_PARAGRAPH:
-            case CMARK_NODE_HEADING:
-            case CMARK_NODE_THEMATIC_BREAK:
-            case CMARK_NODE_TEXT:
-            case CMARK_NODE_SOFTBREAK:
-            case CMARK_NODE_LINEBREAK:
-            case CMARK_NODE_HTML_INLINE:
-            case CMARK_NODE_CUSTOM_INLINE:
-            case CMARK_NODE_EMPH:
-            case CMARK_NODE_STRONG:
-            case CMARK_NODE_LINK:
-            case CMARK_NODE_IMAGE:
-            case CMARK_NODE_DOCUMENT:
-            case CMARK_NODE_BLOCK_QUOTE:
-            case CMARK_NODE_LIST:
-            case CMARK_NODE_ITEM:
-                returnValue.push_back(createElement("Markdown", cmark_render_commonmark(child,0,0)));
-                break;
-        }
-        do {
-            child = cmark_node_next(child);
+        if (MarkdownDocument == nullptr)
+            return returnValue;
+
+        // One element per top level block of the document, in document order.
+        for (auto child = cmark_node_first_child(MarkdownDocument); child != nullptr; child = cmark_node_next(child)) {
             switch (cmark_node_get_type(child)) {
                 case CMARK_NODE_NONE:
                     break;
-                case CMARK_NODE_HTML_BLOCK:
+                case CMARK_NODE_HTML_BLOCK: {
+                    // Raw HTML is document content, not model code: its own language keeps it out of the model.
+                    const char* literal = cmark_node_get_literal(child);
+                    returnValue.push_back(createElement("HTML", literal ? literal : ""));
+                    break;
+                }
                 case CMARK_NODE_CODE_BLOCK:
-                case CMARK_NODE_CODE:
-                    returnValue.push_back(createElement(cmark_node_get_fence_info(child),cmark_node_get_literal(child)));
+                case CMARK_NODE_CODE: {
+                    const char* fenceInfo = cmark_node_get_fence_info(child);
+                    const char* literal = cmark_node_get_literal(child);
+                    returnValue.push_back(createElement(fenceInfo ? fenceInfo : "", literal ? literal : ""));
                     break;
-                case CMARK_NODE_CUSTOM_BLOCK:
-                case CMARK_NODE_PARAGRAPH:
-                case CMARK_NODE_HEADING:
-                case CMARK_NODE_THEMATIC_BREAK:
-                case CMARK_NODE_TEXT:
-                case CMARK_NODE_SOFTBREAK:
-                case CMARK_NODE_LINEBREAK:
-                case CMARK_NODE_HTML_INLINE:
-                case CMARK_NODE_CUSTOM_INLINE:
-                case CMARK_NODE_EMPH:
-                case CMARK_NODE_STRONG:
-                case CMARK_NODE_LINK:
-                case CMARK_NODE_IMAGE:
-                case CMARK_NODE_DOCUMENT:
-                case CMARK_NODE_BLOCK_QUOTE:
-                case CMARK_NODE_LIST:
-                case CMARK_NODE_ITEM:
-                    returnValue.push_back(createElement("Markdown", cmark_render_commonmark(child,0,0)));
+                }
+                default: {
+                    char* rendered = cmark_render_commonmark(child, 0, 0);
+                    returnValue.push_back(createElement("Markdown", rendered ? rendered : ""));
+                    free(rendered);
                     break;
+                }
             }
-        }while(cmark_node_last_child(MarkdownDocument)!=child);
+        }
         return returnValue;
     }
 

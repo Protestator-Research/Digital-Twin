@@ -168,27 +168,37 @@ namespace BACKEND_COMMUNICATION {
 
     std::string CommunicationService::describeBackendError(const std::exception& exception) {
         if(auto http = dynamic_cast<const SysMLv2::API::EXCEPTIONS::HTTPException*>(&exception)) {
+            // The "error" field of the JSON body of the server, empty if there is none.
+            const std::string detail = http->serverErrorCode();
+            auto withDetail = [&detail](std::string message) {
+                if(!detail.empty())
+                    message += " (" + detail + ")";
+                return message;
+            };
             switch(http->httpErrorCode()) {
+                case 400:
+                    return detail.empty() ? std::string("The request was rejected as invalid.")
+                                          : "The request was rejected as invalid: " + detail;
                 case 401:
-                    return "Your session has expired or you are not logged in. Please log in again.";
+                    return withDetail("Your session has expired or you are not logged in. Please log in again.");
                 case 403:
-                    if(http->serverErrorCode() == "password_change_required")
+                    if(detail == "password_change_required")
                         return "You must change your password before you can continue. Please do so in the web interface.";
-                    return "You do not have permission for this action.";
+                    return withDetail("You do not have permission for this action.");
                 case 404:
-                    return "The requested resource was not found or you have no access to it.";
+                    return withDetail("The requested resource was not found or you have no access to it.");
                 case 409:
-                    return "The request conflicts with the current state on the server.";
+                    return withDetail("The request conflicts with the current state on the server.");
                 case 429: {
                     std::string message = "Too many attempts.";
                     if(http->retryAfterSeconds() >= 0)
                         message += " Please retry in " + std::to_string(http->retryAfterSeconds()) + " s.";
                     else
                         message += " Please retry later.";
-                    return message;
+                    return withDetail(message);
                 }
                 default:
-                    return http->what();
+                    return http->what(); // already contains the "error" field
             }
         }
         if(dynamic_cast<const SysMLv2::API::EXCEPTIONS::ConnectionError*>(&exception))

@@ -3,6 +3,7 @@
 //
 
 #include <QList>
+#include <QMessageBox>
 #include <BECommunicationService.h>
 #include <string>
 #include <sysmlv2/rest/entities/Project.h>
@@ -86,23 +87,38 @@ namespace DigitalTwin::Client {
 
         auto possibleDigitalTwin = item->getDigitalTwin();
         if(possibleDigitalTwin != nullptr){
-            auto model = DigitalTwinManager->addDigitalTwinAndCreateModel(possibleDigitalTwin);
-            MainWindow->addTabWidget(new DigitalTwinTabWidget(model,MainWindow),QString::fromStdString(possibleDigitalTwin->getName()));
+            try {
+                auto model = DigitalTwinManager->addDigitalTwinAndCreateModel(possibleDigitalTwin);
+                MainWindow->addTabWidget(new DigitalTwinTabWidget(model,MainWindow),QString::fromStdString(possibleDigitalTwin->getName()));
+            } catch (const std::exception& ex) {
+                QMessageBox::critical(MainWindow, tr("Opening the digital twin failed"),
+                                      QString::fromStdString(BACKEND_COMMUNICATION::CommunicationService::describeBackendError(ex)));
+            }
         } else if(item->getProject() != nullptr) {
             auto project = item->getProject();
-            UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(BackendCommunication, MainWindow);
-            auto branches = BackendCommunication->getAllBranchesForProjectWithID(project->getId());
-            std::vector<std::shared_ptr<KerML::Entities::Element>> elements;
-            std::shared_ptr<SysMLv2::REST::Commit> commit = nullptr;
-            for (const auto& branch : branches) {
-                if (branch->getId() == project->getDefaultBranch()->getId()) {
-                    commit = branch->getHead();
-                    elements = BackendCommunication->getAllElements(branch->getHead()->getId(), project->getId());
+            try {
+                std::vector<std::shared_ptr<KerML::Entities::Element>> elements;
+                std::shared_ptr<SysMLv2::REST::Commit> commit = nullptr;
+                // A new project has no commit: the default branch has no head and there is nothing to download.
+                const auto defaultBranch = project->getDefaultBranch();
+                if (defaultBranch != nullptr) {
+                    for (const auto& branch : BackendCommunication->getAllBranchesForProjectWithID(project->getId())) {
+                        if (branch != nullptr && branch->getId() == defaultBranch->getId()) {
+                            commit = branch->getHead();
+                            break;
+                        }
+                    }
                 }
-            }
+                if (commit != nullptr)
+                    elements = BackendCommunication->getAllElements(commit->getId(), project->getId());
 
-            uploadFileDialog->setElementsForView(elements,commit,project);
-            uploadFileDialog->show();
+                UploadProjectFileToBackend* uploadFileDialog = new UploadProjectFileToBackend(BackendCommunication, MainWindow);
+                uploadFileDialog->setElementsForView(elements,commit,project);
+                uploadFileDialog->show();
+            } catch (const std::exception& ex) {
+                QMessageBox::critical(MainWindow, tr("Opening the project failed"),
+                                      QString::fromStdString(BACKEND_COMMUNICATION::CommunicationService::describeBackendError(ex)));
+            }
         }
     }
 

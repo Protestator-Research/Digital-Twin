@@ -25,6 +25,8 @@
 #include <kerml/kernel/packages/Package.h>
 #include <sysml/parts/PartDefinition.h>
 #include "DigitalTwinModel.h"
+#include "ModelBlocks.h"
+#include <stdexcept>
 
 #include <async_mqtt/protocol/impl/buffer_to_packet_variant.ipp>
 #include <async_mqtt/protocol/impl/store.hpp>
@@ -85,14 +87,13 @@ namespace DigitalTwin::Model {
 
 	void DigitalTwinModel::buildDigitalTwinModel()
 	{
-		const auto& textualRepresentations = Manager->downloadDigitalTwinModel(DigitalTwin->owningProject()->getId(), DigitalTwin->referencedCommit()->getId());
+		if (!DigitalTwin->owningProject() || !DigitalTwin->referencedCommit())
+			throw std::runtime_error("The digital twin references no project or no commit, its model cannot be built.");
 
-		std::string completeModel;
+		const auto& elements = Manager->downloadDigitalTwinModel(DigitalTwin->owningProject()->getId(), DigitalTwin->referencedCommit()->getId());
 
-		for (const auto& elem : textualRepresentations)
-			if ((std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->language() != "Markdown") && (std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->language() != "YaML"))
-				completeModel += std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->body();
-
+		// Only the TextualRepresentations that contain code, in document order. Other elements (Package, memberships) are skipped.
+		const std::string completeModel = assembleModelCode(elements);
 
 		Instance->parseModel(completeModel);
 		DigitalTwinModelElements = Instance->getElements();

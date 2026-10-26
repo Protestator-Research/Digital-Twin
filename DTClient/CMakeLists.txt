@@ -133,3 +133,7 @@ elseif (UNIX AND NOT APPLE)
 else ()
     target_compile_options(DigitalTwinClient PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+if(RUN_TESTS)
+    add_subdirectory(tests)
+endif()
