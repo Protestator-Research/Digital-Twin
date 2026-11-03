@@ -2,6 +2,7 @@
 // Created by herzog on 04.08.26.
 //
 
+#include "Variables/Variable.hpp"
 #include "Function.h"
 
 namespace DigitalTwin
@@ -35,6 +36,14 @@ namespace DigitalTwin
         void Function::setReturnVariable(IVariable* variable)
         {
             ReturnValue = variable;
+        }
+
+        Function* Function::invocate()
+        {
+            const auto function = new Function(Name);
+            function->Parameters = Parameters;
+            function->ReturnValue = ReturnValue;
+            return function;
         }
     } // Model
 } // DigitalTwin

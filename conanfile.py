@@ -34,9 +34,11 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("paho-mqtt-cpp/1.6.0")
         self.requires("date/3.0.4")
         self.requires("md4c/0.5.2")
-        self.requires("sysmllib/2610.2")
+        self.requires("sysmllib/2611.1")
         self.requires("yaml-cpp/0.8.0")
         self.requires("openssl/3.6.3")
+        self.requires("libpqxx/8.0.2")
+
 
         if self.settings.os == "Linux":
             self.requires("qt/6.11.1")

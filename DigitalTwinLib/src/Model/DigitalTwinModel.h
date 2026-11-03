@@ -85,7 +85,8 @@ namespace DigitalTwin::Model {
         IVariable* buildVariableOfDataType(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& element);
         IVariable* buildVariableOfOwnedElements(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& element);
         IVariable* buildVariableOfFeature(std::shared_ptr<KerML::Entities::Feature>& feature);
-        ElementType getElementTypeOfMetaDataUsage(std::shared_ptr<SysMLv2::Entities::MetadataUsage> metaDataUsage);
+        IDigitalTwinElement* getElementFromQualifiedName(std::string qualifiedName);
+    	ElementType getElementTypeOfMetaDataUsage(std::shared_ptr<SysMLv2::Entities::MetadataUsage> metaDataUsage);
         DigitalTwin::Model::SupportedTypes getTypeOfSysMLType(std::shared_ptr<KerML::Entities::DataType>& type);
         DigitalTwin::Model::SupportedTypes getTypeOfSysMLType(std::string value);
 

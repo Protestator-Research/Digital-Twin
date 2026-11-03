@@ -8,11 +8,11 @@
 #include <any>
 
 #include "IDigitalTwinElement.h"
-#include "Variables/Variable.hpp"
 #include "../../cpp_digital_twin_lib_global.h"
 
 namespace DigitalTwin::Model
 {
+    class IVariable;
     class CPPDIGITALTWINLIB_EXPORT Function : public IDigitalTwinElement
     {
     public:
@@ -26,7 +26,7 @@ namespace DigitalTwin::Model
         void appendParameter(IVariable* variable);
         IVariable* getReturnVariable() const;
         void setReturnVariable(IVariable* variable);
-
+        Function* invocate();
     private:
         std::vector<IVariable*> Parameters;
         IVariable* ReturnValue;

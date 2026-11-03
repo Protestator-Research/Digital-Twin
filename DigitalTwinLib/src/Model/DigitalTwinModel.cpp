@@ -232,11 +232,19 @@ namespace DigitalTwin::Model {
 					const auto invocationExpression = std::dynamic_pointer_cast<KerML::Entities::InvocationExpression>(elem);
 					if ((invocationExpression) && (!operatorExpression))
 					{
-						std::cout << "Invocation of: " << invocationExpression->instantiatedType()->qualifiedName().value_or("unnamed") << std::endl;
-						for (const auto& elem : invocationExpression->argument())
-						{
-							const auto reference = std::dynamic_pointer_cast<KerML::Entities::FeatureReferenceExpression>(elem);
-							std::cout << "With Argument: " << reference->referent()->qualifiedName().value_or("unnamed") << std::endl;
+						if (invocationExpression->instantiatedType()->qualifiedName().has_value()) {
+							const auto qualifiedName = invocationExpression->instantiatedType()->qualifiedName().value();
+							const auto invokedFunction = dynamic_cast<Function*>(getElementFromQualifiedName(qualifiedName));
+							if (invokedFunction) {
+								for (const auto& elem : invocationExpression->argument())
+								{
+									const auto reference = std::dynamic_pointer_cast<KerML::Entities::FeatureReferenceExpression>(elem);
+									//std::cout << "With Argument: " << reference->referent()->qualifiedName().value_or("unnamed") << std::endl;
+									if (reference->referent()->qualifiedName().has_value()) {
+										const auto connectedVariable = dynamic_cast<IVariable*>(getElementFromQualifiedName(reference->referent()->qualifiedName().value()));
+									}
+								}
+							}
 						}
 					}
 				}
@@ -368,6 +376,14 @@ namespace DigitalTwin::Model {
 			}
 			return variable;
 		}
+		return nullptr;
+	}
+
+	IDigitalTwinElement* DigitalTwinModel::getElementFromQualifiedName(std::string qualifiedName)
+	{
+		std::string functionPartsInDTCode = CPSBASELIB::STD_EXTENTION::StringExtention::replaceAll(qualifiedName, "::", "/");
+		const auto parts = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(functionPartsInDTCode, '/');
+
 		return nullptr;
 	}
 
