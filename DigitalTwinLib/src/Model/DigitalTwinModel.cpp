@@ -234,19 +234,22 @@ namespace DigitalTwin::Model {
 					{
 						if (invocationExpression->instantiatedType()->qualifiedName().has_value()) {
 							const auto qualifiedName = invocationExpression->instantiatedType()->qualifiedName().value();
-							const auto invokedFunction = dynamic_cast<Function*>(getElementFromQualifiedName(qualifiedName));
+							const auto invokedFunction = dynamic_cast<Function*>(getElementFromQualifiedName(qualifiedName))->invocate();
 							if (invokedFunction) {
-								for (const auto& elem : invocationExpression->argument())
+								for (const auto& arg : invocationExpression->argument())
 								{
-									const auto reference = std::dynamic_pointer_cast<KerML::Entities::FeatureReferenceExpression>(elem);
-									//std::cout << "With Argument: " << reference->referent()->qualifiedName().value_or("unnamed") << std::endl;
+									const auto reference = std::dynamic_pointer_cast<KerML::Entities::FeatureReferenceExpression>(arg);
 									if (reference->referent()->qualifiedName().has_value()) {
 										const auto connectedVariable = dynamic_cast<IVariable*>(getElementFromQualifiedName(reference->referent()->qualifiedName().value()));
+										invokedFunction->appendParameter(connectedVariable);
 									}
 								}
+								invokedFunction->setReturnVariable(variable);
+								variable->setFunctionInvocation(invokedFunction);
 							}
 						}
 					}
+
 				}
 				switch (type)
 				{
@@ -381,10 +384,49 @@ namespace DigitalTwin::Model {
 
 	IDigitalTwinElement* DigitalTwinModel::getElementFromQualifiedName(std::string qualifiedName)
 	{
-		std::string functionPartsInDTCode = CPSBASELIB::STD_EXTENTION::StringExtention::replaceAll(qualifiedName, "::", "/");
-		const auto parts = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(functionPartsInDTCode, '/');
+		std::string address = CPSBASELIB::STD_EXTENTION::StringExtention::replaceAll(qualifiedName, "::", "/");
+		IDigitalTwinElement* element = nullptr;
 
-		return nullptr;
+		try
+		{
+			element=getFunctionWithAddress(address);
+		}catch (...)
+		{
+			element=nullptr;
+		}
+
+		if (!element)
+		{
+			try
+			{
+				element=getPackageWithAddress(address);
+			}catch (...)
+			{
+				element=nullptr;
+			}
+		}
+		if (!element)
+		{
+			try
+			{
+				element=getVariableWithAddress(address);
+			}catch (...)
+			{
+				element=nullptr;
+			}
+		}
+		if (!element)
+		{
+			try
+			{
+				element = getComponentOrPackageWithAddress(address);
+			}catch (...)
+			{
+				element=nullptr;
+			}
+		}
+
+		return element;
 	}
 
 	ElementType DigitalTwinModel::getElementTypeOfMetaDataUsage(
@@ -497,7 +539,12 @@ namespace DigitalTwin::Model {
 			throw DigitalTwinAddressException();
 
 		if (splittedAdress.size() == 1)
-			return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]]);
+		{
+			if (ComponentMap.contains(splittedAdress[0]))
+				return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]]);
+			else
+				return nullptr;
+		}
 
 		std::string addressWithHigherIndex = "";
 		for (size_t i = 1; i < splittedAdress.size(); i++) {
@@ -505,8 +552,10 @@ namespace DigitalTwin::Model {
 			if (i < (splittedAdress.size() - 1))
 				addressWithHigherIndex += "/";
 		}
+		if (ComponentMap.contains(splittedAdress[0]))
+			return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getComponent(addressWithHigherIndex);
 
-		return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getComponent(addressWithHigherIndex);
+		return nullptr;
 	}
 
 	Package* DigitalTwinModel::getPackageWithAddress(std::string address)
@@ -527,6 +576,28 @@ namespace DigitalTwin::Model {
 		// }
 		//
 		// return dynamic_cast<Component*>(PackageMap[splittedAdress[0]])->getComponent(addressWithHigherIndex);
+		return nullptr;
+	}
+
+	Function* DigitalTwinModel::getFunctionWithAddress(std::string address)
+	{
+		auto parts = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
+		std::string componentAddress = "";
+		for (size_t i = 0; i<parts.size()-1; i++)
+		{
+			componentAddress += parts[i];
+			if (i < parts.size()-2)
+			{
+				componentAddress+="/";
+			}
+		}
+		const auto element = getComponentOrPackageWithAddress(componentAddress);
+		if (element)
+		{
+			const auto function = element->resolveFunction(parts.back());
+			if (function)
+				return function;
+		}
 		return nullptr;
 	}
 

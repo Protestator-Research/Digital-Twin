@@ -47,6 +47,12 @@ namespace DigitalTwin::Model {
 
         virtual IVariable* resolveVariable(std::string name) = 0;
         virtual IVariable* resolveVariable(std::vector<std::string> domains, size_t index) = 0;
+    	virtual Function* resolveFunction(const std::string& name)
+    	{
+    		if (Functions.count(name)>0)
+    			return Functions.at(name);
+    		return nullptr;
+    	}
 
     protected:
     	std::map<std::string, Component*> ComponentMap;

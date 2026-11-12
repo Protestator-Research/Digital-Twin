@@ -78,6 +78,7 @@ namespace DigitalTwin::Model {
     private:
         Component* getComponentWithAddress(std::string address);
         Package* getPackageWithAddress(std::string address);
+        Function* getFunctionWithAddress(std::string address);
 
         void buildDigitalTwinModel();
 

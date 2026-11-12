@@ -65,7 +65,9 @@ namespace DigitalTwin::Model {
     }
 
     Component *Component::getComponent(std::string name) {
-        return ComponentMap.at(name);
+        if (ComponentMap.contains(name))
+            return ComponentMap.at(name);
+        return nullptr;
     }
 
     Port* Component::getPort(std::string name)

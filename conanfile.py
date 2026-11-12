@@ -8,7 +8,6 @@ from sys import platform
 
 class CppDigitalTwinRecipe(ConanFile):
     name = "digitaltwin"
-    version = "2610"
     package_type = "application"
 
     # Optional metadata
@@ -29,19 +28,19 @@ class CppDigitalTwinRecipe(ConanFile):
     def requirements(self):
         self.requires("boost/[>=1.86.0 <2]")
         self.requires("libcurl/[>=8.4.0 <9]")
-        self.requires("nlohmann_json/[>=3.11.3 <3.13]")
+        self.requires("nlohmann_json/[>=3.11.3 <4]")
         self.requires("async-mqtt/10.2.8")
         self.requires("paho-mqtt-cpp/1.6.0")
-        self.requires("date/3.0.4")
+        self.requires("date/3.0.5")
         self.requires("md4c/0.5.2")
         self.requires("sysmllib/2611.1")
         self.requires("yaml-cpp/0.8.0")
-        self.requires("openssl/3.6.3")
+        self.requires("openssl/3.6.5")
         self.requires("libpqxx/8.0.2")
 
 
         if self.settings.os == "Linux":
-            self.requires("qt/6.11.1")
+            self.requires("qt/6.12.0")
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -75,6 +74,10 @@ class CppDigitalTwinRecipe(ConanFile):
 
         if self.settings.os == "Linux":
             self.options["qt/*"].qtcharts = True
+            # Qt's PostgreSQL SQL plugin links the static libpq.a without
+            # libpgcommon/libpgport/gssapi and fails to link. The project talks
+            # to PostgreSQL via libpqxx, so the Qt driver is not needed.
+            self.options["qt/*"].with_pq = False
 
     
     def layout(self):
