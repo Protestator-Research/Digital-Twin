@@ -4,7 +4,7 @@
 //! |---|---|
 //! | Real, Integer, Natural, Positive, Boolean | `{"time_point": "...", "value": <number or bool>}` |
 //! | Rational | `{"time_point": "...", "value": "n/d"}` |
-//! | Complex | `{"imaginaryValue": x, "realValue": y, "time_point": "..."}` |
+//! | Complex | `{"imaginary_value": x, "real_value": y, "time_point": "..."}` |
 //!
 //! [`classify`] determines the type of an arbitrary payload, see there for the limits.
 
@@ -168,9 +168,9 @@ impl RationalValue {
 /// `ComplexValueEntity`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct ComplexValue {
-    #[serde(rename = "imaginaryValue")]
+    #[serde(rename = "imaginary_value")]
     pub imaginary_value: f64,
-    #[serde(rename = "realValue")]
+    #[serde(rename = "real_value")]
     pub real_value: f64,
     #[serde(with = "serde_time_point")]
     pub time_point: DateTime<Utc>,

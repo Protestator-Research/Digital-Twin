@@ -6,9 +6,9 @@ use uuid::Uuid;
 /// `{"projectID": "<uuid>", "twinID": "<uuid>"}` (`DigitalTwinEntity`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConnectToTwin {
-    #[serde(rename = "projectID")]
+    #[serde(rename = "project_id")]
     pub project_id: Uuid,
-    #[serde(rename = "twinID")]
+    #[serde(rename = "twin_id")]
     pub twin_id: Uuid,
 }
 
@@ -54,7 +54,7 @@ mod tests {
             project_id: PROJECT.parse().unwrap(),
             twin_id: TWIN.parse().unwrap(),
         };
-        let expected = format!(r#"{{"projectID":"{PROJECT}","twinID":"{TWIN}"}}"#);
+        let expected = format!(r#"{{"project_id":"{PROJECT}","twin_id":"{TWIN}"}}"#);
         assert_eq!(c.to_json(), expected);
         assert_eq!(ConnectToTwin::from_json(expected.as_bytes()).unwrap(), c);
     }
@@ -69,9 +69,9 @@ mod tests {
         );
         let c = ConnectToTwin::from_json(json.as_bytes()).unwrap();
         assert_eq!(c.twin_id.to_string(), TWIN);
-        assert!(ConnectToTwin::from_json(br#"{"twinID":"x","projectID":"y"}"#).is_err());
+        assert!(ConnectToTwin::from_json(br#"{"twin_id":"x","project_id":"y"}"#).is_err());
         assert!(
-            ConnectToTwin::from_json(br#"{"twinID":"123e4567-e89b-12d3-a456-426614174000"}"#)
+            ConnectToTwin::from_json(br#"{"twin_id":"123e4567-e89b-12d3-a456-426614174000"}"#)
                 .is_err()
         );
         assert!(ConnectToTwin::from_json(b"").is_err());
