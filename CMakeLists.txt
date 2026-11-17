@@ -43,6 +43,6 @@ endif()
 add_subdirectory(./CpsBaseLib)
 add_subdirectory(./BackendCommunicationService)
 add_subdirectory(./DigitalTwinLib)
-add_subdirectory(./DTServer)
+# add_subdirectory(./DTServer) C++ Server Version is not maintained anymore, since this would require Drogon on windows, which is not possible.
 add_subdirectory(./PhysicalTwinCommunicationService)
 add_subdirectory(./DTClient)
