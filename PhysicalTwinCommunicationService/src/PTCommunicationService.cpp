@@ -9,7 +9,7 @@
 #include <chrono>
 #include <iostream>
 
-#ifdef WIN32
+#if defined(_WIN32) || defined(WIN32)
 #include <windows.h>
 #endif
 

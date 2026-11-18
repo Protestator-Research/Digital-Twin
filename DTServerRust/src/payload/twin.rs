@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// `{"projectID": "<uuid>", "twinID": "<uuid>"}` (`DigitalTwinEntity`).
+/// `{"project_id": "<uuid>", "twin_id": "<uuid>"}` (`DigitalTwinEntity`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConnectToTwin {
     #[serde(rename = "project_id")]
@@ -63,7 +63,7 @@ mod tests {
     fn connect_to_twin_parsing() {
         // key order and whitespace do not matter, uppercase and unknown keys are accepted
         let json = format!(
-            r#"{{ "twinID": "{}", "extra": 1, "projectID": "{}" }}"#,
+            r#"{{ "twin_id": "{}", "extra": 1, "project_id": "{}" }}"#,
             TWIN.to_uppercase(),
             PROJECT
         );

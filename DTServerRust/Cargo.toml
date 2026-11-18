@@ -1,6 +1,6 @@
 [package]
 name = "dt-server"
-version = "0.1.0"
+version = "2611.1.0"
 edition = "2021"
 description = "Rust port of the Digital Twin Server: embedded MQTT v5 broker and server logic"
 publish = false
@@ -15,7 +15,7 @@ path = "src/main.rs"
 
 [features]
 # Real twin backend: cxx bridge to the C++ facade in ffi/ (needs the existing C++ build tree, see README).
-ffi = ["dep:cxx", "dep:cxx-build"]
+ffi = ["dep:cxx", "dep:cxx-build", "dep:serde_json"]
 # Unit test that checks the syntax of all SQL with PostgreSQL's own parser (libpg_query, no server needed). Off by
 # default because its build needs libclang.
 sql-syntax-check = ["dep:pg_query"]
@@ -37,6 +37,8 @@ sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio",
 
 [build-dependencies]
 cxx-build = { version = "1", optional = true }
+# build.rs parses the Conan graph JSON (ffi/link_plan.rs); only needed with the feature.
+serde_json = { version = "1", optional = true }
 
 [dev-dependencies]
 rumqttc = { version = "0.25", default-features = false }

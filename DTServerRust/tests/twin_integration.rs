@@ -416,8 +416,8 @@ async fn malformed_connect_payloads_are_ignored() {
     for bad in [
         &b"garbage"[..],
         b"",
-        br#"{"twinID":"not-a-uuid","projectID":"also-not"}"#,
-        br#"{"twinID":"123e4567-e89b-12d3-a456-426614174000"}"#,
+        br#"{"twin_id":"not-a-uuid","project_id":"also-not"}"#,
+        br#"{"twin_id":"123e4567-e89b-12d3-a456-426614174000"}"#,
         &[0xff, 0xfe, 0x00],
         b"[]",
     ] {

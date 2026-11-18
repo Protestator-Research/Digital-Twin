@@ -82,7 +82,7 @@ pub fn value_columns(value: &Value) -> (i16, Option<f64>, Option<String>, Option
         ),
         Value::Rational(r) => (value_type::RATIONAL, None, Some(r.to_string()), None),
         Value::Complex { real, imaginary } => {
-            let json = serde_json::json!({ "imaginaryValue": imaginary, "realValue": real });
+            let json = serde_json::json!({ "imaginary_value": imaginary, "real_value": real });
             (value_type::COMPLEX, None, None, Some(json.to_string()))
         }
     }
@@ -166,8 +166,8 @@ mod tests {
         });
         assert_eq!((ty, num, text), (value_type::COMPLEX, None, None));
         let json: serde_json::Value = serde_json::from_str(&json.unwrap()).unwrap();
-        assert_eq!(json["realValue"], 1.0);
-        assert_eq!(json["imaginaryValue"], -2.5);
+        assert_eq!(json["real_value"], 1.0);
+        assert_eq!(json["imaginary_value"], -2.5);
     }
 
     #[test]

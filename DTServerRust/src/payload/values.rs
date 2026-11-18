@@ -254,7 +254,7 @@ pub struct ValuePayload {
 /// Classifies a value payload by its JSON shape. Invalid JSON, a missing or malformed `time_point`, and
 /// shapes that match no value type are errors.
 ///
-/// - `realValue` and `imaginaryValue` present: Complex
+/// - `real_value` and `imaginary_value` present: Complex
 /// - `value` is a boolean: Boolean
 /// - `value` is a string `"n/d"`: Rational; a string of the form integer/integer with denominator 0 is rejected
 /// - `value` is any other string: Text (the String type; `StringValueEntity` is still empty in C++)
@@ -273,7 +273,7 @@ pub fn classify(payload: &[u8]) -> Result<ValuePayload, ValueError> {
         Some(_) => return Err(ValueError::WrongType("time_point")),
     };
 
-    if object.contains_key("realValue") || object.contains_key("imaginaryValue") {
+    if object.contains_key("real_value") || object.contains_key("imaginary_value") {
         let number = |key: &'static str| -> Result<f64, ValueError> {
             object
                 .get(key)
@@ -282,8 +282,8 @@ pub fn classify(payload: &[u8]) -> Result<ValuePayload, ValueError> {
                 .ok_or(ValueError::WrongType(key))
         };
         let value = Value::Complex {
-            real: number("realValue")?,
-            imaginary: number("imaginaryValue")?,
+            real: number("real_value")?,
+            imaginary: number("imaginary_value")?,
         };
         return Ok(ValuePayload { time_point, value });
     }
@@ -448,7 +448,7 @@ mod tests {
         let v = ComplexValue::new(1.5, -2.0, t());
         assert_eq!(
             v.to_json(),
-            format!(r#"{{"imaginaryValue":-2.0,"realValue":1.5,"time_point":"{TP}"}}"#)
+            format!(r#"{{"imaginary_value":-2.0,"real_value":1.5,"time_point":"{TP}"}}"#)
         );
         assert_eq!(ComplexValue::from_json(v.to_json().as_bytes()).unwrap(), v);
     }
@@ -546,8 +546,8 @@ mod tests {
             r#"{"time_point":"2026-11-17T09:40:12.345Z","value":null}"#,
             r#"{"time_point":"2026-11-17T09:40:12.345Z","value":[1]}"#,
             r#"{"time_point":"2026-11-17T09:40:12.345Z","value":"1/0"}"#,
-            r#"{"time_point":"2026-11-17T09:40:12.345Z","realValue":1}"#,
-            r#"{"time_point":"2026-11-17T09:40:12.345Z","realValue":"1","imaginaryValue":2}"#,
+            r#"{"time_point":"2026-11-17T09:40:12.345Z","real_value":1}"#,
+            r#"{"time_point":"2026-11-17T09:40:12.345Z","real_value":"1","imaginary_value":2}"#,
         ];
         for payload in bad {
             assert!(

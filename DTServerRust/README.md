@@ -28,39 +28,110 @@ history work.
 
 ### With the C++ model libraries (`--features ffi`)
 
+The feature links the real twin backend: `build.rs` compiles the cxx bridge and the facade `ffi/dt_facade.cpp`
+(C++20, uses `DigitalTwinLib`, `BackendCommunicationService` and `sysmllib` unmodified) and links it against an
+existing CMake/Conan build tree of the C++ project. `build.rs` never writes into that tree and never runs cmake or
+conan; a failing `--features ffi` build or a missing library at run time is a problem of the C++ tree, rebuild it
+there.
+
+One-time C++ steps, from the repository root (they write only into `build/`). The location of the build tree
+depends on the generator: multi-config generators (Visual Studio, Xcode) use plain `build/`, single-config
+generators (Makefiles, Ninja; the Linux default) use `build/<build_type>` (`cmake_layout`), here `build/Release`.
+
 ```
-export DT_CPP_BUILD_DIR=<repo>/build/Debug      # the existing CMake build tree, read only
+# Linux / macOS with Makefiles or Ninja (tree: build/Release)
+conan install . -s build_type=Release --build missing --format=json --out-file build/Release/conan-graph.json
+conan build . -s build_type=Release
+```
+
+```
+# Windows with Visual Studio (tree: build)
+conan install . -s build_type=Release --build missing --format=json --out-file build/conan-graph.json
+conan build . -s build_type=Release
+```
+
+Add `-o with_client=False` to both commands to skip the Qt client and the `md4c`/Qt requirements; the four libraries
+and, with the default `DT_BUILD_TESTS=ON`, their C++ tests (which need GTest) are still built. The libraries must be
+built shared (the Conan default, `shared=True`).
+`conan-graph.json` is the list of the Conan packages with their include, library and binary directories; it is
+written by `conan install` (use `--format=json`) and is read by `build.rs`.
+
+Then build and test the server:
+
+```
+# Linux / macOS (sh); with Xcode use <repo>/build
+export DT_CPP_BUILD_DIR=<repo>/build/Release
 cargo build --features ffi
 cargo test  --features ffi
 ```
 
-`build.rs` compiles the cxx bridge and the facade `ffi/dt_facade.cpp` (C++20, uses `DigitalTwinLib`,
-`BackendCommunicationService` and `sysmllib` unmodified) against that tree. It never writes there and never runs
-cmake or conan:
-
-- libraries: `$DT_CPP_BUILD_DIR/out/lib{DigitalTwinLib,BackendCommunication,PhysicalTwinCommunication,CPSBaseLib}.so`
-  plus the shared libraries of the Conan package `sysmllib` (the facade uses `SysMLv2::REST` classes directly);
-- source directory: `CMAKE_HOME_DIRECTORY` from `CMakeCache.txt` (header directories of the four C++ libraries);
-- Conan include and library directories: read from `$DT_CPP_BUILD_DIR/generators/*-debug-x86_64-data.cmake`
-  (`DT_CPP_CONAN_CONFIG` changes the suffix `debug-x86_64`); no store path is hard-coded;
-- `DT_CPP_EXTRA_LIB_DIRS` (optional, `:` separated) is searched first for libraries.
-
-Link search order and rpath: extra directories, Conan packages, then `out`. **The order matters**: `out` also holds
-older copies of `libsysml*.so` (built against a different Boost whose store directory is gone) that must not win
-over the Conan `sysmllib` package; if `out` came first the link would succeed but the binary would fail to start
-or to load a library. `build.rs` stops with a message that names the generator file or variable when a package
-it needs is missing (for example `sysmllib-debug-x86_64-data.cmake`, or `<pkg>_INCLUDE_DIRS_DEBUG` naming a
-directory that no longer exists); the variable suffix (`DEBUG`) is derived from `DT_CPP_CONAN_CONFIG`. The
-rpath is DT_RPATH (not RUNPATH) so it also covers dependencies of the libraries; a library that itself carries a
-RUNPATH (the C++ project libraries do) ignores it, so the run environment of the C++ build is still needed:
-
 ```
-source "$DT_CPP_BUILD_DIR/generators/conanrun.sh"
+# Windows (PowerShell)
+$env:DT_CPP_BUILD_DIR = "<repo>\build"
+cargo build --features ffi
+cargo test  --features ffi
 ```
 
-`build.rs` prints a `cargo:warning` for every library directory the generator files name that does not exist
-(stale build tree). A failing `--features ffi` build or a missing library at run time is a problem of the C++
-build tree: rebuild it with conan/cmake there, this crate does not touch it.
+Where the inputs come from:
+
+- Conan packages (include, library and binary directories, the library names of `sysmllib`): from the graph JSON
+  (`DT_CPP_CONAN_GRAPH`, default `$DT_CPP_BUILD_DIR/conan-graph.json`, else `$DT_CPP_BUILD_DIR/../conan-graph.json`). Only `host` packages that are not
+  `test_requires` are used; the same file layout works on every platform. The facade links the four project
+  libraries and exactly the libraries `sysmllib` lists in its `cpp_info` (names are not hard-coded). Conan `defines`
+  are passed to the C++ compiler.
+- Project libraries and configuration: from `$DT_CPP_BUILD_DIR/CMakeCache.txt` (if it is missing but
+  `$DT_CPP_BUILD_DIR/<config>/CMakeCache.txt` exists, the error names that directory; `build.rs` does not switch to
+  it by itself). A tree with
+  `CMAKE_CONFIGURATION_TYPES` (Visual Studio, Xcode, Ninja Multi-Config) is multi-config: the libraries are in
+  `out/<config>`. Otherwise (Makefiles, Ninja) the tree is single-config and they are in `out`. The configuration is
+  `DT_CPP_CONFIG`, else `CMAKE_BUILD_TYPE` if set, else `Release`; it must be one of `CMAKE_CONFIGURATION_TYPES`
+  (multi-config) or equal to `CMAKE_BUILD_TYPE` (single-config). `BUILD_SHARED_LIBS=OFF` in the cache is an error.
+- Headers of the four C++ libraries: `<source dir>/{CpsBaseLib,BackendCommunicationService,
+  PhysicalTwinCommunicationService,DigitalTwinLib}/src`; the source directory is `DT_CPP_SOURCE_DIR`, default the
+  parent of `DTServerRust/`.
+
+Library search order: `DT_CPP_EXTRA_LIB_DIRS`, then the Conan packages, then the project `out` directory.
+**The order matters**: the `out` directory can hold older copies of the `sysml*` libraries (built against other
+dependencies) that must not win over the Conan package `sysmllib`; with `out` first the link could succeed and the
+binary would still fail to start or to load a library.
+
+Finding the libraries at run time:
+
+- Linux: `-Wl,--disable-new-dtags` and one `-Wl,-rpath,<dir>` per search directory, so the rpath is DT_RPATH (not
+  RUNPATH) and also covers the dependencies of the libraries. A library that itself carries a RUNPATH (the C++
+  project libraries do) ignores it; if a library is still not found, run in the environment of the C++ build:
+  `source "$DT_CPP_BUILD_DIR/generators/conanrun.sh"` (`$DT_CPP_BUILD_DIR` is `build/Release` for a single-config tree).
+- macOS: one `-Wl,-rpath,<dir>` per search directory.
+- Windows: there is no rpath. `build.rs` copies the `*.dll` files of `DT_CPP_EXTRA_LIB_DIRS` (they come first), of
+  the Conan `bin` directories and of the project library directory into `<OUT_DIR>/dll`, which is passed to the
+  linker as a search directory; cargo puts such directories on `PATH` for `cargo run` and `cargo test`. The DLLs are
+  also copied next to the final artifacts (`target\<profile>`) so `dt-server.exe` starts directly; a deleted copy
+  is restored by the next `cargo build`. The first DLL of a name wins, in the order of the search directories.
+  `DT_CPP_NO_DLL_COPY=1` switches both copies off; then put the Conan run environment (`generators\conanrun.bat`)
+  and `build\out\<config>` on `PATH` yourself.
+
+C++ compiler and runtime on Linux and macOS (not verified on a real Linux or macOS machine; the decisions are unit
+tested in `tests/link_plan.rs`): unless `CXX` is set, the facade is compiled with `CMAKE_CXX_COMPILER` from
+`CMakeCache.txt`. `compiler.libcxx` of the Conan graph (root node, else the `sysmllib` node) selects the C++
+runtime: `libstdc++` (old ABI) defines `_GLIBCXX_USE_CXX11_ABI=0`, `libstdc++11` changes nothing, `libc++` on Linux
+adds `-stdlib=libc++` and links `c++`; on macOS the default libc++ is kept. Conan `defines` are taken only from
+`sysmllib` and the packages it requires.
+
+Rules and limits:
+
+- **MSVC needs a Release-like C++ tree** (`Release`, `RelWithDebInfo` or `MinSizeRel`). Rust always links the release
+  C runtime (`/MD`); Debug DLLs use `/MDd`, and `std::string` is not ABI compatible across that boundary. `build.rs`
+  stops with a message if the configuration is `Debug` or if `sysmllib` in the graph is a Debug build. Run
+  `conan install` with `-s build_type=Release` and recreate the graph. Because a Visual Studio tree holds all
+  configurations side by side in `out/<config>`, an existing Debug tree stays usable for the C++ client.
+- Windows targets other than `*-pc-windows-msvc` (for example `*-windows-gnu`) are not supported: the C++ libraries
+  are built with MSVC.
+- Only linux, windows and macos are supported targets.
+- `build.rs` prints a `cargo:warning` for every include or library directory of the plan that does not exist (stale
+  build tree or graph). It reruns when the variables below, the graph, `CMakeCache.txt`, the project and `sysmllib`
+  headers or the project library files change.
+- The planning logic is in `ffi/link_plan.rs` (no I/O, shared with `tests/link_plan.rs`), so the Linux and macOS
+  rules are tested on every host.
 
 ### Environment variables
 
@@ -70,7 +141,11 @@ build tree: rebuild it with conan/cmake there, this crate does not touch it.
 | `DT_HISTORY_DATABASE_URL` | server | PostgreSQL URL of the history (beats the file); may contain a password, never logged |
 | `RUST_LOG` | server | log level, default `info` |
 | `DT_CPP_BUILD_DIR` | build, `ffi` | CMake build directory of the C++ project (required for `--features ffi`) |
-| `DT_CPP_CONAN_CONFIG`, `DT_CPP_EXTRA_LIB_DIRS` | build, `ffi` | see above |
+| `DT_CPP_CONFIG` | build, `ffi` | configuration of the C++ tree; default `CMAKE_BUILD_TYPE`, else `Release` |
+| `DT_CPP_CONAN_GRAPH` | build, `ffi` | Conan graph JSON; default `$DT_CPP_BUILD_DIR/conan-graph.json` |
+| `DT_CPP_SOURCE_DIR` | build, `ffi` | source directory with the four library directories; default the parent of `DTServerRust/` |
+| `DT_CPP_EXTRA_LIB_DIRS` | build, `ffi` | extra library directories searched first, separated like `PATH` (`:` on Linux/macOS, `;` on Windows) |
+| `DT_CPP_NO_DLL_COPY` | build, `ffi`, Windows | any value except empty, `0`, `false`, `off`: do not copy the DLLs (see above) |
 | `DT_TEST_DATABASE_URL` | tests | enables the PostgreSQL tests (see below) |
 | `DT_TEST_SERVER_URL`, `DT_TEST_USER`, `DT_TEST_PASSWORD`, `DT_TEST_PROJECT_ID`, `DT_TEST_TWIN_ID` | tests, `ffi` | opt-in live test against a Structura server (same names as `tools/run_live_test.py`); never started by the tests |
 
@@ -79,6 +154,8 @@ build tree: rebuild it with conan/cmake there, this crate does not touch it.
 - `cargo test`: unit tests plus the integration tests. `tests/twin_integration.rs` drives the whole twin flow
   (`connectToTwin` -> interface topics -> `registerFunction` forwarding, duplicate request, backend error,
   malformed payload, login retry, bounded pool, shutdown) over a real broker with a fake `TwinBackend`.
+- `cargo test --test link_plan`: the link planning of `build.rs` for linux, macos and windows with synthetic
+  CMake caches and Conan graphs (no C++ tree needed).
 - `cargo test --features ffi`: additionally `tests/ffi_backend.rs`: calls without login, login against a closed
   port and against a server that answers 500 return errors (no abort, no password in the message). The live test
   needs `DT_TEST_SERVER_URL`, `DT_TEST_PROJECT_ID` and `DT_TEST_TWIN_ID` and is skipped otherwise.
@@ -194,7 +271,7 @@ that recording is off. `run.history.{retention_days,queue_capacity,batch_size,fl
 | `src/broker/` | `codec` (MQTT v5 packets), `topic` (matching, limits), `subscriptions` (store), `tracker` (connection limits), `session`, `limits` |
 | `src/hub.rs` | in-process hub: `subscribe(filter, capacity)` and `publish(topic, payload)`; messages carry their `Origin` |
 | `src/twin/` | `TwinBackend` trait, twin service (`mod.rs`), `ffi.rs` (feature `ffi`, cxx bridge) |
-| `ffi/`, `build.rs` | C++ facade (`dt_facade.h/.cpp`); `build.rs` compiles it against the C++ build tree (feature `ffi`) |
+| `ffi/`, `build.rs` | C++ facade (`dt_facade.h/.cpp`); `build.rs` compiles it against the C++ build tree (feature `ffi`) and emits the link and run-time settings; `ffi/link_plan.rs` is its pure planning logic (paths, libraries, rpath, DLLs), also included by `tests/link_plan.rs` (runs without the feature, covers all three target systems) |
 | `src/history/` | `partition`, `registry`, `row`, `store` (trait), `pg` (sqlx), `recorder` (ingest, stats), `writer` (batches, maintenance) |
 | `migrations/` | embedded SQL migrations |
 | `src/payload/` | `time` (`time_point`), `twin` (`connectToTwin`, `registerFunction`), `values` (value types and `classify`) |
@@ -282,13 +359,15 @@ Payload types:
   accepts the fixed layout `YYYY-MM-DDTHH:MM:SS` with an optional fraction (digits after the third are ignored) and
   requires `Z`. It is stricter than the C++ `sscanf` parser (no short fields like `2026-1-2T3:4:5Z`, ranges are
   validated, e.g. hour 25 is rejected).
-- `classify()` classifies by JSON shape: `realValue`+`imaginaryValue` is Complex, bool is Boolean, `"n/d"` string is
+- `classify()` classifies by JSON shape: `real_value`+`imaginary_value` is Complex, bool is Boolean, `"n/d"` string is
   Rational, a JSON integer is Integer, any other number is Real. Natural and Positive are not distinguishable from
   Integer by the payload and are reported as Integer; the typed structs `NaturalValue` / `PositiveValue` exist for
   callers that know the type. A string value that is not a fraction is rejected (String values are not defined yet).
   `PositiveValue` accepts 0, like the C++ entity.
 - Rational values are reduced and have a positive denominator (like `boost::rational`); denominator 0 is rejected.
-  `long` is treated as 64 bit (Linux).
+  The Rust side uses `i64` (the C++ `long` of Linux). On Windows the C++ `long` has 32 bits: this does not affect the
+  facade path (the facade handles no values), but the C++ libraries (`IntegerVariable`, `RationalVariable`,
+  `RationalValueEntity` with `std::stol`) would truncate or reject values beyond 32 bits there.
 
 ## Hub
 
@@ -317,7 +396,13 @@ Phase 3 and 5:
 - Until the history database is reachable the registry is empty: values are counted as `unknown_twin`.
 - Not verified: SQL against a real PostgreSQL (none available here; the statements are syntax checked with
   libpg_query and the database tests compile, but they were not executed); the facade against a real Structura
-  server; thread safety of the C++ libraries; the `ffi` build on anything but this machine's tree.
+  server; thread safety of the C++ libraries.
+- The `ffi` build is verified on Windows 11 with MSVC against a Release tree (Conan prebuilt packages): `cargo
+  build --features ffi`, the `ffi_backend`, `twin_integration`, `broker_integration` and `history_db` tests and a
+  start of `dt-server.exe` without `PATH` additions work. Not verified: macOS (never built, only the planning logic
+  is unit tested), Linux (no Linux build was run; rpath handling is unit tested only), the live test against
+  Structura, and the MSVC `RelWithDebInfo`/`MinSizeRel` trees. The DLL copy next to the artifact is verified for the
+  default `target` directory only; a separately configured cargo `build-dir` or `--target` is not verified.
 
 Broker and payloads (first increment):
 

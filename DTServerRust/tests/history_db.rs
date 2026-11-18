@@ -215,7 +215,7 @@ async fn batch_insert_stores_all_value_types_in_the_right_partitions() {
         None,
         None,
         None,
-        Some(r#"{"imaginaryValue":-2.5,"realValue":1.0}"#.into()),
+        Some(r#"{"imaginary_value":-2.5,"real_value":1.0}"#.into()),
     ];
     store
         .insert_batch(&c)
@@ -225,7 +225,7 @@ async fn batch_insert_stores_all_value_types_in_the_right_partitions() {
     assert_eq!(count(&store, "measurement").await, 4);
     let rows = sqlx::query(
         "SELECT element_path, tableoid::regclass::text AS part, value_type, value_num, value_text, \
-                value_json->>'realValue' AS re FROM measurement ORDER BY element_path",
+                value_json->>'real_value' AS re FROM measurement ORDER BY element_path",
     )
     .fetch_all(store.pool())
     .await

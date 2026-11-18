@@ -19,8 +19,8 @@ class CppDigitalTwinRecipe(ConanFile):
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": True, "fPIC": True}
+    options = {"shared": [True, False], "fPIC": [True, False], "with_client": [True, False]}
+    default_options = {"shared": True, "fPIC": True, "with_client": True}
 
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "CMakeLists.txt", "CppDigitalTwin/*"
@@ -32,14 +32,15 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("async-mqtt/10.2.8")
         self.requires("paho-mqtt-cpp/1.6.0")
         self.requires("date/3.0.5")
-        self.requires("md4c/0.5.2")
+        if self.options.with_client:
+            self.requires("md4c/0.5.2")
         self.requires("sysmllib/2611.1")
         self.requires("yaml-cpp/0.8.0")
         self.requires("openssl/3.6.5")
         self.requires("libpqxx/8.0.2")
 
 
-        if self.settings.os == "Linux":
+        if self.options.with_client and self.settings.os == "Linux":
             self.requires("qt/6.12.0")
 
     def config_options(self):
@@ -87,6 +88,9 @@ class CppDigitalTwinRecipe(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
+        tc.cache_variables["DT_BUILD_CLIENT"] = bool(self.options.with_client)
+        # also for a plain `cmake -DCMAKE_TOOLCHAIN_FILE=...` configure (variables end up in conan_toolchain.cmake)
+        tc.variables["DT_BUILD_CLIENT"] = bool(self.options.with_client)
         tc.user_presets_path = 'CMakePresets.json'
         tc.generate()
 
