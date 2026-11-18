@@ -113,11 +113,16 @@ fn live_load_twin_against_structura() {
     let twin: Uuid = twin.parse().expect("DT_TEST_TWIN_ID is a uuid");
     let info = backend.load_twin(project, twin).expect("load twin");
     assert!(!info.name.is_empty());
+    assert!(!info.elements.is_empty(), "the twin has no variables");
     eprintln!(
         "loaded twin {:?} with {} elements",
         info.name,
         info.elements.len()
     );
+    for element in &info.elements {
+        dt_server::payload::values::classify(element.initial_json.as_bytes())
+            .unwrap_or_else(|e| panic!("initial value of {:?}: {e}", element.path));
+    }
     backend.release_twin(twin).expect("release");
 }
 
@@ -129,4 +134,41 @@ fn split_url(url: &str) -> (String, u16) {
         format!("{scheme}://{host}"),
         port.trim_end_matches('/').parse().expect("port"),
     )
+}
+
+/// Offline contract test (no Structura server): the `getJson()` of every C++ value entity type passes
+/// `classify` with the expected kind. Guards against the C++ and Rust wire formats drifting apart.
+#[test]
+fn cpp_get_json_matches_classify() {
+    use dt_server::payload::values::{classify, Rational, Value};
+
+    let samples = dt_server::twin::ffi::sample_initial_values();
+    assert_eq!(samples.len(), 9, "one sample per type: {samples:?}");
+    let value_of = |path: &str| {
+        let sample = samples
+            .iter()
+            .find(|e| e.path == path)
+            .unwrap_or_else(|| panic!("no sample {path}"));
+        classify(sample.initial_json.as_bytes())
+            .unwrap_or_else(|e| panic!("{path}: {:?} is rejected: {e}", sample.initial_json))
+            .value
+    };
+    assert_eq!(value_of("real"), Value::Real(1.5));
+    assert_eq!(value_of("real_zero"), Value::Real(0.0));
+    assert_eq!(value_of("integer"), Value::Integer(-7));
+    assert_eq!(value_of("boolean"), Value::Boolean(true));
+    assert_eq!(
+        value_of("complex"),
+        Value::Complex {
+            real: 1.0,
+            imaginary: -2.5
+        }
+    );
+    assert_eq!(
+        value_of("rational"),
+        Value::Rational(Rational::new(1, 3).unwrap())
+    );
+    assert_eq!(value_of("positive"), Value::Integer(3));
+    assert_eq!(value_of("string"), Value::Text("hello".into()));
+    assert_eq!(value_of("string_empty"), Value::Text(String::new()));
 }

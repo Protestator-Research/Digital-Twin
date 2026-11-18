@@ -17,6 +17,7 @@
 #include <sysmlv2/service/implementation/InstanceManager.h>
 
 #include "Entities/ElementType.h"
+#include "MQTT/entities/values/ValueEntity.h"
 
 namespace SysMLv2::REST {
     class DigitalTwin;
@@ -68,6 +69,7 @@ namespace DigitalTwin::Model {
         ICollectionType* getComponentOrPackageWithAddress(std::string address);
 
         std::vector<std::string> getElementStrings();
+        std::vector<std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>> getElementValueEntities();
         void registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest* registrationRequest);
 
         void setUpdateModelFunction(std::function<void()> updateModel);

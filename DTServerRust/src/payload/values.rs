@@ -257,7 +257,8 @@ pub struct ValuePayload {
 /// - `real_value` and `imaginary_value` present: Complex
 /// - `value` is a boolean: Boolean
 /// - `value` is a string `"n/d"`: Rational; a string of the form integer/integer with denominator 0 is rejected
-/// - `value` is any other string: Text (the String type; `StringValueEntity` is still empty in C++)
+/// - `value` is any other string: Text (the String type). A String variable whose text looks like a fraction
+///   (`"5/0"`) is therefore rejected, not published as Text
 /// - `value` is a JSON integer: Integer; beyond `i64`: BigInteger (exact digits kept, never silently a Real)
 /// - `value` is any other number (fraction or exponent): Real
 ///

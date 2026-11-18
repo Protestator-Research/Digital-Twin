@@ -7,7 +7,7 @@
 
 namespace DigitalTwin::Communication
 {
-    class NaturalValueEntity : public ValueEntity
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT NaturalValueEntity : public ValueEntity
     {
     public:
         NaturalValueEntity() = delete;

@@ -115,6 +115,26 @@ namespace DigitalTwin::Model
 		return returnValue;
 	}
 
+	std::vector<std::pair<std::string, IVariable*>> Package::getAllMQTTVariables()
+	{
+		std::vector<std::pair<std::string, IVariable*>> returnValue;
+
+		for (const auto& [name, variable] : Controllables)
+			returnValue.push_back(std::make_pair(name, variable));
+
+		for (const auto& [name, variable] : Measurables)
+			returnValue.push_back(std::make_pair(name, variable));
+
+		for (const auto& [_, instance] : IndividualInstances)
+			for (const auto& variable : instance->getAllMQTTVariables())
+				returnValue.push_back(std::make_pair(instance->getName() + "/" + variable.first, variable.second));
+
+		// TODO: Functions are excluded on purpose. They only get an MQTT interface after initialization,
+		//  and that interface still has to be designed.
+
+		return returnValue;
+	}
+
 	std::vector<Component*> Package::getAllComponents()
 	{
 		std::vector<Component*> components;

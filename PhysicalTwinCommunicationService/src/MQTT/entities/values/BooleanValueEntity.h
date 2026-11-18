@@ -7,7 +7,7 @@
 
 namespace DigitalTwin::Communication
 {
-    class BooleanValueEntity : public ValueEntity
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT BooleanValueEntity : public ValueEntity
     {
     public:
         BooleanValueEntity() = delete;

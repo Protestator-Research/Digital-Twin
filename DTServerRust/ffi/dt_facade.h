@@ -14,6 +14,7 @@ namespace dtrs {
     // Defined by the cxx bridge in src/twin/ffi.rs (the generated header is included by dt_facade.cpp).
     struct CallResult;
     struct TwinLoad;
+    struct TwinElement;
 
     constexpr int32_t CODE_OK = 0;
     constexpr int32_t CODE_INVALID_ARGUMENT = 1;
@@ -30,6 +31,9 @@ namespace dtrs {
     // Downloads the twin and builds its model, as DigitalTwinManager::downloadDigitalTwin does, but without
     // generateMQTTInterface (the Rust side publishes the interface). The model is kept for register_function.
     TwinLoad facade_load_twin(rust::Str project_id, rust::Str twin_id) noexcept;
+
+    // Test/diagnostic support only (no server, no session): the getJson() of one value entity per type.
+    rust::Vec<TwinElement> facade_sample_initial_values() noexcept;
 
     // Hands a registerFunction payload to the model of the twin.
     CallResult facade_register_function(rust::Str twin_id, rust::Str request_json) noexcept;

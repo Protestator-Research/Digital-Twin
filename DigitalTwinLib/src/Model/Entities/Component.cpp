@@ -142,6 +142,25 @@ namespace DigitalTwin::Model {
         return returnValue;
     }
 
+    std::vector<std::pair<std::string, IVariable*>> Component::getAllMQTTVariables() {
+        std::vector<std::pair<std::string, IVariable*>> returnValue;
+
+        for(const auto& comp : ComponentMap)
+            for(const auto& variable : dynamic_cast<Component*>(comp.second)->getAllMQTTVariables())
+                returnValue.push_back(std::make_pair(comp.first + "/" + variable.first, variable.second));
+
+        for(auto element : Controllables)
+            returnValue.push_back(std::make_pair(element.first, element.second));
+
+        for(auto element : Measurables)
+            returnValue.push_back(std::make_pair(element.first, element.second));
+
+        // TODO: Functions are excluded on purpose. They only get an MQTT interface after initialization,
+        //  and that interface still has to be designed.
+
+        return returnValue;
+    }
+
     Component* Component::instantiate(std::string name)
     {
         auto comp = new Component(name);

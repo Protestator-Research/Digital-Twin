@@ -8,7 +8,7 @@
 
 namespace DigitalTwin::Communication
 {
-    class PositiveValueEntity : public ValueEntity
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT PositiveValueEntity : public ValueEntity
     {
     public:
         PositiveValueEntity() = delete;

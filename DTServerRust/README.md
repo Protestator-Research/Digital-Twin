@@ -176,8 +176,9 @@ Rules and limits:
 - subscribes to `connectToTwin` on the hub; each valid payload starts a download on a pool of 4 (a semaphore, the
   calls run in `spawn_blocking`); at most one download per twin id (a repeated request while one is queued or
   running is skipped and logged, like `DownloadsInProgress`); at most 64 distinct twins may be pending;
-- after the load it publishes, through the hub, a valid initial value (`{"time_point": ..., "value": 0}`, the
-  existing `IntegerValue` payload, not the C++ placeholder) on `<TwinName>/<element>` for every element and the empty
+- after the load it publishes, through the hub, the typed initial value of the backend (`ValueEntity::getJson()`,
+  `{"time_point": ..., "value": ...}`, not the C++ placeholder) on `<TwinName>/<element>` for every variable (a value
+  that is not a valid payload is skipped and counted, like an invalid path) and the empty
   registration request on `<TwinName>/registerFunction`, and forwards client payloads on that topic to
   `register_function` (malformed or nameless requests are ignored);
 - errors of the backend are logged and counted, never fatal; malformed `connectToTwin` payloads are ignored;
@@ -191,17 +192,29 @@ Login: done in the background at startup and retried before every download until
 missing backend) is logged and the server keeps running. The C++ server lets the exception end `runInstance`;
 that would make a binary without `ffi`, or a Structura that starts later than the server, unusable.
 
-The facade returns element paths WITHOUT their type (plan 5.3 asked for the type): `DigitalTwinModel::getElementStrings`
-only yields strings, and the type would need a change of the C++ library. The initial value is therefore always
-`Integer 0`, and the recorder classifies the type from the payload. The facade keeps its global state in a leaked
+The facade returns, per variable, the path and its initial value as JSON (`DigitalTwinModel::getElementValueEntities`,
+`ValueEntity::getJson()`), so the initial value has the type of the variable (ScalarQuantities are Real, unknown types
+are provisionally Integer 0). Functions are not part of it: their MQTT interface exists only after initialization.
+The recorder classifies the type from the payload. The facade keeps its global state in a leaked
 singleton, so a blocking call that is still running when the process exits never races with static destruction.
 
 The facade (`ffi/dt_facade.cpp`) does the equivalent of `DigitalTwinManager::downloadDigitalTwin` without
 `generateMQTTInterface` (which `dynamic_cast`s the client to `MqttClientService*`): it lists the twins of the
 project, builds `DigitalTwinModel` with a manager that has a no-op `IMqttClientService`, keeps the model per twin id
-(mutex protected, one mutex per model), and returns the name and the element strings. Every call catches all C++
-exceptions and returns an error code and message. An empty qualified name in `register_function` is rejected
-(`DigitalTwinModel::registerFunction` would index `parts.size() - 1`).
+(mutex protected, one mutex per model), and returns the name and the elements (path and initial value JSON). Every
+call catches all C++ exceptions and returns an error code and message. An empty qualified name in `register_function`
+is rejected (`DigitalTwinModel::registerFunction` would index `parts.size() - 1`).
+
+A single element whose initial value cannot be serialized does not fail the load: the facade passes it on with an
+empty initial value, which the server rejects, counts in `elements_skipped` and logs at debug level. Non-finite Real
+and Complex initial values are replaced by 0 in C++ (JSON has no NaN/inf). A String variable whose text looks like a
+fraction (`"5/0"`) is rejected as an invalid Rational, not published as text.
+
+The Rust build links the **Release** C++ libraries (`build/out/Release`) by default (see `DT_CPP_CONFIG`): after
+every change in the C++ sources, rebuild that configuration (`cmake --build build --config Release --target
+DigitalTwinLib`) before `cargo test --features ffi`.
+`facade_sample_initial_values` is test/diagnostic support (one value entity per type, no server) used by the offline
+C++ `getJson()` <-> `classify` test in `tests/ffi_backend.rs`.
 
 ## History (`src/history/`)
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <utility>
 #include <vector>
 
 #include "ICollectionType.h"
@@ -36,6 +37,7 @@ namespace DigitalTwin::Model {
 		Component* getIndividualInstance(std::string name);
 
 		std::vector<std::string> getAllMQTTTopics();
+		std::vector<std::pair<std::string, IVariable*>> getAllMQTTVariables();
 
 		std::vector<Component*> getAllComponents();
 		std::vector<Port*> getAllPorts();

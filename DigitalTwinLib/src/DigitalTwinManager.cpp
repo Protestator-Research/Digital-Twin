@@ -64,10 +64,16 @@ namespace DigitalTwin {
         return returnValue;
     }
 
+    void DigitalTwinManager::generateMQTTInterface(const std::string& baseName, const std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>& element) {
+        if(element.second == nullptr)
+            return;
+        ClientService->publish(baseName + "/" + element.first, element.second->getJson());
+    }
+
     void DigitalTwinManager::generateMQTTInterface(Model::DigitalTwinModel* digitalTwin) {
         std::string baseName = digitalTwin->digitalTwinName();
-        for(const auto &elementName : digitalTwin->getElementStrings()) {
-            ClientService->publish(baseName + "/" + elementName, "{value=0,\r\n timepoint=\"\"}");
+        for(const auto &element : digitalTwin->getElementValueEntities()) {
+            generateMQTTInterface(baseName, element);
         }
         const auto DTFunctionRegistrationReq = DigitalTwin::Communication::FunctionRegistrationRequest("",{},"");
         ClientService->publish(baseName + "/" + DigitalTwin::Communication::REGISTER_FUNCTION, DTFunctionRegistrationReq.toJsonString());

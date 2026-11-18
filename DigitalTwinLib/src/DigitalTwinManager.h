@@ -12,6 +12,7 @@
 #include <boost/uuid/uuid.hpp>
 
 #include <memory>
+#include <utility>
 
 #include "cpp_digital_twin_lib_global.h"
 #include <Services/IMqttClientService.h>
@@ -33,6 +34,10 @@ namespace DigitalTwin::Model {
     class DigitalTwinModel;
 }
 
+namespace DigitalTwin::Communication {
+    class ValueEntity;
+}
+
 namespace DigitalTwin {
     /**
      *
@@ -52,6 +57,7 @@ namespace DigitalTwin {
     private:
 
         void generateMQTTInterface(Model::DigitalTwinModel* digitalTwin);
+        void generateMQTTInterface(const std::string& baseName, const std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>& element);
         BACKEND_COMMUNICATION::CommunicationService* BackendCommunicationService;
         DigitalTwin::Communication::IMqttClientService* ClientService;
 

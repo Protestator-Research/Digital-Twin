@@ -18,6 +18,13 @@
 #include <BaseFuctions/StringExtention.hpp>
 #include <DigitalTwinManager.h>
 #include <MQTT/entities/FunctionRegistrationRequest.hpp>
+#include <MQTT/entities/values/BooleanValueEntity.h>
+#include <MQTT/entities/values/ComplexValueEntity.h>
+#include <MQTT/entities/values/IntegerValueEntity.h>
+#include <MQTT/entities/values/PositiveValueEntity.h>
+#include <MQTT/entities/values/RationalValueEntity.h>
+#include <MQTT/entities/values/RealValueEntity.h>
+#include <MQTT/entities/values/StringValueEntity.h>
 #include <Model/DigitalTwinModel.h>
 #include <Services/IMqttClientService.h>
 #include <entities/DigitalTwin.h>
@@ -115,7 +122,7 @@ namespace dtrs {
     }
 
     TwinLoad facade_load_twin(rust::Str project_id, rust::Str twin_id) noexcept {
-        TwinLoad out{CODE_UNKNOWN_ERROR, rust::String(), rust::String(), rust::Vec<rust::String>()};
+        TwinLoad out{CODE_UNKNOWN_ERROR, rust::String(), rust::String(), rust::Vec<TwinElement>()};
         auto fail = [&out](int32_t code, const std::string& message) {
             out.code = code;
             out.message = rust::String::lossy(message);
@@ -148,11 +155,25 @@ namespace dtrs {
             entry->Owner = session;
             entry->Model = std::make_unique<DigitalTwin::Model::DigitalTwinModel>(twin, session->Manager.get());
             const std::string name = entry->Model->digitalTwinName();
-            const std::vector<std::string> elements = entry->Model->getElementStrings();
+            const auto elements = entry->Model->getElementValueEntities();
 
             out.name = rust::String::lossy(name);
-            for (const auto& element : elements)
-                out.elements.push_back(rust::String::lossy(element));
+            for (const auto& [path, value] : elements) {
+                if (!value)
+                    continue;
+                TwinElement element;
+                element.path = rust::String::lossy(path);
+                // One element that cannot be serialized must not fail the whole twin: it is passed on with an
+                // empty initial value, which the Rust side rejects (classify), logs and counts as skipped.
+                try {
+                    element.initial_json = rust::String::lossy(value->getJson());
+                } catch (const std::exception&) {
+                    element.initial_json = rust::String();
+                } catch (...) {
+                    element.initial_json = rust::String();
+                }
+                out.elements.push_back(std::move(element));
+            }
 
             std::shared_ptr<ModelEntry> replaced;
             {
@@ -172,6 +193,33 @@ namespace dtrs {
         } catch (...) {
             return fail(CODE_UNKNOWN_ERROR, "unknown C++ exception");
         }
+    }
+
+    // Test/diagnostic support, no Structura server needed: one value entity per type, serialized by the same
+    // getJson() the model uses, so the Rust tests can check the C++ -> classify contract offline.
+    rust::Vec<TwinElement> facade_sample_initial_values() noexcept {
+        rust::Vec<TwinElement> out;
+        try {
+            using namespace DigitalTwin::Communication;
+            auto add = [&out](const char* path, const ValueEntity& value) {
+                TwinElement element;
+                element.path = rust::String(path);
+                element.initial_json = rust::String::lossy(value.getJson());
+                out.push_back(std::move(element));
+            };
+            add("real", RealValueEntity(1.5));
+            add("real_zero", RealValueEntity(0.0));
+            add("integer", IntegerValueEntity(-7));
+            add("boolean", BooleanValueEntity(true));
+            add("complex", ComplexValueEntity(1.0, -2.5));
+            add("rational", RationalValueEntity(2L, 6L));
+            add("positive", PositiveValueEntity(3u));
+            add("string", StringValueEntity(std::string("hello")));
+            add("string_empty", StringValueEntity(std::string()));
+        } catch (...) {
+            // a partial list makes the offline test fail on its element count
+        }
+        return out;
     }
 
     CallResult facade_register_function(rust::Str twin_id, rust::Str request_json) noexcept {

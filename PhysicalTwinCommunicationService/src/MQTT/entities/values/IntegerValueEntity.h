@@ -8,7 +8,7 @@
 
 namespace DigitalTwin::Communication
 {
-    class IntegerValueEntity : public ValueEntity
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT IntegerValueEntity : public ValueEntity
     {
     public:
         IntegerValueEntity() = delete;

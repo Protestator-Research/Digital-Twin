@@ -8,7 +8,8 @@
 //!   skipped and logged (like `DownloadsInProgress`). Errors are logged and never end the service.
 //! - A download refused as unauthorized (expired session) logs in again and is retried once.
 //! - After a successful load the MQTT interface is published through the hub: a valid initial value on
-//!   `<TwinName>/<element>` for every element and the empty registration request on
+//!   `<TwinName>/<element>` for every variable (a variable whose initial value is invalid is skipped and counted)
+//!   and the empty registration request on
 //!   `<TwinName>/registerFunction`. Payloads of `<TwinName>/registerFunction` are forwarded to the backend.
 //!
 //! Login failures: the C++ server lets the exception end `runInstance`. Here the login happens in the
@@ -19,7 +20,8 @@
 //!
 //! A twin whose name is empty, contains `+`, `#`, `/` or NUL, or starts with `$`, is rejected before anything is
 //! subscribed or published (otherwise `<name>/registerFunction` could be a wildcard filter that receives the
-//! registrations of every twin). Element paths that are no valid topic are skipped and counted once per load.
+//! registrations of every twin). Element paths that are no valid topic, and elements whose initial value is no valid
+//! value payload, are skipped and counted once per load.
 //!
 //! The initial values are published with [`Origin::Server`], which the history recorder ignores, so the
 //! placeholders are never stored as measurements.
@@ -33,19 +35,18 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use chrono::Utc;
 use thiserror::Error;
 use tokio::sync::{watch, Semaphore};
 use tokio::task::{JoinHandle, JoinSet};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-pub use backend::{BackendError, TwinBackend, TwinInfo, UnavailableBackend};
+pub use backend::{BackendError, TwinBackend, TwinElement, TwinInfo, UnavailableBackend};
 
 use crate::config::SysmlConfig;
 use crate::hub::{Hub, HubError, HubSubscription, Message, Origin};
 use crate::payload::twin::{ConnectToTwin, FunctionRegistrationRequest};
-use crate::payload::values::IntegerValue;
+use crate::payload::values::classify;
 use crate::payload::{CONNECT_TO_TWIN, REGISTER_FUNCTION};
 
 /// Number of parallel downloads (the C++ `DownloadPool` has 4 threads).
@@ -112,7 +113,8 @@ pub struct TwinStats {
     pub registrations_forwarded: AtomicU64,
     /// Registrations ignored (server's own request, malformed, nameless).
     pub registrations_ignored: AtomicU64,
-    /// Element paths not published because they are no valid topic (wildcards, empty levels, NUL).
+    /// Elements not published: the path is no valid topic (wildcards, empty levels, NUL) or the initial value is
+    /// no valid value payload (including values the C++ side could not serialize).
     pub elements_skipped: AtomicU64,
 }
 
@@ -443,16 +445,21 @@ impl Shared {
         }
         self.loaded.lock().unwrap().insert(twin);
 
-        let initial = IntegerValue::new(0, Utc::now()).to_json();
         let mut published = 0usize;
         let mut skipped = 0usize;
         for element in &info.elements {
-            if !valid_element_path(element) {
+            if !valid_element_path(&element.path) {
                 skipped += 1;
                 continue;
             }
-            let topic = format!("{}/{element}", info.name);
-            match self.hub.publish(&topic, initial.clone()) {
+            let topic = format!("{}/{}", info.name, element.path);
+            // the recorder and the clients parse every value, so never publish something they would reject
+            if let Err(e) = classify(element.initial_json.as_bytes()) {
+                skipped += 1;
+                debug!(%twin, %topic, "initial value from the backend is not a valid value payload: {e}");
+                continue;
+            }
+            match self.hub.publish(&topic, element.initial_json.clone()) {
                 Ok(()) => published += 1,
                 Err(HubError::Closed) => return,
                 Err(e) => warn!(%twin, %topic, "cannot publish initial value: {e}"),
@@ -462,7 +469,7 @@ impl Shared {
             self.stats
                 .elements_skipped
                 .fetch_add(skipped as u64, Ordering::Relaxed);
-            warn!(%twin, skipped, "elements with an invalid topic path were not published");
+            warn!(%twin, skipped, "elements with an invalid topic path or initial value were not published");
         }
         let empty = FunctionRegistrationRequest {
             linked_variable_return: String::new(),

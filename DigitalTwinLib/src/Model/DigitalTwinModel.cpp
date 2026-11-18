@@ -26,6 +26,7 @@
 #include <sysml/parts/PartDefinition.h>
 #include "DigitalTwinModel.h"
 #include "ModelBlocks.h"
+#include <cmath>
 #include <stdexcept>
 
 #include <async_mqtt/protocol/impl/buffer_to_packet_variant.ipp>
@@ -51,9 +52,48 @@
 #include "Entities/Variables/PositiveVariable.h"
 #include "Entities/Variables/RationalVariable.h"
 #include "Entities/Variables/StringVariable.h"
+#include "Entities/Variables/ScalarQuantities.h"
 #include "MQTT/entities/FunctionRegistrationRequest.hpp"
+#include "MQTT/entities/values/BooleanValueEntity.h"
+#include "MQTT/entities/values/ComplexValueEntity.h"
+#include "MQTT/entities/values/IntegerValueEntity.h"
+#include "MQTT/entities/values/PositiveValueEntity.h"
+#include "MQTT/entities/values/RationalValueEntity.h"
+#include "MQTT/entities/values/RealValueEntity.h"
+#include "MQTT/entities/values/StringValueEntity.h"
 
 namespace DigitalTwin::Model {
+	namespace {
+		/**
+		 * Creates the companion ValueEntity for the given variable, initialised with the variable's current value.
+		 */
+		std::shared_ptr<DigitalTwin::Communication::ValueEntity> createValueEntity(IVariable* variable) {
+			using namespace DigitalTwin::Communication;
+			// JSON has no NaN/inf (nlohmann writes null, which the server rejects), so a non-finite initial value is 0.
+			const auto finiteOrZero = [](double v) { return std::isfinite(v) ? v : 0.0; };
+			if (auto real = dynamic_cast<RealVariable*>(variable))
+				return std::make_shared<RealValueEntity>(finiteOrZero(real->getValue()));
+			if (auto integer = dynamic_cast<IntegerVariable*>(variable))
+				return std::make_shared<IntegerValueEntity>(static_cast<int>(integer->getValue()));
+			if (auto boolean = dynamic_cast<BooleanVariable*>(variable))
+				return std::make_shared<BooleanValueEntity>(boolean->getValue());
+			if (auto complex = dynamic_cast<ComplexVariable*>(variable))
+			{
+				const auto value = complex->getValue();
+				return std::make_shared<ComplexValueEntity>(finiteOrZero(value.real()), finiteOrZero(value.imag()));
+			}
+			if (auto rational = dynamic_cast<RationalVariable*>(variable))
+				return std::make_shared<RationalValueEntity>(rational->getValue());
+			if (auto positive = dynamic_cast<PositiveVariable*>(variable))
+				return std::make_shared<PositiveValueEntity>(positive->getValue());
+			if (auto string = dynamic_cast<StringVariable*>(variable))
+				return std::make_shared<StringValueEntity>(string->getValue());
+			if (dynamic_cast<ScalarQuantities*>(variable))
+				return std::make_shared<RealValueEntity>(0.0); // Provisional default for scalar quantities.
+			return std::make_shared<IntegerValueEntity>(0); // Provisional default for unknown variable types.
+		}
+	}
+
 	DigitalTwinModel::DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager* manager) :
 		DigitalTwin(digitalTwin),
 		Manager(manager),
@@ -506,6 +546,28 @@ namespace DigitalTwin::Model {
 		for (const auto& element : ComponentMap)
 			for (const auto& string : dynamic_cast<Component*>(element.second)->getAllMQTTTopics())
 				elements.push_back(element.first + "/" + string);
+
+		return elements;
+	}
+
+	std::vector<std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>> DigitalTwinModel::getElementValueEntities() {
+		std::vector<std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>> elements;
+
+		for (const auto& element : PackageMap) {
+			const auto package = dynamic_cast<Package*>(element.second);
+			if (!package)
+				continue;
+			for (const auto& variable : package->getAllMQTTVariables())
+				elements.push_back(std::make_pair(element.first + "/" + variable.first, createValueEntity(variable.second)));
+		}
+
+		for (const auto& element : ComponentMap) {
+			const auto component = dynamic_cast<Component*>(element.second);
+			if (!component)
+				continue;
+			for (const auto& variable : component->getAllMQTTVariables())
+				elements.push_back(std::make_pair(element.first + "/" + variable.first, createValueEntity(variable.second)));
+		}
 
 		return elements;
 	}

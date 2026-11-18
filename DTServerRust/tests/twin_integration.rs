@@ -12,10 +12,10 @@ use common::*;
 use dt_server::broker::{Broker, BrokerLimits};
 use dt_server::config::SysmlConfig;
 use dt_server::payload::twin::{ConnectToTwin, FunctionRegistrationRequest};
-use dt_server::payload::values::{classify, Value};
+use dt_server::payload::values::{classify, IntegerValue, Value};
 use dt_server::twin::{
-    BackendError, LoadedTwin, TwinBackend, TwinInfo, TwinObserver, TwinOptions, TwinService,
-    UnavailableBackend,
+    BackendError, LoadedTwin, TwinBackend, TwinElement, TwinInfo, TwinObserver, TwinOptions,
+    TwinService, UnavailableBackend,
 };
 use rumqttc::v5::mqttbytes::QoS;
 use uuid::Uuid;
@@ -57,12 +57,26 @@ impl FakeBackend {
         Arc::new(backend)
     }
 
+    /// Every element gets the initial value `Integer 0`.
     fn add_twin(&self, id: Uuid, name: &str, elements: &[&str]) {
+        let initial = IntegerValue::new(0, chrono::Utc::now()).to_json();
+        let elements: Vec<(&str, &str)> = elements.iter().map(|e| (*e, initial.as_str())).collect();
+        self.add_twin_with_values(id, name, &elements);
+    }
+
+    /// Elements as `(path, initial value JSON)`.
+    fn add_twin_with_values(&self, id: Uuid, name: &str, elements: &[(&str, &str)]) {
         self.twins.lock().unwrap().insert(
             id,
             TwinInfo {
                 name: name.to_owned(),
-                elements: elements.iter().map(|e| (*e).to_owned()).collect(),
+                elements: elements
+                    .iter()
+                    .map(|(path, json)| TwinElement {
+                        path: (*path).to_owned(),
+                        initial_json: (*json).to_owned(),
+                    })
+                    .collect(),
             },
         );
     }
@@ -623,6 +637,51 @@ async fn invalid_element_paths_are_skipped_and_counted_once_per_load() {
         5
     );
     assert_eq!(f.service.stats().loaded.load(Ordering::Relaxed), 1);
+    f.broker.shutdown().await;
+    f.service.shutdown().await;
+}
+
+#[tokio::test]
+async fn typed_initial_values_are_published_as_given_and_invalid_ones_skipped() {
+    let tp = r#""time_point":"2026-11-17T09:40:12.345Z""#;
+    let real = format!("{{{tp},\"value\":0.0}}");
+    let flag = format!("{{{tp},\"value\":false}}");
+    let backend = Arc::new(FakeBackend::default());
+    backend.add_twin_with_values(
+        twin_id(1),
+        "Pump",
+        &[
+            ("speed", real.as_str()),
+            ("on", flag.as_str()),
+            // C++ placeholder of the old interface: neither a valid payload nor accepted
+            ("broken", "{value=0, timepoint=\"\"}"),
+        ],
+    );
+    let f = fixture(backend.clone(), TwinOptions::default()).await;
+    let mut watcher = Client::connect(f.broker.port(), "watcher").await;
+    subscribe(&mut watcher, "Pump/#").await;
+    let requester = Client::connect(f.broker.port(), "requester").await;
+    publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+    let mut published = Vec::new();
+    loop {
+        let (topic, payload) = watcher.next_publish().await;
+        if topic == "Pump/registerFunction" {
+            break;
+        }
+        published.push((topic, String::from_utf8(payload.to_vec()).unwrap()));
+    }
+    published.sort();
+    assert_eq!(
+        published,
+        [
+            ("Pump/on".to_owned(), flag),
+            ("Pump/speed".to_owned(), real)
+        ]
+    );
+    assert_eq!(
+        f.service.stats().elements_skipped.load(Ordering::Relaxed),
+        1
+    );
     f.broker.shutdown().await;
     f.service.shutdown().await;
 }

@@ -5,7 +5,7 @@
 
 use uuid::Uuid;
 
-use super::backend::{BackendError, TwinBackend, TwinInfo};
+use super::backend::{BackendError, TwinBackend, TwinElement, TwinInfo};
 
 #[cxx::bridge(namespace = "dtrs")]
 mod bridge {
@@ -19,7 +19,13 @@ mod bridge {
         code: i32,
         message: String,
         name: String,
-        elements: Vec<String>,
+        elements: Vec<TwinElement>,
+    }
+
+    /// A variable path and its initial value (`ValueEntity::getJson()`).
+    struct TwinElement {
+        path: String,
+        initial_json: String,
     }
 
     unsafe extern "C++" {
@@ -27,9 +33,24 @@ mod bridge {
 
         fn facade_login(url: &str, port: u16, username: &str, password: &str) -> CallResult;
         fn facade_load_twin(project_id: &str, twin_id: &str) -> TwinLoad;
+        /// Test/diagnostic support: `getJson()` of one value entity per type, no server needed.
+        fn facade_sample_initial_values() -> Vec<TwinElement>;
         fn facade_register_function(twin_id: &str, request_json: &str) -> CallResult;
         fn facade_release_twin(twin_id: &str) -> CallResult;
     }
+}
+
+/// `getJson()` of one C++ value entity per type (paths `real`, `real_zero`, `integer`, `boolean`, `complex`,
+/// `rational`, `positive`, `string`, `string_empty`). Test/diagnostic support for checking the C++ ->
+/// `payload::values::classify` contract without a Structura server.
+pub fn sample_initial_values() -> Vec<TwinElement> {
+    bridge::facade_sample_initial_values()
+        .into_iter()
+        .map(|e| TwinElement {
+            path: e.path,
+            initial_json: e.initial_json,
+        })
+        .collect()
 }
 
 /// Backend that calls the C++ libraries (`DigitalTwinLib`, `BackendCommunication`).
@@ -77,7 +98,14 @@ impl TwinBackend for FfiBackend {
         check(r.code, r.message)?;
         Ok(TwinInfo {
             name: r.name,
-            elements: r.elements,
+            elements: r
+                .elements
+                .into_iter()
+                .map(|e| TwinElement {
+                    path: e.path,
+                    initial_json: e.initial_json,
+                })
+                .collect(),
         })
     }
 

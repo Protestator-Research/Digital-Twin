@@ -5,13 +5,24 @@
 use thiserror::Error;
 use uuid::Uuid;
 
-/// Result of loading a twin: the topic base name and the element paths below it.
+/// A variable of a twin with the value it is published with after the load.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TwinElement {
+    /// Topic path relative to the twin name (`Component/part/variable`).
+    pub path: String,
+    /// `ValueEntity::getJson()` of the variable's type: `{"time_point": ..., "value": ...}` (a valid payload of
+    /// `payload::values`).
+    pub initial_json: String,
+}
+
+/// Result of loading a twin: the topic base name and the variables below it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TwinInfo {
     /// `DigitalTwinModel::digitalTwinName()`, the first topic level of everything the twin publishes.
     pub name: String,
-    /// `DigitalTwinModel::getElementStrings()`, paths relative to the name (`Component/part/variable`).
-    pub elements: Vec<String>,
+    /// `DigitalTwinModel::getElementValueEntities()`. Functions are not part of it: their MQTT interface exists
+    /// only after `registerFunction`.
+    pub elements: Vec<TwinElement>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
