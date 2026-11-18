@@ -142,6 +142,10 @@ impl TwinBackend for FakeBackend {
         self.state.lock().unwrap().released.push(twin_id);
         Ok(())
     }
+
+    fn update_variable(&self, twin_id: Uuid, path: &str, payload_json: &str) -> Result<(), BackendError> {
+        todo!()
+    }
 }
 
 #[derive(Default)]

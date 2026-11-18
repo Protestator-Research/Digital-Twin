@@ -67,7 +67,13 @@ namespace DigitalTwin {
     void DigitalTwinManager::generateMQTTInterface(const std::string& baseName, const std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>& element) {
         if(element.second == nullptr)
             return;
-        ClientService->publish(baseName + "/" + element.first, element.second->getJson());
+        std::string topic = baseName + "/" + element.first;
+        ClientService->publish(topic, element.second->getJson());
+        const auto updateVariableFunction = [this](std::string topic, std::string payload)
+            {
+                std::cout << "Variable with Address: " << topic << " is updated with Value:" << std::endl << payload << std::endl;
+            };
+        dynamic_cast<DigitalTwin::Communication::MqttClientService*>(ClientService)->subscribe(topic, updateVariableFunction);
     }
 
     void DigitalTwinManager::generateMQTTInterface(Model::DigitalTwinModel* digitalTwin) {

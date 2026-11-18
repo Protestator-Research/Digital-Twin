@@ -60,6 +60,9 @@ pub trait TwinBackend: Send + Sync + 'static {
 
     /// Frees the model of the twin. Unknown twins are not an error.
     fn release_twin(&self, twin_id: Uuid) -> Result<(), BackendError>;
+
+    /// Hands a client update of the value of a variable (`path` relative to the twin name, valid value payload) to the model.
+    fn update_variable(&self, twin_id: Uuid, path: &str, payload_json: &str) -> Result<(), BackendError>;
 }
 
 /// Backend of a binary without the `ffi` feature: every request fails with "twin backend not available".
@@ -80,6 +83,10 @@ impl TwinBackend for UnavailableBackend {
     }
 
     fn release_twin(&self, _: Uuid) -> Result<(), BackendError> {
+        Err(BackendError::NotAvailable)
+    }
+
+    fn update_variable(&self, _: Uuid, _: &str, _: &str) -> Result<(), BackendError> {
         Err(BackendError::NotAvailable)
     }
 }

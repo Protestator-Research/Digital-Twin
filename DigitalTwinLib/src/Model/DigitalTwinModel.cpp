@@ -112,6 +112,57 @@ namespace DigitalTwin::Model {
 
 	}
 
+	void DigitalTwinModel::updateVariable(const std::string& path, const std::string& payload)
+	{
+		//std::cout << "Variable with Address: " << path << " is updated with Value:" << std::endl << payload << std::endl;
+		const auto variableToBeEdited = getVariableWithAddress(path);
+		if (variableToBeEdited!=nullptr)
+		{
+			std::cout << "Variable found?" << std::endl;
+			std::cout << "Varialbe To Be Edited: " << variableToBeEdited->getName() <<std::endl;
+			const std::string &type = variableToBeEdited->getType();
+			if (type== "BooelanVariable")
+			{
+				auto json_value = DigitalTwin::Communication::BooleanValueEntity(payload);
+				dynamic_cast<BooleanVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "ComplexVariable")
+			{
+				auto json_value = DigitalTwin::Communication::ComplexValueEntity(payload);
+				dynamic_cast<ComplexVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "IntegerVariable")
+			{
+				auto json_value = DigitalTwin::Communication::IntegerValueEntity(payload);
+				dynamic_cast<IntegerVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "PositiveVariable")
+			{
+				auto json_value = DigitalTwin::Communication::PositiveValueEntity(payload);
+				dynamic_cast<PositiveVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "RationalVariable")
+			{
+				auto json_value = DigitalTwin::Communication::RationalValueEntity(payload);
+				dynamic_cast<RationalVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "RealVariable")
+			{
+				auto json_value = DigitalTwin::Communication::RealValueEntity(payload);
+				dynamic_cast<RealVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "StringVariable")
+			{
+				auto json_value = DigitalTwin::Communication::StringValueEntity(payload);
+				dynamic_cast<StringVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+
+			//TODO Some Variable Types are missing that need to be filled.
+		}
+		else
+			std::cout << "Error in Variable search. Variable not found." << std::endl;
+	}
+
 	std::string DigitalTwinModel::digitalTwinName() {
 		return DigitalTwin->getName();
 	}
@@ -665,9 +716,12 @@ namespace DigitalTwin::Model {
 
 	IVariable* DigitalTwinModel::getVariableWithAddress(std::string address) {
 		const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
+		//std::cout << "Address Splitted" << std::endl;
 
 		if (splittedAdress.size() < 2)
 			throw DigitalTwinAddressException();
+
+		//std::cout << "Address is bigger than 2" << std::endl;
 
 		std::string addressWithHigherIndex = "";
 		for (size_t i = 1; i < splittedAdress.size(); i++) {
@@ -676,10 +730,16 @@ namespace DigitalTwin::Model {
 				addressWithHigherIndex += "/";
 		}
 
-		if (ComponentMap.contains(splittedAdress[0]))
+		//std::cout << "Addresses Spllitted into:" << std::endl << "Current Interation index: " << splittedAdress[0] << std::endl << "Higher Index" << addressWithHigherIndex <<std::endl;
+
+		if (ComponentMap.contains(splittedAdress[0])) {
+			//std::cout << "Checking in Components " << std::endl;
 			return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
-		else
+		}
+		else {
+			//std::cout << "Checking in Packages " << std::endl;
 			return dynamic_cast<Package*>(PackageMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
+		}
 	}
 
 	ICollectionType* DigitalTwinModel::getComponentOrPackageWithAddress(std::string address)

@@ -266,4 +266,23 @@ namespace dtrs {
             return result(CODE_OK, "");
         });
     }
+
+    CallResult facade_update_variable(rust::Str twin_id, rust::Str path, rust::Str payload_json) noexcept {
+        return guarded([&]() -> CallResult {
+            const auto twinId = parseUuid(twin_id);
+            std::shared_ptr<ModelEntry> entry;
+            {
+                std::lock_guard lock(state.Mutex);
+                auto it = state.Models.find(twinId);
+                if (it != state.Models.end())
+                    entry = it->second;
+            }
+            if (!entry)
+                return result(CODE_NOT_FOUND, "no model loaded for this digital twin");
+
+            std::lock_guard lock(entry->ModelMutex);   // das Modell ist nicht thread-safe
+            entry->Model->updateVariable(std::string(path), std::string(payload_json));
+            return result(CODE_OK, "");
+        });
+    }
 }  // namespace dtrs

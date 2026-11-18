@@ -37,6 +37,8 @@ mod bridge {
         fn facade_sample_initial_values() -> Vec<TwinElement>;
         fn facade_register_function(twin_id: &str, request_json: &str) -> CallResult;
         fn facade_release_twin(twin_id: &str) -> CallResult;
+
+        fn facade_update_variable(twin_id: &str, path: &str, payload_json: &str) -> CallResult;
     }
 }
 
@@ -116,6 +118,11 @@ impl TwinBackend for FfiBackend {
 
     fn release_twin(&self, twin_id: Uuid) -> Result<(), BackendError> {
         let r = bridge::facade_release_twin(&twin_id.to_string());
+        check(r.code, r.message)
+    }
+
+    fn update_variable(&self, twin_id: Uuid, path:&str, payload_json:&str) -> Result<(), BackendError> {
+        let r = bridge::facade_update_variable(&twin_id.to_string(), path, payload_json);
         check(r.code, r.message)
     }
 }

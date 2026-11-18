@@ -60,6 +60,8 @@ namespace DigitalTwin::Model {
 
         void generateDigitalTwinBackend();
 
+        void updateVariable(const std::string& path, const std::string& payload);
+
         std::string digitalTwinName();
 
         std::vector<IDigitalTwinElement*> getAllComponents() const;

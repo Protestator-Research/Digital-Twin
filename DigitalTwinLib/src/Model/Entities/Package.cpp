@@ -5,6 +5,7 @@
 #include "../Exceptions/DigitalTwinAddressException.h"
 #include "Variables/Variable.hpp"
 #include "BaseFuctions/StringExtention.hpp"
+#include <iostream>
 
 namespace DigitalTwin::Model
 {
@@ -65,7 +66,7 @@ namespace DigitalTwin::Model
 	{
 		if (index >= domains.size())
 			throw DigitalTwinAddressException();
-
+		//std::cout << "Package::resolveVariable" << std::endl;
 		if ((size_t)index == (domains.size() - 1))
 		{
 			if (Controllables.contains(domains.back()))
@@ -74,10 +75,16 @@ namespace DigitalTwin::Model
 				return Measurables.at(domains.back());
 			if (Attributes.contains(domains.back()))
 				return Attributes.at(domains.back());
+
 			throw DigitalTwinAddressException();
 		}
-
-		return dynamic_cast<Component*>(ComponentDefinitions[domains[index]])->resolveVariable(domains, index + 1);
+		//std::cout << "Variable is in subpart." << std::endl;
+		if (ComponentDefinitions.contains(domains[index]))
+			return dynamic_cast<Component*>(ComponentDefinitions[domains[index]])->resolveVariable(domains, index + 1);
+		if (PortDefinitions.contains(domains[index]))
+			return dynamic_cast<Port*>(PortDefinitions[domains[index]])->resolveVariable(domains, index + 1);
+		if (IndividualInstances.contains(domains[index]))
+			return dynamic_cast<Component*>(IndividualInstances[domains[index]])->resolveVariable(domains, index + 1);
 	}
 
 	IVariable* Package::getMeasurable(std::string name)

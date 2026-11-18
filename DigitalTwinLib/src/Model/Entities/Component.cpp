@@ -6,6 +6,7 @@
 
 #include "../Exceptions/DigitalTwinAddressException.h"
 #include "Component.h"
+#include <iostream>
 
 #include "Port.h"
 #include "Function.h"
@@ -194,6 +195,8 @@ namespace DigitalTwin::Model {
         if (index >= domains.size())
             throw DigitalTwinAddressException();
 
+        //std::cout << "Component::resolveVariable" << std::endl;
+
         if ((size_t)index == (domains.size()-1))
         {
             if (Controllables.contains(domains.back()))
@@ -204,7 +207,12 @@ namespace DigitalTwin::Model {
                 return Attributes.at(domains.back());
             throw DigitalTwinAddressException();
         }
+        
+        //std::cout << "Variable is in subpart." << std::endl;
 
-        return ComponentMap[domains[index]]->resolveVariable(domains, index + 1);
+    	if (ComponentMap.contains(domains[index]))
+			return ComponentMap[domains[index]]->resolveVariable(domains, index + 1);
+        if (PortMap.contains(domains[index]))
+            return PortMap[domains[index]]->resolveVariable(domains, index + 1);
     } 
 }

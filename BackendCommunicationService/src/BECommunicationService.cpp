@@ -110,7 +110,7 @@ namespace BACKEND_COMMUNICATION {
     }
 
     std::vector<std::shared_ptr<SysMLv2::REST::DigitalTwin>> CommunicationService::getAllDigitalTwinsForProjectWithId(boost::uuids::uuid projectId) {
-        std::cout <<"Get Project: "<< "projects/" + boost::lexical_cast<std::string>(projectId) + "/twins" << std::endl;
+        //std::cout <<"Get Project: "<< "projects/" + boost::lexical_cast<std::string>(projectId) + "/twins" << std::endl;
         auto twinString = APIImplementation->getCustomRequest("projects/" + boost::lexical_cast<std::string>(projectId) + "/twins",BarrierString);
         std::vector<std::shared_ptr<SysMLv2::REST::DigitalTwin>> returnValue;
         nlohmann::json json = nlohmann::json::parse(twinString, nullptr, false);

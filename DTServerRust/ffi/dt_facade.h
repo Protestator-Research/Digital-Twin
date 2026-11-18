@@ -40,4 +40,7 @@ namespace dtrs {
 
     // Frees the model of the twin. Unknown twins are not an error.
     CallResult facade_release_twin(rust::Str twin_id) noexcept;
+
+    // Gibt ein Variablen-Update (topic path relativ zum Twin-Namen) an das Modell des Twins.
+    CallResult facade_update_variable(rust::Str twin_id, rust::Str path, rust::Str payload_json) noexcept;
 }

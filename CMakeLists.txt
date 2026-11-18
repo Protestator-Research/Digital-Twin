@@ -8,10 +8,10 @@ option(RUN_TESTS "Build the tests" ON)
 
 if(DT_BUILD_CLIENT)
     if(APPLE)
-        list(APPEND CMAKE_PREFIX_PATH "~/Qt/6.11.1/macos/")
+        list(APPEND CMAKE_PREFIX_PATH "~/Qt/6.12.0/macos/")
     endif(APPLE)
     if(WIN32)
-       list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.11.1/msvc2022_64")
+       list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.12.0/msvc2022_64")
     endif(WIN32)
 endif()
 

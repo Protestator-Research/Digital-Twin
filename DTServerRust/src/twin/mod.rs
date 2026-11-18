@@ -436,6 +436,17 @@ impl Shared {
             }
         }
 
+        let paths: HashSet<String> = info.elements.iter().map(|e| e.path.clone()).collect();
+        match self.hub.subscribe(&format!("{}/#", info.name), self.options.subscription_capacity.max(1)) {
+            Ok(sub) => {
+                let handle = tokio::spawn(forward_variable_updates(Arc::clone(self), twin, info.name.clone(), paths, sub));
+                if let Some(old) = self.registrations.lock().unwrap().insert(twin, handle) {
+                    old.abort();
+                }
+            }
+            Err(e) => warn!(%twin, "cannot subscribe to variable updates: {e}"),
+        }
+
         if let Some(observer) = &self.observer {
             observer.twin_loaded(&LoadedTwin {
                 twin_id: twin,
@@ -549,6 +560,25 @@ async fn forward_registrations(
                 warn!(%twin, function = %request.qualified_name, "cannot register function: {e}")
             }
             Err(e) => error!(%twin, "function registration ended abnormally: {e}"),
+        }
+    }
+}
+
+/// Updates variable of DT in the Backend.
+async fn forward_variable_updates(shared: Arc<Shared>, twin: Uuid, name: String,
+                                  paths: HashSet<String>, mut sub: HubSubscription) {
+    let prefix = format!("{name}/");
+    while let Some(message) = sub.recv().await {
+        if message.origin == Origin::Server { continue; }          // eigene Initialwerte ignorieren
+        let Some(path) = message.topic.strip_prefix(&prefix) else { continue };
+        if !paths.contains(path) { continue; }                      // registerFunction, Funktions-Topics usw.
+        if classify(&message.payload).is_err() { continue; }        // ungültige Werte nicht an C++ geben
+        let Ok(json) = String::from_utf8(message.payload.to_vec()) else { continue };
+        let (backend, path) = (Arc::clone(&shared.backend), path.to_owned());
+        match tokio::task::spawn_blocking(move || backend.update_variable(twin, &path, &json)).await {
+            Ok(Ok(())) => {}
+            Ok(Err(e)) => warn!(%twin, "cannot update variable: {e}"),
+            Err(e) => error!(%twin, "variable update ended abnormally: {e}"),
         }
     }
 }
