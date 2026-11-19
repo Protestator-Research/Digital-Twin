@@ -20,92 +20,95 @@
 #include "MQTT/entities/values/ValueEntity.h"
 
 namespace SysMLv2::REST {
-    class DigitalTwin;
+	class DigitalTwin;
 }
 
 namespace SysMLv2::Entities
 {
-    class AttributeUsage;
-    class MetadataUsage;
+	class AttributeUsage;
+	class MetadataUsage;
 }
 
 namespace KerML::Entities {
-    class Element;
-    class NamespaceImport;
-    class DataType;
-    class Feature;
+	class Element;
+	class NamespaceImport;
+	class DataType;
+	class Feature;
 }
 
 namespace DigitalTwin {
-    class DigitalTwinManager;
-    namespace Model{
-	    class Package;
-	    class Port;
-	    class IDigitalTwinElement;
-        class ICollectionType;
-        class Component;
-    }
-    namespace Communication
-    {
-        class FunctionRegistrationRequest;
-    }
+	class DigitalTwinManager;
+	namespace Model {
+		class Package;
+		class Port;
+		class IDigitalTwinElement;
+		class ICollectionType;
+		class Component;
+	}
+	namespace Communication
+	{
+		class FunctionRegistrationRequest;
+	}
 }
 
 namespace DigitalTwin::Model {
-    class CPPDIGITALTWINLIB_EXPORT DigitalTwinModel {
-    public:
-        DigitalTwinModel() = delete;
-        explicit DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager* manager);
-        virtual ~DigitalTwinModel();
+	class CPPDIGITALTWINLIB_EXPORT DigitalTwinModel {
+	public:
+		DigitalTwinModel() = delete;
+		explicit DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager* manager);
+		virtual ~DigitalTwinModel();
 
-        void generateDigitalTwinBackend();
+		void generateDigitalTwinBackend();
 
-        void updateVariable(const std::string& path, const std::string& payload);
+		void updateVariable(const std::string& path, const std::string& payload);
 
-        std::string digitalTwinName();
+		std::string digitalTwinName();
 
-        std::vector<IDigitalTwinElement*> getAllComponents() const;
-        std::vector<IDigitalTwinElement*> getAllPackages() const;
+		std::vector<IDigitalTwinElement*> getAllComponents() const;
+		std::vector<IDigitalTwinElement*> getAllPackages() const;
 
-        IVariable* getVariableWithAddress(std::string address);
-        ICollectionType* getComponentOrPackageWithAddress(std::string address);
+		IVariable* getVariableWithAddress(std::string address);
+		ICollectionType* getComponentOrPackageWithAddress(std::string address);
 
-        std::vector<std::string> getElementStrings();
-        std::vector<std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>> getElementValueEntities();
-        void registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest* registrationRequest);
+		std::vector<std::string> getElementStrings();
+		std::vector<std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>> getElementValueEntities();
+		void registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest* registrationRequest);
 
-        void setUpdateModelFunction(std::function<void()> updateModel);
+		void setUpdateModelFunction(std::function<void()> updateModel);
 
-        boost::uuids::uuid getId() const;
+		boost::uuids::uuid getId() const;
+		/**
+		 * Creates the companion ValueEntity for the given variable, initialised with the variable's current value.
+		 */
+		std::shared_ptr<DigitalTwin::Communication::ValueEntity> createValueEntity(IVariable* variable);
+
+	private:
+		Component* getComponentWithAddress(std::string address);
+		Package* getPackageWithAddress(std::string address);
+		Function* getFunctionWithAddress(std::string address);
+
+		void buildDigitalTwinModel();
+
+		void generateDigitalTwinModelRecursively(const std::shared_ptr<KerML::Entities::Element>& element, ICollectionType* parent);
+		IVariable* buildVariableOfDataType(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& element);
+		IVariable* buildVariableOfOwnedElements(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& element);
+		IVariable* buildVariableOfFeature(std::shared_ptr<KerML::Entities::Feature>& feature);
+		IDigitalTwinElement* getElementFromQualifiedName(std::string qualifiedName);
+		ElementType getElementTypeOfMetaDataUsage(std::shared_ptr<SysMLv2::Entities::MetadataUsage> metaDataUsage);
+		DigitalTwin::Model::SupportedTypes getTypeOfSysMLType(std::shared_ptr<KerML::Entities::DataType>& type);
+		DigitalTwin::Model::SupportedTypes getTypeOfSysMLType(std::string value);
 
 
-    private:
-        Component* getComponentWithAddress(std::string address);
-        Package* getPackageWithAddress(std::string address);
-        Function* getFunctionWithAddress(std::string address);
-
-        void buildDigitalTwinModel();
-
-        void generateDigitalTwinModelRecursively(const std::shared_ptr<KerML::Entities::Element>& element, ICollectionType* parent);
-        IVariable* buildVariableOfDataType(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& element);
-        IVariable* buildVariableOfOwnedElements(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& element);
-        IVariable* buildVariableOfFeature(std::shared_ptr<KerML::Entities::Feature>& feature);
-        IDigitalTwinElement* getElementFromQualifiedName(std::string qualifiedName);
-    	ElementType getElementTypeOfMetaDataUsage(std::shared_ptr<SysMLv2::Entities::MetadataUsage> metaDataUsage);
-        DigitalTwin::Model::SupportedTypes getTypeOfSysMLType(std::shared_ptr<KerML::Entities::DataType>& type);
-        DigitalTwin::Model::SupportedTypes getTypeOfSysMLType(std::string value);
-
-
-        std::shared_ptr<SysMLv2::REST::DigitalTwin> DigitalTwin;
-        std::vector<std::shared_ptr<KerML::Entities::Element>> DigitalTwinModelElements;
-        std::vector<std::shared_ptr<KerML::Entities::Element>> RootElements;
-        [[maybe_unused]] DigitalTwinManager* Manager;
-        std::map<std::string, Component*> ComponentMap;
-        std::map<std::string, Package*> PackageMap;
-        std::map<std::string, Port*> PortMap;
-        std::function<void()> UpdateModelFunction;
-        SysMLv2::API::InstanceManager* Instance;
-    };
+		std::shared_ptr<SysMLv2::REST::DigitalTwin> DigitalTwin;
+		std::vector<std::shared_ptr<KerML::Entities::Element>> DigitalTwinModelElements;
+		std::vector<std::shared_ptr<KerML::Entities::Element>> RootElements;
+		[[maybe_unused]] DigitalTwinManager* Manager;
+		std::map<std::string, Component*> ComponentMap;
+		std::map<std::string, Package*> PackageMap;
+		std::map<std::string, Port*> PortMap;
+		std::function<void()> UpdateModelFunction;
+		SysMLv2::API::InstanceManager* Instance;
+	};
 }
 
 #endif //DIGITALTWIN_DIGITALTWINMODEL_H

@@ -32,6 +32,8 @@ add_library(PhysicalTwinCommunication
         src/MQTT/entities/values/NaturalValueEntity.h
         src/MQTT/entities/values/PositiveValueEntity.cpp
         src/MQTT/entities/values/PositiveValueEntity.h
+        src/MQTT/entities/FunctionValueEntity.h
+        src/MQTT/entities/FunctionValueEntity.cpp
         src/MQTT/entities/JsonEntities.cpp
         src/MQTT/entities/FunctionRegistrationRequest.hpp)
 

@@ -63,36 +63,6 @@
 #include "MQTT/entities/values/StringValueEntity.h"
 
 namespace DigitalTwin::Model {
-	namespace {
-		/**
-		 * Creates the companion ValueEntity for the given variable, initialised with the variable's current value.
-		 */
-		std::shared_ptr<DigitalTwin::Communication::ValueEntity> createValueEntity(IVariable* variable) {
-			using namespace DigitalTwin::Communication;
-			// JSON has no NaN/inf (nlohmann writes null, which the server rejects), so a non-finite initial value is 0.
-			const auto finiteOrZero = [](double v) { return std::isfinite(v) ? v : 0.0; };
-			if (auto real = dynamic_cast<RealVariable*>(variable))
-				return std::make_shared<RealValueEntity>(finiteOrZero(real->getValue()));
-			if (auto integer = dynamic_cast<IntegerVariable*>(variable))
-				return std::make_shared<IntegerValueEntity>(static_cast<int>(integer->getValue()));
-			if (auto boolean = dynamic_cast<BooleanVariable*>(variable))
-				return std::make_shared<BooleanValueEntity>(boolean->getValue());
-			if (auto complex = dynamic_cast<ComplexVariable*>(variable))
-			{
-				const auto value = complex->getValue();
-				return std::make_shared<ComplexValueEntity>(finiteOrZero(value.real()), finiteOrZero(value.imag()));
-			}
-			if (auto rational = dynamic_cast<RationalVariable*>(variable))
-				return std::make_shared<RationalValueEntity>(rational->getValue());
-			if (auto positive = dynamic_cast<PositiveVariable*>(variable))
-				return std::make_shared<PositiveValueEntity>(positive->getValue());
-			if (auto string = dynamic_cast<StringVariable*>(variable))
-				return std::make_shared<StringValueEntity>(string->getValue());
-			if (dynamic_cast<ScalarQuantities*>(variable))
-				return std::make_shared<RealValueEntity>(0.0); // Provisional default for scalar quantities.
-			return std::make_shared<IntegerValueEntity>(0); // Provisional default for unknown variable types.
-		}
-	}
 
 	DigitalTwinModel::DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager* manager) :
 		DigitalTwin(digitalTwin),
@@ -118,8 +88,8 @@ namespace DigitalTwin::Model {
 		const auto variableToBeEdited = getVariableWithAddress(path);
 		if (variableToBeEdited!=nullptr)
 		{
-			std::cout << "Variable found?" << std::endl;
-			std::cout << "Varialbe To Be Edited: " << variableToBeEdited->getName() <<std::endl;
+			//std::cout << "Variable found?" << std::endl;
+			//std::cout << "Varialbe To Be Edited: " << variableToBeEdited->getName() <<std::endl;
 			const std::string &type = variableToBeEdited->getType();
 			if (type== "BooelanVariable")
 			{
@@ -174,6 +144,33 @@ namespace DigitalTwin::Model {
 	boost::uuids::uuid DigitalTwinModel::getId() const
 	{
 		return DigitalTwin->getId();
+	}
+
+	std::shared_ptr<DigitalTwin::Communication::ValueEntity> DigitalTwinModel::createValueEntity(IVariable* variable)
+	{
+		using namespace DigitalTwin::Communication;
+		// JSON has no NaN/inf (nlohmann writes null, which the server rejects), so a non-finite initial value is 0.
+		const auto finiteOrZero = [](double v) { return std::isfinite(v) ? v : 0.0; };
+		if (auto real = dynamic_cast<RealVariable*>(variable))
+			return std::make_shared<RealValueEntity>(finiteOrZero(real->getValue()));
+		if (auto integer = dynamic_cast<IntegerVariable*>(variable))
+			return std::make_shared<IntegerValueEntity>(static_cast<int>(integer->getValue()));
+		if (auto boolean = dynamic_cast<BooleanVariable*>(variable))
+			return std::make_shared<BooleanValueEntity>(boolean->getValue());
+		if (auto complex = dynamic_cast<ComplexVariable*>(variable))
+		{
+			const auto value = complex->getValue();
+			return std::make_shared<ComplexValueEntity>(finiteOrZero(value.real()), finiteOrZero(value.imag()));
+		}
+		if (auto rational = dynamic_cast<RationalVariable*>(variable))
+			return std::make_shared<RationalValueEntity>(rational->getValue());
+		if (auto positive = dynamic_cast<PositiveVariable*>(variable))
+			return std::make_shared<PositiveValueEntity>(positive->getValue());
+		if (auto string = dynamic_cast<StringVariable*>(variable))
+			return std::make_shared<StringValueEntity>(string->getValue());
+		if (dynamic_cast<ScalarQuantities*>(variable))
+			return std::make_shared<RealValueEntity>(0.0); // Provisional default for scalar quantities.
+		return std::make_shared<IntegerValueEntity>(0); // Provisional default for unknown variable types.
 	}
 
 	void DigitalTwinModel::buildDigitalTwinModel()
