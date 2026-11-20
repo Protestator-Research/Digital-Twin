@@ -23,8 +23,9 @@
 //! registrations of every twin). Element paths that are no valid topic, and elements whose initial value is no valid
 //! value payload, are skipped and counted once per load.
 //!
-//! The initial values are published with [`Origin::Server`], which the history recorder ignores, so the
-//! placeholders are never stored as measurements.
+//! The initial values are published with [`Origin::Server`], which the variable forwarder ignores, so they are
+//! never handed back to the backend as client updates. Client updates are passed to the backend with the time
+//! the hub accepted them ([`Message::received_at_ms`]); the backend (the C++ core) records the history.
 
 pub mod backend;
 #[cfg(feature = "ffi")]
@@ -41,13 +42,27 @@ use tokio::task::{JoinHandle, JoinSet};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-pub use backend::{BackendError, TwinBackend, TwinElement, TwinInfo, UnavailableBackend};
+pub use backend::{
+    BackendError, StoreSettings, StoreStats, TwinBackend, TwinElement, TwinInfo, UnavailableBackend,
+};
 
 use crate::config::SysmlConfig;
 use crate::hub::{Hub, HubError, HubSubscription, Message, Origin};
 use crate::payload::twin::{ConnectToTwin, FunctionRegistrationRequest};
 use crate::payload::values::{classify, Value, ValuePayload};
 use crate::payload::{CONNECT_TO_TWIN, REGISTER_FUNCTION};
+
+/// How long shutdown waits for the forwarding tasks (and their running backend calls, the gates) to end.
+const FORWARDER_DRAIN_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// How long shutdown waits for the release of the loaded twins in the backend.
+const RELEASE_TIMEOUT: Duration = Duration::from_secs(5);
+
+/// The outer limit of [`TwinService::shutdown`]: both phases of the service's own shutdown can run to their
+/// limits one after the other (the abort of the downloads and the joins are immediate), plus a margin for the
+/// calls to return, so that the caller never gives up while the service is still inside its own limits.
+pub const SHUTDOWN_TIMEOUT: Duration =
+    Duration::from_secs(FORWARDER_DRAIN_TIMEOUT.as_secs() + RELEASE_TIMEOUT.as_secs() + 5);
 
 /// Number of parallel downloads (the C++ `DownloadPool` has 4 threads).
 pub const DEFAULT_POOL_SIZE: usize = 4;
@@ -61,6 +76,9 @@ pub struct TwinOptions {
     pub max_pending: usize,
     /// Capacity of the hub subscriptions of the twin logic.
     pub subscription_capacity: usize,
+    /// How long a reload waits for a backend call of the old forwarders of the twin before it goes on (default
+    /// 10 s). The new forwarders then use a new gate, so a call that never returns cannot stall them.
+    pub reload_gate_timeout: Duration,
 }
 
 impl Default for TwinOptions {
@@ -69,21 +87,9 @@ impl Default for TwinOptions {
             pool_size: DEFAULT_POOL_SIZE,
             max_pending: 64,
             subscription_capacity: 256,
+            reload_gate_timeout: Duration::from_secs(10),
         }
     }
-}
-
-/// A twin whose model has been loaded.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LoadedTwin {
-    pub twin_id: Uuid,
-    pub project_id: Uuid,
-    pub name: String,
-}
-
-/// Is told about every successfully loaded twin, before its interface topics are published. Must not block.
-pub trait TwinObserver: Send + Sync {
-    fn twin_loaded(&self, twin: &LoadedTwin);
 }
 
 #[derive(Debug, Error)]
@@ -153,15 +159,23 @@ struct Shared {
     hub: Hub,
     backend: Arc<dyn TwinBackend>,
     sysml: SysmlConfig,
-    observer: Option<Arc<dyn TwinObserver>>,
     options: TwinOptions,
     stats: Arc<TwinStats>,
     in_flight: Mutex<HashSet<Uuid>>,
     pool: Semaphore,
     /// `true` after a successful login. The async mutex serializes login attempts.
     logged_in: tokio::sync::Mutex<bool>,
-    /// Forwarding task of `<TwinName>/registerFunction` per twin.
-    registrations: Mutex<HashMap<Uuid, JoinHandle<()>>>,
+    /// The forwarding tasks of a twin (`<TwinName>/registerFunction` and the variable updates). They live until
+    /// the twin is loaded again or the service stops.
+    forwarders: Mutex<HashMap<Uuid, Vec<JoinHandle<()>>>>,
+    /// One gate per twin, held by every blocking call a forwarder makes for it (inside the `spawn_blocking`
+    /// closure, so it is released only when the call has really ended, even if the forwarder was aborted
+    /// meanwhile). Whoever takes the gate knows that no forwarder call is still running for the twin.
+    gates: Mutex<HashMap<Uuid, Arc<tokio::sync::Mutex<()>>>>,
+    /// Gates replaced after a reload gave up waiting for them; only shutdown still waits for them.
+    retired_gates: Mutex<Vec<Arc<tokio::sync::Mutex<()>>>>,
+    /// `true` when the service is asked to stop: the forwarders then work off what is queued and end.
+    stop: watch::Receiver<bool>,
     loaded: Mutex<HashSet<Uuid>>,
 }
 
@@ -192,24 +206,25 @@ impl TwinService {
         backend: Arc<dyn TwinBackend>,
         sysml: SysmlConfig,
         options: TwinOptions,
-        observer: Option<Arc<dyn TwinObserver>>,
     ) -> Result<TwinService, TwinError> {
         let subscription = hub.subscribe(CONNECT_TO_TWIN, options.subscription_capacity.max(1))?;
         let stats = Arc::new(TwinStats::default());
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
         let shared = Arc::new(Shared {
             hub,
             backend,
             sysml,
-            observer,
             pool: Semaphore::new(options.pool_size.max(1)),
             options,
             stats: Arc::clone(&stats),
             in_flight: Mutex::new(HashSet::new()),
             logged_in: tokio::sync::Mutex::new(false),
-            registrations: Mutex::new(HashMap::new()),
+            forwarders: Mutex::new(HashMap::new()),
+            gates: Mutex::new(HashMap::new()),
+            retired_gates: Mutex::new(Vec::new()),
+            stop: shutdown_rx.clone(),
             loaded: Mutex::new(HashSet::new()),
         });
-        let (shutdown_tx, shutdown_rx) = watch::channel(false);
         let task = tokio::spawn(run(shared, subscription, shutdown_rx));
         Ok(TwinService {
             shutdown_tx,
@@ -222,15 +237,20 @@ impl TwinService {
         &self.stats
     }
 
-    /// Stops the service: pending downloads are abandoned (a running backend call cannot be interrupted),
-    /// the loaded twins are released (at most 5 seconds). Waits at most 10 seconds.
+    /// Stops the service: pending downloads are abandoned (a running backend call cannot be interrupted), the
+    /// forwarders work off their queue (at most 5 seconds, together with the calls they have running), the loaded
+    /// twins are released (at most 5 seconds more). Waits at most [`SHUTDOWN_TIMEOUT`] (15 seconds), which is
+    /// longer than both phases together.
     pub async fn shutdown(self) {
         let _ = self.shutdown_tx.send(true);
-        if tokio::time::timeout(Duration::from_secs(10), self.task)
+        if tokio::time::timeout(SHUTDOWN_TIMEOUT, self.task)
             .await
             .is_err()
         {
-            warn!("twin logic did not stop within 10 seconds");
+            warn!(
+                "twin logic did not stop within {} seconds",
+                SHUTDOWN_TIMEOUT.as_secs()
+            );
         }
     }
 
@@ -278,16 +298,29 @@ async fn run(
     debug!(dropped = subscription.dropped(), "twin logic is stopping");
     tasks.abort_all();
     while tasks.join_next().await.is_some() {}
-    let registrations: Vec<_> = shared
-        .registrations
+    // The forwarders are not aborted: they end by themselves when their subscription ends (the hub is closed) or
+    // after the service was asked to stop, and first work off what is queued, including a backend call that is
+    // running. Only a forwarder that does not end in time (a hanging backend call) is aborted. Then nothing of
+    // ours is running in the backend any more when the twins are released and the store is shut down.
+    let deadline = tokio::time::Instant::now() + FORWARDER_DRAIN_TIMEOUT;
+    let forwarders: Vec<_> = shared
+        .forwarders
         .lock()
         .unwrap()
         .drain()
-        .map(|(_, handle)| handle)
+        .flat_map(|(_, handles)| handles)
         .collect();
-    for handle in registrations {
-        handle.abort();
+    for mut handle in forwarders {
+        if tokio::time::timeout_at(deadline, &mut handle)
+            .await
+            .is_err()
+        {
+            warn!("a forwarding task did not end in time and is aborted");
+            handle.abort();
+        }
     }
+    // an aborted forwarder can leave a blocking call behind
+    shared.wait_for_gates(deadline).await;
     shared.release_all().await;
 }
 
@@ -401,11 +434,11 @@ impl Shared {
             error!(%twin, "the backend returned a digital twin without a name");
             return;
         }
-        self.publish_interface(&request, &info);
+        self.publish_interface(&request, &info).await;
     }
 
     /// Port of `generateMQTTInterface`, with a valid initial value.
-    fn publish_interface(self: &Arc<Self>, request: &ConnectToTwin, info: &TwinInfo) {
+    async fn publish_interface(self: &Arc<Self>, request: &ConnectToTwin, info: &TwinInfo) {
         let twin = request.twin_id;
         if let Err(reason) = check_twin_name(&info.name) {
             TwinStats::bump(&self.stats.failed);
@@ -413,6 +446,22 @@ impl Shared {
             return;
         }
         let register_topic = format!("{}/{REGISTER_FUNCTION}", info.name);
+
+        // A reload replaces the forwarders of the twin. Stop the old ones first, so that no message is forwarded
+        // twice while the new ones are subscribed, and wait for a backend call they may still have running, so
+        // that it does not overlap with what follows for the twin (the first values are published, new
+        // updates are forwarded).
+        self.stop_forwarders(twin);
+        let gate = self.gate(twin);
+        if tokio::time::timeout(self.options.reload_gate_timeout, gate.lock())
+            .await
+            .is_err()
+        {
+            // The call may never return. The new forwarders get a new gate, so that they do not wait for it for
+            // ever; the old one is only kept for the wait at shutdown.
+            self.retire_gate(twin);
+            warn!(%twin, "a backend call of the previous load is still running; the reload goes on");
+        }
 
         // Subscribe before publishing, so a registration cannot be missed. The server's own empty
         // request is told apart by its origin.
@@ -427,9 +476,7 @@ impl Shared {
                     register_topic.clone(),
                     subscription,
                 ));
-                if let Some(old) = self.registrations.lock().unwrap().insert(twin, handle) {
-                    old.abort();
-                }
+                self.add_forwarder(twin, handle);
             }
             Err(e) => {
                 warn!(%twin, topic = %register_topic, "cannot subscribe to function registrations: {e}")
@@ -457,20 +504,11 @@ impl Shared {
                     paths,
                     sub,
                 ));
-                if let Some(old) = self.registrations.lock().unwrap().insert(twin, handle) {
-                    old.abort();
-                }
+                self.add_forwarder(twin, handle);
             }
             Err(e) => warn!(%twin, "cannot subscribe to variable updates: {e}"),
         }
 
-        if let Some(observer) = &self.observer {
-            observer.twin_loaded(&LoadedTwin {
-                twin_id: twin,
-                project_id: request.project_id,
-                name: info.name.clone(),
-            });
-        }
         self.loaded.lock().unwrap().insert(twin);
 
         let mut published = 0usize;
@@ -481,7 +519,7 @@ impl Shared {
                 continue;
             }
             let topic = format!("{}/{}", info.name, element.path);
-            // the recorder and the clients parse every value, so never publish something they would reject
+            // the clients parse every value, so never publish something they would reject
             if let Err(e) = classify(element.initial_json.as_bytes()) {
                 skipped += 1;
                 debug!(%twin, %topic, "initial value from the backend is not a valid value payload: {e}");
@@ -517,6 +555,51 @@ impl Shared {
         );
     }
 
+    /// Registers a forwarding task of the twin; it is aborted by [`Shared::stop_forwarders`] or at shutdown.
+    fn add_forwarder(&self, twin: Uuid, handle: JoinHandle<()>) {
+        self.forwarders
+            .lock()
+            .unwrap()
+            .entry(twin)
+            .or_default()
+            .push(handle);
+    }
+
+    /// The gate of the twin, see [`Shared::gates`].
+    fn gate(&self, twin: Uuid) -> Arc<tokio::sync::Mutex<()>> {
+        Arc::clone(self.gates.lock().unwrap().entry(twin).or_default())
+    }
+
+    /// Replaces the gate of the twin by a new one; the old one stays in the list that shutdown waits for.
+    fn retire_gate(&self, twin: Uuid) {
+        if let Some(old) = self.gates.lock().unwrap().remove(&twin) {
+            self.retired_gates.lock().unwrap().push(old);
+        }
+    }
+
+    /// Waits (until `deadline`) until no forwarder call is running for any twin.
+    async fn wait_for_gates(&self, deadline: tokio::time::Instant) {
+        let mut gates: Vec<_> = self.gates.lock().unwrap().values().cloned().collect();
+        gates.extend(self.retired_gates.lock().unwrap().iter().cloned());
+        for gate in gates {
+            if tokio::time::timeout_at(deadline, gate.lock())
+                .await
+                .is_err()
+            {
+                warn!("a backend call of a forwarding task is still running at shutdown");
+                return;
+            }
+        }
+    }
+
+    /// Aborts all forwarding tasks of the twin.
+    fn stop_forwarders(&self, twin: Uuid) {
+        let old = self.forwarders.lock().unwrap().remove(&twin);
+        for handle in old.into_iter().flatten() {
+            handle.abort();
+        }
+    }
+
     /// Releases all loaded twins in the backend (shutdown), waiting at most 5 seconds.
     async fn release_all(&self) {
         let twins: Vec<Uuid> = self.loaded.lock().unwrap().drain().collect();
@@ -531,12 +614,31 @@ impl Shared {
                 }
             }
         });
-        if tokio::time::timeout(Duration::from_secs(5), release)
+        if tokio::time::timeout(RELEASE_TIMEOUT, release)
             .await
             .is_err()
         {
-            warn!("releasing the digital twins took longer than 5 seconds");
+            warn!(
+                "releasing the digital twins took longer than {} seconds",
+                RELEASE_TIMEOUT.as_secs()
+            );
         }
+    }
+}
+
+/// The next message of a forwarder. After the service was asked to stop, the messages that are already queued are
+/// still returned; `None` ends the forwarder (queue empty, or the hub is closed).
+async fn next_message(
+    subscription: &mut HubSubscription,
+    stop: &mut watch::Receiver<bool>,
+) -> Option<Message> {
+    if *stop.borrow() {
+        return subscription.try_recv().ok();
+    }
+    tokio::select! {
+        biased;
+        _ = stop.wait_for(|stop| *stop) => subscription.try_recv().ok(),
+        message = subscription.recv() => message,
     }
 }
 
@@ -547,7 +649,8 @@ async fn forward_registrations(
     topic: String,
     mut subscription: HubSubscription,
 ) {
-    while let Some(message) = subscription.recv().await {
+    let mut stop = shared.stop.clone();
+    while let Some(message) = next_message(&mut subscription, &mut stop).await {
         TwinStats::bump(&shared.stats.registration_messages);
         if message.origin == Origin::Server {
             TwinStats::bump(&shared.stats.registrations_ignored);
@@ -571,7 +674,13 @@ async fn forward_registrations(
         };
         let backend = Arc::clone(&shared.backend);
         TwinStats::bump(&shared.stats.registrations_forwarded);
-        match tokio::task::spawn_blocking(move || backend.register_function(twin, &json)).await {
+        let gate = shared.gate(twin).lock_owned().await;
+        match tokio::task::spawn_blocking(move || {
+            let _gate = gate;
+            backend.register_function(twin, &json)
+        })
+        .await
+        {
             Ok(Ok(())) => debug!(%twin, function = %request.qualified_name, "function registered"),
             Ok(Err(e)) => {
                 warn!(%twin, function = %request.qualified_name, "cannot register function: {e}")
@@ -593,7 +702,7 @@ fn is_function_payload(json: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Updates variable of DT in the Backend.
+/// Hands client updates of the variables of a twin to the backend, with the time the hub accepted them.
 async fn forward_variable_updates(
     shared: Arc<Shared>,
     twin: Uuid,
@@ -602,7 +711,8 @@ async fn forward_variable_updates(
     mut sub: HubSubscription,
 ) {
     let prefix = format!("{name}/");
-    while let Some(message) = sub.recv().await {
+    let mut stop = shared.stop.clone();
+    while let Some(message) = next_message(&mut sub, &mut stop).await {
         if message.origin == Origin::Server {
             continue;
         } // eigene Initialwerte ignorieren
@@ -625,7 +735,13 @@ async fn forward_variable_updates(
             continue;
         };
         let (backend, path) = (Arc::clone(&shared.backend), path.to_owned());
-        match tokio::task::spawn_blocking(move || backend.update_variable(twin, &path, &json)).await
+        let received_at_ms = message.received_at_ms;
+        let gate = shared.gate(twin).lock_owned().await;
+        match tokio::task::spawn_blocking(move || {
+            let _gate = gate;
+            backend.update_variable(twin, &path, &json, received_at_ms)
+        })
+        .await
         {
             Ok(Ok(())) => {}
             Ok(Err(e)) => warn!(%twin, "cannot update variable: {e}"),

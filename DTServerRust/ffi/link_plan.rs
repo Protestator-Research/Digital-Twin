@@ -15,19 +15,21 @@ use serde_json::Value;
 
 /// CMake targets of the project libraries, in link order (dependents first). The target name is also the
 /// library file name apart from the platform prefix and suffix.
-pub const PROJECT_LIBS: [&str; 4] = [
+pub const PROJECT_LIBS: [&str; 5] = [
     "DigitalTwinLib",
     "BackendCommunication",
     "PhysicalTwinCommunication",
     "CPSBaseLib",
+    "DigitalTwinStore",
 ];
 
 /// Header directories of the project libraries, relative to the source directory.
-pub const PROJECT_INCLUDE_DIRS: [&str; 4] = [
+pub const PROJECT_INCLUDE_DIRS: [&str; 5] = [
     "CpsBaseLib/src",
     "BackendCommunicationService/src",
     "PhysicalTwinCommunicationService/src",
     "DigitalTwinLib/src",
+    "DigitalTwinStore/src",
 ];
 
 /// The Conan package whose libraries the facade links.

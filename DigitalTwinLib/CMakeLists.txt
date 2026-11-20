@@ -51,7 +51,14 @@ add_library(DigitalTwinLib
         src/Model/Entities/Variables/PositiveVariable.h
         src/Model/Entities/Variables/ScalarQuantities.cpp
         src/Model/Entities/Variables/ScalarQuantities.h
-        src/Model/Entities/ElementType.h)
+        src/Model/Entities/ElementType.h
+        src/Model/State/StateTypes.h
+        src/Model/State/ValueCodec.h
+        src/Model/State/ValueCodec.cpp
+        src/Model/State/ModelTree.h
+        src/Model/State/ModelTree.cpp
+        src/Model/State/StateTracking.h
+        src/Model/State/StateTracking.cpp)
 
 target_include_directories(DigitalTwinLib PUBLIC
         boost::boost

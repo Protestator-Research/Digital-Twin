@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include "../../State/ValueCodec.h"
+
 namespace DigitalTwin::Model
 {
 	BooleanVariable::BooleanVariable(const std::string& name) : IVariable(name)
@@ -27,6 +29,26 @@ namespace DigitalTwin::Model
 	void BooleanVariable::setValue(const bool& value)
 	{
 		Value = value;
+		notifyChanged();
+	}
+
+	ValueType BooleanVariable::getValueType() const
+	{
+		return ValueType::Boolean;
+	}
+
+	VariableValue BooleanVariable::getStateValue() const
+	{
+		return ValueCodec::encodeBoolean(Value);
+	}
+
+	bool BooleanVariable::setStateValue(const VariableValue& value)
+	{
+		bool decoded = false;
+		if (!ValueCodec::decodeBoolean(value, decoded))
+			return false;
+		setValueWithoutPropagation(decoded);
+		return true;
 	}
 
 	IVariable* BooleanVariable::copy()
@@ -57,5 +79,6 @@ namespace DigitalTwin::Model
 	void BooleanVariable::setValueWithoutPropagation(bool value)
 	{
 		Value = value;
+		notifyChanged();
 	}
 } // DigitalTwin::Model

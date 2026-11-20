@@ -14,7 +14,7 @@ use dt_server::config::SysmlConfig;
 use dt_server::payload::twin::{ConnectToTwin, FunctionRegistrationRequest};
 use dt_server::payload::values::{classify, IntegerValue, Value};
 use dt_server::twin::{
-    BackendError, LoadedTwin, TwinBackend, TwinElement, TwinInfo, TwinObserver, TwinOptions,
+    BackendError, StoreSettings, StoreStats, TwinBackend, TwinElement, TwinInfo, TwinOptions,
     TwinService, UnavailableBackend,
 };
 use rumqttc::QoS;
@@ -33,6 +33,11 @@ struct FakeState {
     loads: Vec<(Uuid, Uuid)>,
     registered: Vec<(Uuid, String)>,
     released: Vec<Uuid>,
+    updates: Vec<(Uuid, String, String, i64)>,
+    /// Wall clock (Unix ms) at which each `update_variable` call started.
+    update_calls_ms: Vec<i64>,
+    /// Number of `update_variable` calls that have returned.
+    updates_finished: usize,
 }
 
 #[derive(Default)]
@@ -44,6 +49,8 @@ struct FakeBackend {
     unauthorized_once: Mutex<HashSet<Uuid>>,
     /// While set, `load_twin` blocks until a unit is sent.
     gate: Mutex<Option<std_mpsc::Receiver<()>>>,
+    /// The next `update_variable` call takes this long (once).
+    first_update_delay: Mutex<Option<Duration>>,
     /// Every load takes this long.
     load_delay: Mutex<Duration>,
     running: AtomicUsize,
@@ -87,6 +94,11 @@ impl FakeBackend {
 
     fn registered(&self) -> Vec<(Uuid, String)> {
         self.state.lock().unwrap().registered.clone()
+    }
+
+    /// Variable updates handed to the backend as `(twin, path, payload, received_at_ms)`.
+    fn updates(&self) -> Vec<(Uuid, String, String, i64)> {
+        self.state.lock().unwrap().updates.clone()
     }
 }
 
@@ -148,17 +160,38 @@ impl TwinBackend for FakeBackend {
         twin_id: Uuid,
         path: &str,
         payload_json: &str,
+        received_at_ms: i64,
     ) -> Result<(), BackendError> {
-        todo!()
+        {
+            let mut state = self.state.lock().unwrap();
+            state
+                .update_calls_ms
+                .push(chrono::Utc::now().timestamp_millis());
+            state.updates.push((
+                twin_id,
+                path.to_owned(),
+                payload_json.to_owned(),
+                received_at_ms,
+            ));
+        }
+        let delay = self.first_update_delay.lock().unwrap().take();
+        if let Some(delay) = delay {
+            std::thread::sleep(delay);
+        }
+        self.state.lock().unwrap().updates_finished += 1;
+        Ok(())
     }
-}
 
-#[derive(Default)]
-struct Observed(Mutex<Vec<LoadedTwin>>);
+    fn configure_store(&self, _: &StoreSettings) -> Result<(), BackendError> {
+        Ok(())
+    }
 
-impl TwinObserver for Observed {
-    fn twin_loaded(&self, twin: &LoadedTwin) {
-        self.0.lock().unwrap().push(twin.clone());
+    fn store_stats(&self) -> StoreStats {
+        StoreStats::default()
+    }
+
+    fn shutdown_store(&self, _: Duration) -> Result<(), BackendError> {
+        Ok(())
     }
 }
 
@@ -207,25 +240,12 @@ async fn subscribe(client: &mut Client, filter: &str) {
 struct Fixture {
     broker: Broker,
     service: TwinService,
-    observed: Arc<Observed>,
 }
 
 async fn fixture(backend: Arc<dyn TwinBackend>, options: TwinOptions) -> Fixture {
     let broker = start(BrokerLimits::default()).await;
-    let observed = Arc::new(Observed::default());
-    let service = TwinService::start(
-        broker.hub(),
-        backend,
-        sysml(),
-        options,
-        Some(Arc::clone(&observed) as Arc<dyn TwinObserver>),
-    )
-    .unwrap();
-    Fixture {
-        broker,
-        service,
-        observed,
-    }
+    let service = TwinService::start(broker.hub(), backend, sysml(), options).unwrap();
+    Fixture { broker, service }
 }
 
 #[tokio::test]
@@ -265,15 +285,6 @@ async fn connect_publishes_the_interface_and_forwards_registrations() {
         }
     );
     assert_eq!(backend.loads(), vec![(PROJECT, twin_id(1))]);
-    // the observer (history registry) was told
-    assert_eq!(
-        f.observed.0.lock().unwrap().clone(),
-        vec![LoadedTwin {
-            twin_id: twin_id(1),
-            project_id: PROJECT,
-            name: "Pump".into()
-        }]
-    );
     // the server's own empty request reaches the forwarder but is not forwarded to the backend
     let stats = f.service.stats();
     wait_until("own request seen", || {
@@ -387,6 +398,203 @@ async fn reload_keeps_a_single_registration_forwarder() {
     .await;
     assert_eq!(stats.registration_messages.load(Ordering::Relaxed), 3);
     assert_eq!(backend.registered().len(), 1, "forwarded exactly once");
+    f.broker.shutdown().await;
+    f.service.shutdown().await;
+}
+
+/// Both forwarding tasks of a twin (function registrations and variable updates) must stay alive after the
+/// load. They used to be stored under the same key, so the second one aborted the first.
+#[tokio::test]
+async fn registrations_and_variable_updates_both_reach_the_backend() {
+    let backend = FakeBackend::with_twin(twin_id(1), "Pump", &["Motor/speed"]);
+    let f = fixture(backend.clone(), TwinOptions::default()).await;
+    let requester = Client::connect(f.broker.port(), "requester").await;
+    publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+    wait_until("loaded", || {
+        f.service.stats().loaded.load(Ordering::Relaxed) == 1
+    })
+    .await;
+
+    let request =
+        r#"{"linked_variable_return":"","linked_variables":[],"qualified_name":"Pump::f"}"#;
+    publish(&requester, "Pump/registerFunction", request).await;
+    let update = IntegerValue::new(7, chrono::Utc::now()).to_json();
+    let before_ms = chrono::Utc::now().timestamp_millis();
+    publish(&requester, "Pump/Motor/speed", update.clone()).await;
+
+    wait_until("registration and update forwarded", || {
+        !backend.registered().is_empty() && !backend.updates().is_empty()
+    })
+    .await;
+    assert_eq!(backend.registered(), vec![(twin_id(1), request.to_owned())]);
+    let updates = backend.updates();
+    assert_eq!(updates.len(), 1);
+    let (twin, path, payload, received_at_ms) = updates[0].clone();
+    assert_eq!(
+        (twin, path.as_str(), payload),
+        (twin_id(1), "Motor/speed", update)
+    );
+    // the arrival time is the time the hub accepted the message
+    let after_ms = chrono::Utc::now().timestamp_millis();
+    assert!(
+        (before_ms..=after_ms).contains(&received_at_ms),
+        "{before_ms} <= {received_at_ms} <= {after_ms}"
+    );
+    f.broker.shutdown().await;
+    f.service.shutdown().await;
+}
+
+/// The arrival time is stamped where the broker accepts the PUBLISH, not when the forwarder gets to the message:
+/// the first update is slow in the backend, so the second waits in the queue, and its stamp must be older than
+/// the moment its backend call starts.
+#[tokio::test]
+async fn the_arrival_time_is_taken_at_the_broker_not_in_the_forwarder() {
+    let backend = FakeBackend::with_twin(twin_id(1), "Pump", &["x"]);
+    *backend.first_update_delay.lock().unwrap() = Some(Duration::from_millis(600));
+    let f = fixture(backend.clone(), TwinOptions::default()).await;
+    let requester = Client::connect(f.broker.port(), "requester").await;
+    publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+    wait_until("loaded", || {
+        f.service.stats().loaded.load(Ordering::Relaxed) == 1
+    })
+    .await;
+    let update = IntegerValue::new(1, chrono::Utc::now()).to_json();
+    publish(&requester, "Pump/x", update.clone()).await;
+    publish(&requester, "Pump/x", update).await;
+    wait_until("both updates arrived", || backend.updates().len() == 2).await;
+    let updates = backend.updates();
+    let calls = backend.state.lock().unwrap().update_calls_ms.clone();
+    // forwarder stamping would give ~0 here, broker stamping about the 600 ms the first call took
+    let waited = calls[1] - updates[1].3;
+    assert!(waited >= 300, "the second update waited only {waited} ms");
+    assert!(updates[0].3 <= updates[1].3, "arrival times keep the order");
+    f.broker.shutdown().await;
+    f.service.shutdown().await;
+}
+
+/// At shutdown the forwarders work off what is queued and a running backend call ends before the twins are
+/// released.
+#[tokio::test]
+async fn shutdown_drains_queued_updates_before_releasing() {
+    let backend = FakeBackend::with_twin(twin_id(1), "Pump", &["x"]);
+    *backend.first_update_delay.lock().unwrap() = Some(Duration::from_millis(400));
+    let f = fixture(backend.clone(), TwinOptions::default()).await;
+    let requester = Client::connect(f.broker.port(), "requester").await;
+    publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+    wait_until("loaded", || {
+        f.service.stats().loaded.load(Ordering::Relaxed) == 1
+    })
+    .await;
+    let update = IntegerValue::new(1, chrono::Utc::now()).to_json();
+    for _ in 0..3 {
+        publish(&requester, "Pump/x", update.clone()).await;
+    }
+    // the first call is running, the other two are queued
+    wait_until("first call started", || !backend.updates().is_empty()).await;
+    f.broker.shutdown().await;
+    f.service.shutdown().await;
+    let state = backend.state.lock().unwrap();
+    assert_eq!(state.updates.len(), 3, "queued updates are not lost");
+    assert_eq!(state.updates_finished, 3, "no call is left running");
+    assert_eq!(state.released, vec![twin_id(1)]);
+}
+
+/// A reload waits for a backend call of the old forwarders before it goes on.
+#[tokio::test]
+async fn reload_waits_for_a_running_update_call() {
+    let backend = FakeBackend::with_twin(twin_id(1), "Pump", &["x"]);
+    *backend.first_update_delay.lock().unwrap() = Some(Duration::from_millis(600));
+    let f = fixture(backend.clone(), TwinOptions::default()).await;
+    let requester = Client::connect(f.broker.port(), "requester").await;
+    publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+    wait_until("loaded", || {
+        f.service.stats().loaded.load(Ordering::Relaxed) == 1
+    })
+    .await;
+    let update = IntegerValue::new(1, chrono::Utc::now()).to_json();
+    publish(&requester, "Pump/x", update).await;
+    wait_until("call running", || !backend.updates().is_empty()).await;
+    publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+    wait_until("reloaded", || {
+        f.service.stats().loaded.load(Ordering::Relaxed) == 2
+    })
+    .await;
+    assert_eq!(
+        backend.state.lock().unwrap().updates_finished,
+        1,
+        "the reload went on while a call of the old forwarder was running"
+    );
+    f.broker.shutdown().await;
+    f.service.shutdown().await;
+}
+
+/// A backend call of the old forwarder that does not return must not stall the reloaded twin for good: after the
+/// reload gave up waiting, the new forwarders work with a new gate.
+#[tokio::test]
+async fn a_hung_call_of_the_old_load_does_not_stall_the_reloaded_twin() {
+    let backend = FakeBackend::with_twin(twin_id(1), "Pump", &["x"]);
+    // "hangs" for 2 s; the reload gives up after 300 ms
+    *backend.first_update_delay.lock().unwrap() = Some(Duration::from_secs(2));
+    let f = fixture(
+        backend.clone(),
+        TwinOptions {
+            reload_gate_timeout: Duration::from_millis(300),
+            ..TwinOptions::default()
+        },
+    )
+    .await;
+    let requester = Client::connect(f.broker.port(), "requester").await;
+    publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+    wait_until("loaded", || {
+        f.service.stats().loaded.load(Ordering::Relaxed) == 1
+    })
+    .await;
+    let update = IntegerValue::new(1, chrono::Utc::now()).to_json();
+    publish(&requester, "Pump/x", update.clone()).await;
+    wait_until("call running", || !backend.updates().is_empty()).await;
+    publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+    wait_until("reloaded", || {
+        f.service.stats().loaded.load(Ordering::Relaxed) == 2
+    })
+    .await;
+    let reloaded = std::time::Instant::now();
+    assert_eq!(
+        backend.state.lock().unwrap().updates_finished,
+        0,
+        "the old call is still running"
+    );
+    publish(&requester, "Pump/x", update).await;
+    wait_until("update of the new load", || backend.updates().len() == 2).await;
+    assert!(
+        reloaded.elapsed() < Duration::from_millis(1500),
+        "the new forwarder waited for the old call: {:?}",
+        reloaded.elapsed()
+    );
+    f.broker.shutdown().await;
+    f.service.shutdown().await;
+    // shutdown waited for the old call
+    assert_eq!(backend.state.lock().unwrap().updates_finished, 2);
+}
+
+/// After a reload only the new forwarders run: an update reaches the backend once, not once per load.
+#[tokio::test]
+async fn reload_keeps_a_single_variable_forwarder() {
+    let backend = FakeBackend::with_twin(twin_id(1), "Pump", &["x"]);
+    let f = fixture(backend.clone(), TwinOptions::default()).await;
+    let requester = Client::connect(f.broker.port(), "requester").await;
+    for expected in 1..=2u64 {
+        publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+        wait_until("loaded", || {
+            f.service.stats().loaded.load(Ordering::Relaxed) == expected
+        })
+        .await;
+    }
+    let update = IntegerValue::new(1, chrono::Utc::now()).to_json();
+    publish(&requester, "Pump/x", update).await;
+    wait_until("update forwarded", || !backend.updates().is_empty()).await;
+    // give a second (wrong) forwarder time to deliver as well
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert_eq!(backend.updates().len(), 1, "forwarded exactly once");
     f.broker.shutdown().await;
     f.service.shutdown().await;
 }
@@ -600,10 +808,7 @@ async fn twin_names_that_would_become_wildcards_are_rejected() {
         f.service.stats().failed.load(Ordering::Relaxed) == 5
     })
     .await;
-    assert!(
-        f.observed.0.lock().unwrap().is_empty(),
-        "no twin was registered"
-    );
+    assert_eq!(f.service.stats().loaded.load(Ordering::Relaxed), 0);
     publish(&requester, "connectToTwin", connect_request(twin_id(6))).await;
     wait_until("good twin loaded", || {
         f.service.stats().loaded.load(Ordering::Relaxed) == 1

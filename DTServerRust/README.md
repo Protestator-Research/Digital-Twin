@@ -2,8 +2,8 @@
 
 Port described in `Markdownfiles/Rust_Server_Portierung_Implementierungsplan.md`: configuration/CLI, embedded
 MQTT broker (3.1.1 and 5, selectable), in-process hub and payload types (first increment), twin logic with the FFI bridge to the C++
-libraries (phase 3) and the history in PostgreSQL (phase 5). Not included: REST API, TLS, removal
-of the C++ server. MQTT clients log in with their SysML credentials, see "Authentication".
+libraries (phase 3), and a read-only REST API over the history database. The history itself is written by the
+C++ core (feature `ffi`), see "History and REST API". Not included: TLS, removal of the C++ server. MQTT clients log in with their SysML credentials, see "Authentication".
 
 ## Build and test
 
@@ -14,8 +14,10 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt
 ```
 
-Environment overrides (beat file and command line): `DT_SYSML_PASSWORD` (Structura password) and
-`DT_HISTORY_DATABASE_URL` (history database URL, may contain a password). Empty values are ignored.
+Environment overrides (beat file and command line): `DT_SYSML_PASSWORD` (Structura password),
+`DT_HISTORY_DATABASE_URL` (history database URL, may contain a password), `DT_API_LISTEN` (address of the REST API)
+`DT_API_DATABASE_URL` (its database URL, may contain a password) and `DT_API_BEHIND_PROXY` (`true` / `false`; an
+invalid value is a startup error). Empty values are ignored.
 
 Run: `cargo run -- --instance.config config.cfg --instance.mqtt.port 1883` (same keys as the C++ server).
 
@@ -81,13 +83,14 @@ Log level via `RUST_LOG` (default `info`). Output goes to `target/` (ignored by 
 ## Features, build and run
 
 Without features nothing but Rust and crates.io is needed. `cargo build` produces a server whose twin backend
-reports "twin backend not available" for every `connectToTwin` (logged, the server keeps running); broker and
-history work.
+reports "twin backend not available" for every `connectToTwin` (logged, the server keeps running); the broker and
+the REST API work, but no history is recorded (the C++ core writes it).
 
 ### With the C++ model libraries (`--features ffi`)
 
 The feature links the real twin backend: `build.rs` compiles the cxx bridge and the facade `ffi/dt_facade.cpp`
-(C++20, uses `DigitalTwinLib`, `BackendCommunicationService` and `sysmllib` unmodified) and links it against an
+(C++20, uses `DigitalTwinLib`, `DigitalTwinStore` (the history writer), `BackendCommunicationService` and
+`sysmllib`) and links it against an
 existing CMake/Conan build tree of the C++ project. `build.rs` never writes into that tree and never runs cmake or
 conan; a failing `--features ffi` build or a missing library at run time is a problem of the C++ tree, rebuild it
 there.
@@ -108,9 +111,14 @@ conan install . -s build_type=Release --build missing --format=json --out-file b
 conan build . -s build_type=Release
 ```
 
-Add `-o with_client=False` to both commands to skip the Qt client and the `md4c`/Qt requirements; the four libraries
-and, with the default `DT_BUILD_TESTS=ON`, their C++ tests (which need GTest) are still built. The libraries must be
+Add `-o with_client=False` to both commands to skip the Qt client and the `md4c`/Qt requirements; the five libraries
+(`DigitalTwinLib`, `BackendCommunication`, `PhysicalTwinCommunication`, `CPSBaseLib`, `DigitalTwinStore`) and, with the default `DT_BUILD_TESTS=ON`, their C++ tests (which need GTest) are still built. The libraries must be
 built shared (the Conan default, `shared=True`).
+**`DigitalTwinStore` has to be built before the Rust build.** It is one of the project libraries the facade links; if
+`DigitalTwinStore.lib` (`libDigitalTwinStore` elsewhere) is missing from the output directory, the link of
+`cargo build --features ffi` fails with a missing library. `conan build` builds it with everything else. It needs
+`libpqxx` (and with it `libpq`), which the Conan graph has to list: run `conan install` again (with `--format=json`)
+whenever the dependencies of the C++ project changed.
 `conan-graph.json` is the list of the Conan packages with their include, library and binary directories; it is
 written by `conan install` (use `--format=json`) and is read by `build.rs`.
 
@@ -134,7 +142,7 @@ Where the inputs come from:
 
 - Conan packages (include, library and binary directories, the library names of `sysmllib`): from the graph JSON
   (`DT_CPP_CONAN_GRAPH`, default `$DT_CPP_BUILD_DIR/conan-graph.json`, else `$DT_CPP_BUILD_DIR/../conan-graph.json`). Only `host` packages that are not
-  `test_requires` are used; the same file layout works on every platform. The facade links the four project
+  `test_requires` are used; the same file layout works on every platform. The facade links the five project
   libraries and exactly the libraries `sysmllib` lists in its `cpp_info` (names are not hard-coded). Conan `defines`
   are passed to the C++ compiler.
 - Project libraries and configuration: from `$DT_CPP_BUILD_DIR/CMakeCache.txt` (if it is missing but
@@ -144,8 +152,8 @@ Where the inputs come from:
   `out/<config>`. Otherwise (Makefiles, Ninja) the tree is single-config and they are in `out`. The configuration is
   `DT_CPP_CONFIG`, else `CMAKE_BUILD_TYPE` if set, else `Release`; it must be one of `CMAKE_CONFIGURATION_TYPES`
   (multi-config) or equal to `CMAKE_BUILD_TYPE` (single-config). `BUILD_SHARED_LIBS=OFF` in the cache is an error.
-- Headers of the four C++ libraries: `<source dir>/{CpsBaseLib,BackendCommunicationService,
-  PhysicalTwinCommunicationService,DigitalTwinLib}/src`; the source directory is `DT_CPP_SOURCE_DIR`, default the
+- Headers of the five C++ libraries: `<source dir>/{CpsBaseLib,BackendCommunicationService,
+  PhysicalTwinCommunicationService,DigitalTwinLib,DigitalTwinStore}/src`; the source directory is `DT_CPP_SOURCE_DIR`, default the
   parent of `DTServerRust/`.
 
 Library search order: `DT_CPP_EXTRA_LIB_DIRS`, then the Conan packages, then the project `out` directory.
@@ -197,11 +205,14 @@ Rules and limits:
 |---|---|---|
 | `DT_SYSML_PASSWORD` | server | Structura password (beats file and command line) |
 | `DT_HISTORY_DATABASE_URL` | server | PostgreSQL URL of the history (beats the file); may contain a password, never logged |
+| `DT_API_LISTEN` | server | listen address of the REST API, e.g. `127.0.0.1:8080` (beats the file); empty = disabled |
+| `DT_API_DATABASE_URL` | server | PostgreSQL URL of the REST API (beats the file, default the history URL); may contain a password, never logged |
+| `DT_API_BEHIND_PROXY` | server | `true` / `false`: take the client address of the API from the last `X-Forwarded-For` entry (beats the file) |
 | `RUST_LOG` | server | log level, default `info` |
 | `DT_CPP_BUILD_DIR` | build, `ffi` | CMake build directory of the C++ project (required for `--features ffi`) |
 | `DT_CPP_CONFIG` | build, `ffi` | configuration of the C++ tree; default `CMAKE_BUILD_TYPE`, else `Release` |
 | `DT_CPP_CONAN_GRAPH` | build, `ffi` | Conan graph JSON; default `$DT_CPP_BUILD_DIR/conan-graph.json` |
-| `DT_CPP_SOURCE_DIR` | build, `ffi` | source directory with the four library directories; default the parent of `DTServerRust/` |
+| `DT_CPP_SOURCE_DIR` | build, `ffi` | source directory with the five library directories; default the parent of `DTServerRust/` |
 | `DT_CPP_EXTRA_LIB_DIRS` | build, `ffi` | extra library directories searched first, separated like `PATH` (`:` on Linux/macOS, `;` on Windows) |
 | `DT_CPP_NO_DLL_COPY` | build, `ffi`, Windows | any value except empty, `0`, `false`, `off`: do not copy the DLLs (see above) |
 | `DT_TEST_DATABASE_URL` | tests | enables the PostgreSQL tests (see below) |
@@ -217,19 +228,23 @@ Rules and limits:
 - `cargo test --features ffi`: additionally `tests/ffi_backend.rs`: calls without login, login against a closed
   port and against a server that answers 500 return errors (no abort, no password in the message). The live test
   needs `DT_TEST_SERVER_URL`, `DT_TEST_PROJECT_ID` and `DT_TEST_TWIN_ID` and is skipped otherwise.
-- PostgreSQL tests (`tests/history_db.rs`): run only when `DT_TEST_DATABASE_URL` is set, e.g.
-  `DT_TEST_DATABASE_URL=postgres://user:pw@localhost/postgres cargo test --test history_db`. The user needs the
-  right to create schemas. Every test creates its own schema `dt_test_<uuid>`, uses it as `search_path`, and
-  drops it afterwards (also after a panic); nothing else is touched. Without the variable each test prints
-  `SKIPPED ...` and passes.
-- `cargo test --features sql-syntax-check`: checks the syntax of every SQL statement (migration, insert, upsert,
-  partition DDL) with PostgreSQL's own parser (`pg_query`, libpg_query, no server). Off by default because the
-  build of `pg_query` needs libclang.
+- `tests/api_auth.rs`: the REST API without a database: Basic authentication (same `Authenticator` and throttle as
+  MQTT, with a stub), routing, JSON errors and the parameter validation that happens before any query.
+- PostgreSQL tests (`tests/api_db.rs`): run only when `DT_TEST_DATABASE_URL` is set, e.g.
+  `DT_TEST_DATABASE_URL=postgres://user:pw@localhost/postgres cargo test --test api_db`. The user needs the
+  right to create schemas. Every test creates its own schema `dt_test_<uuid>`, loads
+  `DigitalTwinStore/sql/0001_schema.sql` into it, uses it as `search_path`, and drops it afterwards (also after a
+  panic); nothing else is touched. They write a small twin with two commits, a checkpoint and later changes and call
+  the routes through the axum router. Without the variable each test prints `SKIPPED ...` and passes.
+- `cargo test --features sql-syntax-check`: checks the syntax of the schema file and of every SQL statement of the
+  REST API with PostgreSQL's own parser (`pg_query`, libpg_query, no server). Off by default because the build of
+  `pg_query` needs libclang.
 
 ## Twin logic (`src/twin/`)
 
 `TwinBackend` (`backend.rs`) is the interface to the model library: `login`, `load_twin`, `register_function`,
-`release_twin`. `TwinService` implements everything on top of it:
+`release_twin`, `update_variable` (with the arrival time) and the history store of the core (`configure_store`,
+`store_stats`, `shutdown_store`). `TwinService` implements everything on top of it:
 
 - subscribes to `connectToTwin` on the hub; each valid payload starts a download on a pool of 4 (a semaphore, the
   calls run in `spawn_blocking`); at most one download per twin id (a repeated request while one is queued or
@@ -238,7 +253,9 @@ Rules and limits:
   `{"time_point": ..., "value": ...}`, not the C++ placeholder) on `<TwinName>/<element>` for every variable (a value
   that is not a valid payload is skipped and counted, like an invalid path) and the empty
   registration request on `<TwinName>/registerFunction`, and forwards client payloads on that topic to
-  `register_function` (malformed or nameless requests are ignored);
+  `register_function` (malformed or nameless requests are ignored), and forwards client updates of the variables
+  (valid single values on `<TwinName>/<element>`) with their arrival time to `update_variable`. The two forwarding
+  tasks of a twin live until the twin is loaded again or the service stops;
 - errors of the backend are logged and counted, never fatal; malformed `connectToTwin` payloads are ignored;
 - a download refused as unauthorized (HTTP 401 / not logged in) logs in again and is retried once;
 - a twin name that is empty, contains `+`, `#`, `/` or NUL, or starts with `$`, is rejected before anything is
@@ -253,7 +270,7 @@ that would make a binary without `ffi`, or a Structura that starts later than th
 The facade returns, per variable, the path and its initial value as JSON (`DigitalTwinModel::getElementValueEntities`,
 `ValueEntity::getJson()`), so the initial value has the type of the variable (ScalarQuantities are Real, unknown types
 are provisionally Integer 0). Functions are not part of it: their MQTT interface exists only after initialization.
-The recorder classifies the type from the payload. The facade keeps its global state in a leaked
+The server classifies the type from the payload. The facade keeps its global state in a leaked
 singleton, so a blocking call that is still running when the process exits never races with static destruction.
 
 The facade (`ffi/dt_facade.cpp`) does the equivalent of `DigitalTwinManager::downloadDigitalTwin` without
@@ -269,70 +286,186 @@ and Complex initial values are replaced by 0 in C++ (JSON has no NaN/inf). A Str
 fraction (`"5/0"`) is rejected as an invalid Rational, not published as text.
 
 The Rust build links the **Release** C++ libraries (`build/out/Release`) by default (see `DT_CPP_CONFIG`): after
-every change in the C++ sources, rebuild that configuration (`cmake --build build --config Release --target
-DigitalTwinLib`) before `cargo test --features ffi`.
+every change in the C++ sources, rebuild that configuration before `cargo test --features ffi`, for **both** libraries
+the facade depends on that change: `cmake --build build --config Release --target DigitalTwinLib DigitalTwinStore`
+(or the whole tree). Rust does not rebuild them; a stale `DigitalTwinStore` is linked as it is.
 `facade_sample_initial_values` is test/diagnostic support (one value entity per type, no server) used by the offline
 C++ `getJson()` <-> `classify` test in `tests/ffi_backend.rs`.
 
-## History (`src/history/`)
+## History and REST API
 
-Enabled only when `run.history.database_url` or `DT_HISTORY_DATABASE_URL` is set; otherwise one log line says
-that recording is off. `run.history.{retention_days,queue_capacity,batch_size,flush_interval_ms}` as in the plan.
+### History: written by the C++ core, not by this server
 
-- Schema (`migrations/0001_init.sql`, embedded with `sqlx::migrate!`, applied at startup): `twin` and the monthly
-  range partitioned `measurement` as in plan 6.1, plus a unique index on `twin.name`. There is no primary key or
-  unique constraint on `measurement` (PostgreSQL would require the partition key in it) and no default partition.
-  `value_type`: 1 Real, 2 Integer, 3 Boolean, 4 Rational, 5 Complex, 6 String. Integers are stored as `double precision`;
-  beyond 2^53 the exact digits are also in `value_text`; integers beyond `i64` (exact digits in `value_text`, the
-  nearest double in `value_num`) are never turned into a Real. A JSON string that is not a fraction is a String
-  (`value_text`, at most 4096 bytes, no NUL); `"1/0"`-like strings are invalid.
-- Partitions `measurement_yYYYYmMM`: current and next month at startup and hourly; created on demand for rows whose
-  `ts` lies in the accepted window `[max(2000-01-01, retention cutoff), end of next month)`. Rows outside are
-  dropped and counted. Chosen over a default partition because a default partition blocks the creation of any
-  partition that overlaps rows it already holds.
-- Retention: `retention_days > 0` drops partitions that lie entirely before `now - retention_days` (hourly);
-  0 keeps everything.
-- Registry: the twin logic tells the history about every loaded twin (before the interface is published); the
-  history applies the collision rule in memory (a name owned by another twin id stays with the first; warning; the
-  later twin is not stored) and upserts `(twin_id, project_id, name, last_seen)`. At startup the registry is loaded
-  from the table, so recording works after a restart before any `connectToTwin`.
-- Recorder: subscribes to `#` on the hub, ignores `connectToTwin`, `*/registerFunction` and every message with
-  `Origin::Server`, maps `<TwinName>/<elementPath>`, classifies the payload (`payload::values::classify`), stores
-  `ts` from `time_point` and `received_at` from the arrival. Unknown twin, invalid payload and out-of-window values
-  are dropped and counted (`HistoryStats`, logged every 60 s when changed and at shutdown).
-- The server's own initial values are not recorded: `Hub::publish` marks messages `Origin::Server`, MQTT clients'
-  messages `Origin::Client`, and the recorder only takes `Client` messages. (Values the server computes itself
-  would need their own path; there are none yet.)
-- Queue and writer: bounded queue (`queue_capacity`) filled with `try_send` (full: drop and count, the broker never
-  waits); the writer collects `batch_size` rows or waits `flush_interval_ms`, then ONE
-  `INSERT ... SELECT FROM UNNEST(9 arrays)` per batch. Transient errors: retry with backoff 0.5 s .. 30 s (memory is
-  bounded by queue + one batch). A row the database refuses (SQLSTATE 22/23) is isolated by halving the batch and
-  dropped alone. A missing partition (23514) is created and the batch retried. Shutdown flushes for at most 5 s,
-  the rest is counted as `lost_on_shutdown`. The connection and the migrations are also retried in the background;
-  an invalid URL is a startup error (the message never contains the URL).
-- Partition DDL runs in a transaction under `pg_advisory_xact_lock`, so two servers on one database serialize; if a
-  `CREATE ... PARTITION OF` still loses a race (42P07 / 23505) it counts as success when the partition is attached
-  (checked in `pg_inherits`). A detached table of the same name is an error: its rows are dropped and counted.
-- Time limits: every connection has `statement_timeout` 30 s and `lock_timeout` 5 s, every store call is wrapped
-  in a 45 s timeout (a timeout is a transient error), connecting plus migrating is limited to 60 s per attempt,
-  and during shutdown no call may run past the shutdown deadline.
-- Retry rules of the writer: transient errors are retried without limit (memory is bounded); a missing partition
-  (23514) is re-created ONCE, a persisting 23514 is treated as bad data (the batch is split, the offending rows
-  are dropped and counted); other permanent errors (permissions, missing table) drop the batch after
-  `permanent_attempts` (5) tries with an error log and the `rejected` counter, so later data is not blocked.
-- Registry registrations (`PendingUpserts`, at most `registry_queue` = 1024 twins, newest version per twin) stay
-  pending until the database accepts them and are retried with backoff; at shutdown they are drained for at most
-  5 s. The registry load at startup merges with the memory by one rule: the database owner of a name wins; a twin
-  id already known in memory keeps its newer in-memory name; an in-memory twin that holds a name of a database
-  twin loses it (warning) and nothing is recorded for it.
-- Maintenance (partitions, retention) runs every step even if another failed and repeats after 60 s when it had
-  errors.
-- Memory bound of the recorder: the hub subscription holds at most 256 messages (`HUB_CAPACITY`), i.e. at most
-  256 x `max_packet_size` (256 KiB) = 64 MiB of payloads; messages beyond that are dropped and counted
-  (`hub_dropped`). Classification happens before queueing, so queue and writer batch only hold compact rows
-  (topic path at most 512 bytes, text at most 4096 bytes): at most about `(queue_capacity + batch_size) x 5 KiB`
-  (default 10000 + 500: roughly 52 MiB, in practice far less). Worst case with the defaults: about 120 MiB.
-- Rows dropped because the database was never reached before shutdown are counted in `lost_on_shutdown`.
+The history of the twins is written to PostgreSQL by the C++ core (`DigitalTwinStore`, plan:
+`Markdownfiles/Plan_Datenbank_CppKern.md`), **only in a build with `--features ffi`**. This server does not write to
+the database. It passes three things to the core:
+
+- the settings (`run.history.*`, see below), once at startup, through `TwinBackend::configure_store`;
+- every client update of a variable with its arrival time, through `update_variable(twin, path, payload,
+  received_at_ms)`. The time is taken when the broker has decoded the PUBLISH (`Message::received_at_ms`, Unix
+  milliseconds, UTC), before any queue of a subscriber, so a slow subscriber does not shift it;
+- the load of a twin (`load_twin`): the core registers project, twin, commit and model tree in the database itself,
+  and the initial values it returns are already the restored state (the last stored values of the same commit, or
+  the initial values of a new commit).
+
+What is stored: a change log (one change set per update: the variable the client set and every variable the model
+changed with it) plus checkpoints (the full state at load, in a fixed interval, in a new month, after data loss and at
+shutdown). The schema is `DigitalTwinStore/sql/0001_schema.sql`; the core creates it and maintains the monthly
+partitions and the retention. The core is the only writer and the only one that changes the schema.
+
+Without the feature there is no history: if a database URL is configured, the server says so once at startup
+(`history is NOT recorded: ...`) and goes on.
+
+Starting the store does **not** touch the database: `facade_store_configure` creates the store and its threads and
+returns, and the store connects in the background (and keeps trying). The log line `history store configured` therefore
+says nothing about the database. Whether there is a connection is the `connected` field of the statistics: the server
+logs `history database connected` / `history database NOT connected` as soon as it changes (checked every 2 s) and the
+other counters (`pending_rows`, `written_rows`, `dropped_rows`, `retries`, `checkpoints`) every 10 s, only when they
+changed. A configuration the store cannot start with at all (an invalid URL, a second configuration) is an error of
+the call; the server logs it and goes on without history.
+
+The store writes its own messages to stderr as `[DigitalTwinStore] ...`, outside the `tracing` output (no level, no
+`RUST_LOG`). Look there for the reason when `connected` stays false (wrong password, no such database, schema
+problems).
+
+**Old database:** a database that still has the tables of the old Rust recorder (`twin` and `measurement` with the
+old layout) must have them dropped before the first start with the C++ store. The store refuses to start on such a
+schema with a clear message (in its stderr output) instead of working in it; its data is not migrated.
+
+At shutdown the twin service is stopped first (its forwarders work off what is queued, and a running backend call
+ends before the twins are released; at most 5 s, then at most 5 s for the release, 15 s as the outer limit), then the store gets 10 s to write its queue and a last checkpoint.
+
+| Key (`run.history.`) | Default | Meaning |
+|---|---|---|
+| `database_url` | empty = no history | PostgreSQL URL; env `DT_HISTORY_DATABASE_URL` beats the file. May contain a password, never logged |
+| `retention_days` | 0 | drop data older than this many days (whole partitions); 0 keeps everything |
+| `checkpoint_interval_s` | 600 | seconds between two interval checkpoints; 0 switches them off (the checkpoints at load, in a new month, after data loss and at shutdown remain) |
+| `queue_capacity` | 10000 | **rows** (not change sets; one update can write several) waiting for the writer; further ones are dropped and counted |
+| `batch_size` | 500 | rows per insert |
+| `flush_interval_ms` | 200 | longest wait before a batch is written |
+
+All numbers are unsigned 32-bit values; for `queue_capacity`, `batch_size` and `flush_interval_ms` 0 selects the
+default of the store. The counters `pending`, `written` and `dropped` of the store statistics are rows as well. The old Rust recorder (`src/history`, its migration and its `measurement`
+table with a different layout) is gone; its data is not carried over.
+
+### REST API (`src/api/`)
+
+A read-only HTTP API over the same database, in this process (axum on the tokio runtime). It is **off by default**.
+
+| Key (`run.api.`) | Default | Meaning |
+|---|---|---|
+| `listen` | empty = disabled | socket address, e.g. `127.0.0.1:8080`; env `DT_API_LISTEN` beats the file |
+| `database_url` | the history URL | database of the API; env `DT_API_DATABASE_URL` beats the file. May contain a password, never logged |
+| `behind_proxy` | `false` | the API is only reachable through a reverse proxy that appends `X-Forwarded-For`: throttle by its last entry instead of the peer address (see below); env `DT_API_BEHIND_PROXY` beats the file |
+
+The API works without the `ffi` feature (it only reads). It connects lazily, so it starts and answers `503` while the
+database is down. Reads are runtime-checked `sqlx` queries (the build needs no database). The API never writes: give
+it a database role that may only `SELECT` (its own `run.api.database_url`); as a second line of defence every
+connection is opened with `default_transaction_read_only = on` and a statement timeout of 15 s.
+
+Access control: **if MQTT authentication is enabled (`run.mqtt.authentication = "sysml"`), every request needs HTTP
+Basic credentials, checked exactly like the CONNECT of an MQTT client** (same SysML login, same cache; the answer is
+`401` with `WWW-Authenticate: Basic`, or `503` if the SysML backend cannot decide). Failed logins are throttled
+by the **same `LoginThrottle` instance as the MQTT logins**, used the same way (`run.mqtt.auth_max_failures`,
+`auth_failure_window_s`, `auth_block_s`, `auth_max_pending_per_ip`): a user name or a client address with too many
+failures is refused without a check (answered `401`), and only a few checks of one address run at the same time
+(further ones get `503`). A user name or address blocked over MQTT is blocked for the API and the other way round, so
+the failure budget is not doubled. The slot of the pending checks is only held while the credentials are verified, not
+while the request is served. Requests without a usable `Authorization` header get `401` and are counted nowhere. As
+with MQTT, anybody who knows a user name can block that user name for a while by failing logins.
+
+The client address is the peer address of the connection. **With a reverse proxy in front and `behind_proxy` off, all
+users share the proxy's address**, so a few failed logins of one person block every API user for a while, and the
+pending-check limit applies to all of them together. Switch `run.api.behind_proxy` (`DT_API_BEHIND_PROXY`, `true` or
+`false`, default `false`) on only if the API port is reachable **solely through a proxy that sets or appends the
+`X-Forwarded-For` header** (and that you trust to do so): the client address is then the last (rightmost) entry of that
+header, the one the proxy itself added; entries to its left are whatever the client claimed and are ignored. If the
+header is missing, or the last entry is not an address, the peer address is used. With the setting on and the port
+reachable directly, a client could choose its own address and would escape the throttling. With it off the header is
+ignored.
+
+There is no
+authorization beyond the login: every user who can log in can read all projects and twins, as
+every MQTT client can read every topic. **With `authentication = "none"` the API is open.** In both cases: Basic
+sends the password with every request and this server has no TLS, so bind the API to localhost
+(`127.0.0.1:...`) or put it behind a reverse proxy that terminates TLS (and, if you need it, restricts access
+further). The server warns at startup if the API is open on a non-local address.
+
+Responses are JSON. Errors are `{"error": "..."}` with a fitting status: `400` for bad parameters (also unknown or
+repeated parameters), `401`, `404` for unknown ids (and for a state without a checkpoint), `405` for anything but GET,
+`503` for an unreachable database. Messages never contain SQL, driver errors or the database URL (those are only
+logged). Ids are UUIDs, times are RFC 3339 in UTC; in a query string write `+` of an offset as `%2B`.
+
+| Route | Answer |
+|---|---|
+| `GET /projects` | `[{project_id, name, first_seen}]` |
+| `GET /projects/{project_id}/twins` | `[{twin_id, name, first_seen, last_seen}]`; `404` for an unknown project |
+| `GET /twins/{twin_id}/versions` | the loaded commits, newest first: `[{commit, first_loaded, last_loaded}]` |
+| `GET /twins/{twin_id}/elements?commit=` | `{twin_id, commit, elements: [{element_no, parent_no, kind, name, path, value_type}]}`, the model tree of one commit as a flat list. `kind` is `package`, `component`, `port`, `measurable`, `controllable` or `attribute`; `value_type` is `real`, `integer`, `boolean`, `rational`, `complex`, `string`, or `null` for non-variables. Default commit: the one with the latest `last_loaded`, i.e. the one loaded last (a reload of an older commit makes it the default again) |
+| `GET /twins/{twin_id}/state?at=&commit=&path=` | the complete state at a time (default now), see below |
+| `GET /twins/{twin_id}/series?path=&from=&to=&limit=&commit=` | the time series of one variable, see below |
+
+`state`: the newest checkpoint at or before `at` (ties: the later one) decides the version and the base; the state is
+that checkpoint plus the changes of the same version after it up to `at` (inclusive). Without `commit` it is the
+newest checkpoint of **any** version of the twin, so `at` in the time commit B ran gives B even if commit A was loaded
+again later (`last_loaded` is not used). With `commit` only the checkpoints of that commit count. `commit` and
+`checkpoint_at` of the answer say which version and which checkpoint were used; version, checkpoint and values come
+from one statement. `path` restricts the answer to that element and everything below it (a whole path level: `Motor`
+does not match `Motors`). If there is no checkpoint at or before `at` (the twin was loaded later, or the data was
+removed by the retention), the answer is `404`, not an empty state.
+
+```json
+{
+  "twin_id": "00000000-0000-0000-0000-000000000020",
+  "commit": "00000000-0000-0000-0000-000000000031",
+  "at": "2026-01-10T10:07:00Z",
+  "checkpoint_at": "2026-01-10T10:00:00Z",
+  "variables": [
+    {"path": "Motor/enabled", "kind": "controllable", "value_type": "boolean", "value": false,
+     "received_at": "2026-01-10T10:00:00Z", "ts": "2026-01-10T10:00:00Z", "source": "checkpoint"},
+    {"path": "Motor/speed", "kind": "measurable", "value_type": "real", "value": 2.5,
+     "received_at": "2026-01-10T10:05:00Z", "ts": "2026-01-10T10:04:59Z", "source": "client"}
+  ]
+}
+```
+
+`received_at` is when the broker accepted the update, `ts` the `time_point` of the client's payload. `source` is
+`client` (set by a client), `derived` (changed by the model because of a client update) or `checkpoint` (taken
+over from the checkpoint).
+
+`series`: the rows of the variable with exactly this `path`, ordered by `received_at` ascending (`from` and `to`
+bound it, both inclusive). Without `commit` it spans all versions of the twin and joins them by path; every point
+says which `commit` it is from and carries its `change_no`. `limit` is 1 to 10000 (default 1000; anything else is
+`400`). Rows are ordered by `(received_at, change_no, element, source)`, which is total, so rows that arrived in the
+same instant (millisecond stamps, a checkpoint row next to the update that caused it) have a fixed order. `more` tells
+whether there are more rows than `limit`; then `next` is a cursor: pass it unchanged as `after=<next>` (together
+with the same other parameters) to get the following page without skipping or repeating a row. Do not use `from`
+for paging. Checkpoint rows are part of the series
+(`source` `checkpoint`); filter them out if only changes matter. `404` if the twin has no variable with that path.
+
+A page of a series (`GET /twins/{twin_id}/series?path=Motor/speed&limit=2`); the next page is
+`...&limit=2&after=2026-01-10T10:05:00Z,2001,12,1`:
+
+```json
+{
+  "twin_id": "00000000-0000-0000-0000-000000000020",
+  "path": "Motor/speed",
+  "limit": 2,
+  "more": true,
+  "next": "2026-01-10T10:05:00Z,2001,12,1",
+  "points": [
+    {"commit": "00000000-0000-0000-0000-000000000031", "received_at": "2026-01-10T10:00:00Z", "change_no": 2000,
+     "ts": "2026-01-10T10:00:00Z", "source": "checkpoint", "value_type": "real", "value": 1.0},
+    {"commit": "00000000-0000-0000-0000-000000000031", "received_at": "2026-01-10T10:05:00Z", "change_no": 2001,
+     "ts": "2026-01-10T10:04:59Z", "source": "client", "value_type": "real", "value": 2.5}
+  ]
+}
+```
+
+`value` is decoded by the element's type: real is a number (NaN and infinity, which JSON cannot hold, become `null`),
+integer a number (or a string of digits when the magnitude exceeds 2^53 and was stored as text), boolean `true` /
+`false`, rational the string `"n/d"`, complex the stored object (`{"imaginaryValue": 2.0, "realValue": 1.0}`), string
+a string.
 
 ## Layout
 
@@ -344,8 +477,7 @@ that recording is off. `run.history.{retention_days,queue_capacity,batch_size,fl
 | `src/hub.rs` | in-process hub: `subscribe(filter, capacity)` and `publish(topic, payload)`; messages carry their `Origin` |
 | `src/twin/` | `TwinBackend` trait, twin service (`mod.rs`), `ffi.rs` (feature `ffi`, cxx bridge) |
 | `ffi/`, `build.rs` | C++ facade (`dt_facade.h/.cpp`); `build.rs` compiles it against the C++ build tree (feature `ffi`) and emits the link and run-time settings; `ffi/link_plan.rs` is its pure planning logic (paths, libraries, rpath, DLLs), also included by `tests/link_plan.rs` (runs without the feature, covers all three target systems) |
-| `src/history/` | `partition`, `registry`, `row`, `store` (trait), `pg` (sqlx), `recorder` (ingest, stats), `writer` (batches, maintenance) |
-| `migrations/` | embedded SQL migrations |
+| `src/api/` | read-only REST API: `mod.rs` (routes, errors, server), `model.rs` (words, value decoding, parameters), `sql.rs` (the statements), `auth.rs` (HTTP Basic with the MQTT authenticator) |
 | `src/payload/` | `time` (`time_point`), `twin` (`connectToTwin`, `registerFunction`), `values` (value types and `classify`) |
 | `tests/` | integration tests against the real broker (rumqttc MQTT 3.1.1 and MQTT 5 clients and a raw socket client; MQTT 5 and the protocol modes in `mqtt5_integration.rs`) |
 
@@ -454,11 +586,12 @@ Payload types:
 ## Hub
 
 `Broker::hub()` returns a cloneable `Hub`. `hub.subscribe(filter, capacity)` gives a bounded receiver of
-`Message { origin, topic, payload }` for every accepted PUBLISH (and for hub publishes). A full channel drops the message and
+`Message { origin, topic, payload, received_at_ms }` for every accepted PUBLISH (and for hub publishes). A full channel drops the message and
 counts it (`HubSubscription::dropped()`, `Hub::dropped_total()`); the broker never waits. `hub.publish(topic, payload)`
 delivers to all matching client sessions and all matching internal subscribers (there is no no-local for internal
-code, so a recorder on `#` also sees what the server itself published; such messages have `Origin::Server`, those of
-MQTT clients `Origin::Client`).
+code, so a subscriber on `#` also sees what the server itself published; such messages have `Origin::Server`, those of
+MQTT clients `Origin::Client`). `received_at_ms` is the time the broker accepted the message (Unix milliseconds, UTC),
+stamped before any queueing; it follows the system clock and is not monotonic.
 
 ## Known remaining deviations and limits
 
@@ -473,14 +606,13 @@ Phase 3 and 5:
   destructor only frees the instance manager); not changed.
 - Twin names containing `/` are not supported (the first topic level is the name, as in the C++ topic building).
 - Login: see "Twin logic". An expired token is refreshed only when a download is refused (once per download).
-- The history writes the registry row of a twin asynchronously; if the queue of registrations (1024) is full the
-  row is not written until the next `connectToTwin` of that twin (the in-memory registry is always right).
-- Until the history database is reachable the registry is empty: values are counted as `unknown_twin`.
-- Not verified: SQL against a real PostgreSQL (none available here; the statements are syntax checked with
-  libpg_query and the database tests compile, but they were not executed); the facade against a real Structura
-  server; thread safety of the C++ libraries.
+- Without a loaded model nothing is recorded: the history starts with the load of a twin (the C++ core), and only
+  paths of the model are stored.
+- Not verified: the SQL of the REST API against a real PostgreSQL (none was available; the database tests in
+  `tests/api_db.rs` compile but were not executed, and the syntax check with libpg_query needs libclang); the
+  facade against a real Structura server; thread safety of the C++ libraries.
 - The `ffi` build is verified on Windows 11 with MSVC against a Release tree (Conan prebuilt packages): `cargo
-  build --features ffi`, the `ffi_backend`, `twin_integration`, `broker_integration` and `history_db` tests and a
+  build --features ffi`, the `ffi_backend`, `twin_integration` and `broker_integration` tests and a
   start of `dt-server.exe` without `PATH` additions work. Not verified: macOS (never built, only the planning logic
   is unit tested), Linux (no Linux build was run; rpath handling is unit tested only), the live test against
   Structura, and the MSVC `RelWithDebInfo`/`MinSizeRel` trees. The DLL copy next to the artifact is verified for the

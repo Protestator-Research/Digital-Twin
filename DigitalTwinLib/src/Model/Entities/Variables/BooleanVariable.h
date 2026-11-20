@@ -8,7 +8,7 @@
 
 namespace DigitalTwin::Model
 {
-    class BooleanVariable : public IVariable
+    class CPPDIGITALTWINLIB_EXPORT BooleanVariable : public IVariable
     {
     public:
 	    BooleanVariable() = delete;
@@ -22,6 +22,10 @@ namespace DigitalTwin::Model
 	    
 	    IVariable* copy() override;
 	    std::string getType() override;
+
+        ValueType getValueType() const override;
+        VariableValue getStateValue() const override;
+        bool setStateValue(const VariableValue& value) override;
 
     protected:
 	    void updateLinkedVariables() override;

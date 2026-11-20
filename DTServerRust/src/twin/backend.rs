@@ -2,8 +2,13 @@
 //!
 //! All calls block (HTTP via libcurl, model parsing), so they are only made from `spawn_blocking`.
 
+use std::fmt;
+use std::time::Duration;
+
 use thiserror::Error;
 use uuid::Uuid;
+
+use crate::config::HistoryConfig;
 
 /// A variable of a twin with the value it is published with after the load.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,6 +28,77 @@ pub struct TwinInfo {
     /// `DigitalTwinModel::getElementValueEntities()`. Functions are not part of it: their MQTT interface exists
     /// only after `registerFunction`.
     pub elements: Vec<TwinElement>,
+}
+
+/// Settings of the history store of the backend (`run.history.*`).
+#[derive(Clone, PartialEq, Eq)]
+pub struct StoreSettings {
+    /// PostgreSQL URL, may contain a password: never logged.
+    pub database_url: String,
+    /// 0 keeps the data forever.
+    pub retention_days: u32,
+    /// Seconds between two checkpoints of the full state. 0 switches the interval checkpoints off (the
+    /// checkpoints at load, in a new month, after data loss and at shutdown remain).
+    pub checkpoint_interval_s: u32,
+    /// Maximum number of rows (not change sets) waiting for the writer; further ones are dropped and counted.
+    /// 0 selects the default of the store, like for `batch_size` and `flush_interval_ms`.
+    pub queue_capacity: u32,
+    /// Maximum number of rows per insert.
+    pub batch_size: u32,
+    /// Maximum time rows wait before they are written.
+    pub flush_interval_ms: u32,
+}
+
+impl fmt::Debug for StoreSettings {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StoreSettings")
+            .field(
+                "database_url",
+                &if self.database_url.is_empty() {
+                    ""
+                } else {
+                    "<redacted>"
+                },
+            )
+            .field("retention_days", &self.retention_days)
+            .field("checkpoint_interval_s", &self.checkpoint_interval_s)
+            .field("queue_capacity", &self.queue_capacity)
+            .field("batch_size", &self.batch_size)
+            .field("flush_interval_ms", &self.flush_interval_ms)
+            .finish()
+    }
+}
+
+impl From<&HistoryConfig> for StoreSettings {
+    fn from(config: &HistoryConfig) -> Self {
+        Self {
+            database_url: config.database_url.clone(),
+            retention_days: config.retention_days,
+            checkpoint_interval_s: config.checkpoint_interval_s,
+            queue_capacity: config.queue_capacity,
+            batch_size: config.batch_size,
+            flush_interval_ms: config.flush_interval_ms,
+        }
+    }
+}
+
+/// Counters of the history store of the backend. All zero and `enabled == false` if it is not configured.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct StoreStats {
+    /// The store has been configured.
+    pub enabled: bool,
+    /// The writer currently has a database connection.
+    pub connected: bool,
+    /// Rows waiting for the writer (not change sets: one update can write several rows).
+    pub pending: u64,
+    /// Rows written.
+    pub written: u64,
+    /// Rows dropped because the queue was full.
+    pub dropped: u64,
+    /// Repeated write attempts after errors.
+    pub retries: u64,
+    /// Checkpoints written.
+    pub checkpoints: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -61,13 +137,29 @@ pub trait TwinBackend: Send + Sync + 'static {
     /// Frees the model of the twin. Unknown twins are not an error.
     fn release_twin(&self, twin_id: Uuid) -> Result<(), BackendError>;
 
-    /// Hands a client update of the value of a variable (`path` relative to the twin name, valid value payload) to the model.
+    /// Hands a client update of the value of a variable (`path` relative to the twin name, valid value payload)
+    /// to the model. `received_at_ms` is when the broker accepted the message (Unix time in milliseconds, UTC);
+    /// the history is ordered by it.
     fn update_variable(
         &self,
         twin_id: Uuid,
         path: &str,
         payload_json: &str,
+        received_at_ms: i64,
     ) -> Result<(), BackendError>;
+
+    /// Creates the history store and its housekeeping thread. Can be done once: a second call is an error.
+    /// Twins loaded before the call are not recorded. It does not touch the database and does not fail because
+    /// it is down: the store connects (and applies the schema) in the background, so `Ok` says nothing about
+    /// the database. `store_stats().connected` tells whether there is a connection. (A schema that is not the
+    /// expected one is reported by the store itself, on its own log.)
+    fn configure_store(&self, settings: &StoreSettings) -> Result<(), BackendError>;
+
+    /// The counters of the history store; all zero if it is not configured.
+    fn store_stats(&self) -> StoreStats;
+
+    /// Writes the queued changes and a last checkpoint and stops the store, waiting at most `timeout`. Blocks.
+    fn shutdown_store(&self, timeout: Duration) -> Result<(), BackendError>;
 }
 
 /// Backend of a binary without the `ffi` feature: every request fails with "twin backend not available".
@@ -91,7 +183,19 @@ impl TwinBackend for UnavailableBackend {
         Err(BackendError::NotAvailable)
     }
 
-    fn update_variable(&self, _: Uuid, _: &str, _: &str) -> Result<(), BackendError> {
+    fn update_variable(&self, _: Uuid, _: &str, _: &str, _: i64) -> Result<(), BackendError> {
+        Err(BackendError::NotAvailable)
+    }
+
+    fn configure_store(&self, _: &StoreSettings) -> Result<(), BackendError> {
+        Err(BackendError::NotAvailable)
+    }
+
+    fn store_stats(&self) -> StoreStats {
+        StoreStats::default()
+    }
+
+    fn shutdown_store(&self, _: Duration) -> Result<(), BackendError> {
         Err(BackendError::NotAvailable)
     }
 }
@@ -114,8 +218,37 @@ mod tests {
         );
         assert_eq!(b.release_twin(Uuid::nil()), Err(BackendError::NotAvailable));
         assert_eq!(
+            b.update_variable(Uuid::nil(), "a", "{}", 0),
+            Err(BackendError::NotAvailable)
+        );
+        let settings = StoreSettings::from(
+            &crate::config::Config::from_args(Vec::<String>::new())
+                .unwrap()
+                .history,
+        );
+        assert_eq!(
+            b.configure_store(&settings),
+            Err(BackendError::NotAvailable)
+        );
+        assert_eq!(b.store_stats(), StoreStats::default());
+        assert!(!b.store_stats().enabled);
+        assert_eq!(
+            b.shutdown_store(Duration::from_secs(1)),
+            Err(BackendError::NotAvailable)
+        );
+        assert_eq!(
             BackendError::NotAvailable.to_string(),
             "twin backend not available"
         );
+    }
+
+    #[test]
+    fn store_settings_never_show_the_url() {
+        let mut config = crate::config::Config::from_args(Vec::<String>::new())
+            .unwrap()
+            .history;
+        config.database_url = "postgres://user:hunter2@db/history".into();
+        let shown = format!("{:?}", StoreSettings::from(&config));
+        assert!(!shown.contains("hunter2") && shown.contains("<redacted>"));
     }
 }

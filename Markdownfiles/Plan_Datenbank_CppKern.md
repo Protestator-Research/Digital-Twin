@@ -243,3 +243,26 @@ Phase 0 ist unabhängig. Phase 4 kann nach Phase 2 parallel zu Phase 3 laufen, w
 6. **Zeit der abgeleiteten Werte.** Vorschlag: `ts` der auslösenden Nachricht übernehmen.
 7. **Spätere Portierung nach Rust.** Der gelöschte Rust-Recorder bleibt in der Git-Historie; die Logik für
    Partitionen und Wiederholungen lässt sich dann wiederverwenden.
+
+## 10. Umsetzungsstand (2026-11-20)
+
+Phasen 0 bis 5 sind im Arbeitsverzeichnis umgesetzt, nicht committet.
+
+Abweichungen vom Plan oben:
+
+- **Schema:** maßgeblich ist `DigitalTwinStore/sql/0001_schema.sql`. Gegenüber Abschnitt 3 neu: die Sequenz
+  `measurement_change_no_seq` (Blöcke von 1000) und die Spalte `checkpoint.change_no`.
+- **Zustandsabfrage:** Die untere Grenze ist zusätzlich `change_no >= checkpoint.change_no`. Ohne Angabe eines
+  Commits bestimmt der jüngste Checkpoint vor dem Zeitpunkt die Version, nicht `last_loaded`.
+- **Ankunftszeit:** `received_at` wird je Version monoton gehalten (ältere Werte werden angehoben).
+- **Neuregistrierung:** Sie läuft im Hintergrund-Thread der Fassade, nie in `update_variable`.
+- **Neuladen:** Das alte Modell wird stillgelegt. Beim selben Commit übernimmt das neue Modell dessen Zustand
+  direkt. Nur ohne altes Modell wird aus der Datenbank gelesen; die Registrierung wartet dann bis zu 5 s, bis
+  die Warteschlange der Version leer ist.
+- **REST-API:** Konfiguration unter `run.api.*`. Zeitreihen blättern über einen Cursor (`after`, `next`). Bei
+  MQTT-Authentifizierung `sysml` verlangt die API HTTP Basic und nutzt dieselbe Drossel wie MQTT (je Adresse
+  und Benutzername). Hinter einem Proxy liefert `run.api.behind_proxy` die Adresse aus `X-Forwarded-For`.
+- **Prüfung:** Zwei Runden durch Opus. Die Korrekturen der zweiten Runde sind nicht erneut geprüft.
+
+Nicht ausgeführt: alles, was PostgreSQL berührt (11 Tests im Store, 8 in der API; sie laufen mit
+`DT_TEST_DATABASE_URL`), und der Pfad mit geladenem Twin (braucht einen Structura-Server).

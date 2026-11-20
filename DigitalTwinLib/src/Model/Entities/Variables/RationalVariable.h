@@ -10,7 +10,7 @@
 
 namespace DigitalTwin::Model
 {
-    class RationalVariable : public IVariable
+    class CPPDIGITALTWINLIB_EXPORT RationalVariable : public IVariable
     {
     public:
         RationalVariable() = delete;
@@ -21,6 +21,10 @@ namespace DigitalTwin::Model
     	
     	IVariable* copy() override;
         std::string getType() override;
+
+        ValueType getValueType() const override;
+        VariableValue getStateValue() const override;
+        bool setStateValue(const VariableValue& value) override;
 
         void setValue(const long& numerator, const long& denumerator);
         void setValue(const boost::rational<long>& value);

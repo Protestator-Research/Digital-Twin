@@ -18,6 +18,7 @@
 
 #include "Entities/ElementType.h"
 #include "MQTT/entities/values/ValueEntity.h"
+#include "State/StateTypes.h"
 
 namespace SysMLv2::REST {
 	class DigitalTwin;
@@ -44,6 +45,7 @@ namespace DigitalTwin {
 		class IDigitalTwinElement;
 		class ICollectionType;
 		class Component;
+		class StateTracking;
 	}
 	namespace Communication
 	{
@@ -65,6 +67,9 @@ namespace DigitalTwin::Model {
 		DigitalTwinModel() = delete;
 		explicit DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager* manager);
 		virtual ~DigitalTwinModel();
+		// The model owns the observers of its variables and raw pointers into its tree.
+		DigitalTwinModel(const DigitalTwinModel&) = delete;
+		DigitalTwinModel& operator=(const DigitalTwinModel&) = delete;
 
 		/**
 		 * Last topic segment of a variable that has a function attached: the computing client writes the result there.
@@ -74,7 +79,37 @@ namespace DigitalTwin::Model {
 
 		void generateDigitalTwinBackend();
 
-		void updateVariable(const std::string& path, const std::string& payload);
+		/**
+		 * Sets the variable at `path` from a JSON payload. A path that ends in RETURN_TOPIC addresses the result of
+		 * a variable that has a function attached.
+		 * @return The variable the call addressed first, then every other variable whose value was set during the
+		 * call (linked variables). A variable object that is reachable under several paths (a measurable shared by
+		 * several component instances) is reported under each of them: the path that was addressed is not derived,
+		 * the others are. For a RETURN_TOPIC path the variable's own path is reported.
+		 * Throws what the payload parsing or the address resolution throws; nothing is reported then.
+		 */
+		UpdateResult updateVariable(const std::string& path, const std::string& payload);
+
+		/**
+		 * Packages, Components, Ports and all variables of the model, parents before children. The path of a
+		 * variable equals the MQTT topic path that getElementValueEntities uses (without function suffixes).
+		 * See walkModelTree for the details.
+		 */
+		std::vector<ModelElementInfo> getModelTree();
+
+		/** The current value of every variable of the tree (a shared variable under each of its paths). */
+		std::vector<VariableState> snapshotState();
+
+		/**
+		 * Sets the values of a stored state without propagating them to linked variables. Unknown paths and values of
+		 * the wrong type are skipped.
+		 * @return The number of variable values applied.
+		 */
+		size_t restoreState(const std::vector<VariableState>& state);
+
+		/** Commit that the twin references, the history is kept per commit. */
+		boost::uuids::uuid commitId() const;
+		boost::uuids::uuid projectId() const;
 
 		std::string digitalTwinName();
 
@@ -108,6 +143,9 @@ namespace DigitalTwin::Model {
 
 		void buildDigitalTwinModel();
 
+		/** Builds the path index and installs the change observer on first use. The tree is fixed after the build. */
+		StateTracking& stateTracking();
+
 		void generateDigitalTwinModelRecursively(const std::shared_ptr<KerML::Entities::Element>& element, ICollectionType* parent);
 		IVariable* buildVariableOfDataType(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& element);
 		IVariable* buildVariableOfOwnedElements(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& element);
@@ -127,6 +165,7 @@ namespace DigitalTwin::Model {
 		std::map<std::string, Port*> PortMap;
 		std::function<void()> UpdateModelFunction;
 		SysMLv2::API::InstanceManager* Instance;
+		StateTracking* Tracking = nullptr;
 	};
 }
 

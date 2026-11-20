@@ -21,7 +21,7 @@ pub enum Origin {
     /// Published by an MQTT client.
     Client,
     /// Published by the server itself through [`Hub::publish`] (initial values, registration requests).
-    /// These are not measurements, so the history recorder ignores them.
+    /// These are not measurements, so the twin logic does not hand them to the backend.
     Server,
 }
 
@@ -31,6 +31,15 @@ pub struct Message {
     pub origin: Origin,
     pub topic: Arc<str>,
     pub payload: Bytes,
+    /// When the broker accepted the message: Unix time in milliseconds (UTC). Taken when the PUBLISH has been
+    /// decoded (or [`Hub::publish`] is called), before any queueing for subscribers, so a slow subscriber does
+    /// not shift it. Not monotonic: it follows the system clock.
+    pub received_at_ms: i64,
+}
+
+/// The current time as Unix milliseconds (UTC), the unit of [`Message::received_at_ms`].
+pub fn now_unix_ms() -> i64 {
+    chrono::Utc::now().timestamp_millis()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -187,6 +196,7 @@ impl Hub {
                 origin: Origin::Server,
                 topic: Arc::from(topic),
                 payload,
+                received_at_ms: now_unix_ms(),
             },
             None,
         );

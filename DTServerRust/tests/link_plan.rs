@@ -294,9 +294,32 @@ fn include_dirs_start_with_the_project_headers() {
     assert_eq!(r.include_dirs[0], Path::new(SRC).join("CpsBaseLib/src"));
     assert_eq!(r.include_dirs[3], Path::new(SRC).join("DigitalTwinLib/src"));
     assert_eq!(
-        &r.include_dirs[4..],
+        r.include_dirs[4],
+        Path::new(SRC).join("DigitalTwinStore/src")
+    );
+    assert_eq!(
+        &r.include_dirs[5..],
         &[p("/c/boost/include"), p("/c/sysml/include")]
     );
+}
+
+#[test]
+fn digital_twin_store_is_linked_and_its_dll_is_taken_from_the_project_directory() {
+    assert!(PROJECT_LIBS.contains(&"DigitalTwinStore"));
+    let r = run(
+        "windows",
+        "msvc",
+        &cache_multi(""),
+        &graph("Release"),
+        Some("Release"),
+    )
+    .unwrap();
+    assert!(r.libs.contains(&"DigitalTwinStore".to_string()));
+    // libpqxx, libpq and OpenSSL are inside DigitalTwinStore.dll (shared build): nothing of them is linked
+    assert!(!r.libs.iter().any(|l| l.contains("pq") || l == "libssl"));
+    // the DLL is in the project directory, which is a DLL source directory
+    assert_eq!(r.dll_dirs.last(), Some(&r.project_lib_dir));
+    assert!(r.lib_search_dirs.contains(&r.project_lib_dir));
 }
 
 #[test]
@@ -463,7 +486,7 @@ fn real_shape_graph_without_root_key() {
     );
     // only sysmllib's libs are linked; the multi-component package (openssl) is not
     assert_eq!(
-        &r.libs[4..],
+        &r.libs[PROJECT_LIBS.len()..],
         [
             "sysmlv2service",
             "sysmlv2rest",

@@ -9,9 +9,10 @@
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
+use std::time::Duration;
 
 use dt_server::twin::ffi::FfiBackend;
-use dt_server::twin::{BackendError, TwinBackend};
+use dt_server::twin::{BackendError, StoreSettings, TwinBackend};
 use uuid::Uuid;
 
 fn message(e: BackendError) -> String {
@@ -171,4 +172,111 @@ fn cpp_get_json_matches_classify() {
     assert_eq!(value_of("positive"), Value::Integer(3));
     assert_eq!(value_of("string"), Value::Text("hello".into()));
     assert_eq!(value_of("string_empty"), Value::Text(String::new()));
+}
+
+#[test]
+fn update_variable_for_an_unknown_twin_is_an_error() {
+    let backend = FfiBackend::new();
+    let err = backend
+        .update_variable(Uuid::new_v4(), "a/b", "1.5", 1_700_000_000_000)
+        .expect_err("no model loaded");
+    assert!(message(err).contains("no model"));
+}
+
+#[test]
+fn store_configure_with_an_empty_url_is_an_error() {
+    // Rejected before the once-only state of the process is touched, so this test is independent of the
+    // lifecycle test below.
+    let backend = FfiBackend::new();
+    let settings = store_settings("");
+    let err = backend.configure_store(&settings).expect_err("empty url");
+    assert!(message(err).contains("url"));
+}
+
+fn store_settings(url: &str) -> StoreSettings {
+    StoreSettings {
+        database_url: url.to_string(),
+        retention_days: 30,
+        checkpoint_interval_s: 3600,
+        queue_capacity: 0,
+        batch_size: 0,
+        flush_interval_ms: 0,
+    }
+}
+
+/// The whole lifecycle of the history store in one test: it can be configured once per process, so the steps
+/// that depend on the order (stats before and after configure, second configure, shutdown) must not be split
+/// into tests that run in parallel threads. Nothing here needs a database: the store connects in the
+/// background and keeps retrying; it must not leak the URL or fail the configuration.
+#[test]
+fn store_lifecycle_without_a_database() {
+    let backend = FfiBackend::new();
+
+    // not configured: disabled, all counters zero; shutdown without a store is not an error
+    let stats = backend.store_stats();
+    assert!(!stats.enabled && !stats.connected);
+    assert_eq!(
+        (
+            stats.pending,
+            stats.written,
+            stats.dropped,
+            stats.retries,
+            stats.checkpoints
+        ),
+        (0, 0, 0, 0, 0)
+    );
+    backend
+        .shutdown_store(Duration::from_millis(100))
+        .expect("shutdown without a store");
+
+    // a port that was just free: no database there
+    let port = {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.local_addr().unwrap().port()
+    };
+    let url = format!("postgres://dt_user:secret-db-password@127.0.0.1:{port}/dt");
+    let settings = store_settings(&url);
+    match backend.configure_store(&settings) {
+        Ok(()) => {}
+        Err(e) => {
+            let text = message(e);
+            assert!(
+                !text.contains("secret-db-password"),
+                "message leaks the password: {text}"
+            );
+            panic!("configure must not fail because the database is down: {text}");
+        }
+    }
+
+    let stats = backend.store_stats();
+    assert!(stats.enabled);
+    assert!(!stats.connected, "there is no database");
+    assert_eq!(stats.written, 0);
+
+    // a second configuration is refused, also without leaking
+    let err = backend
+        .configure_store(&settings)
+        .expect_err("second configure");
+    let text = message(err);
+    assert!(text.contains("already"), "{text}");
+    assert!(!text.contains("secret-db-password"), "{text}");
+
+    // an unknown twin is still an error with a store configured
+    assert!(backend
+        .update_variable(Uuid::new_v4(), "a/b", "1.5", 0)
+        .is_err());
+
+    // shutdown returns within the timeout (plus slack) and is idempotent
+    let started = std::time::Instant::now();
+    backend
+        .shutdown_store(Duration::from_millis(500))
+        .expect("shutdown");
+    assert!(
+        started.elapsed() < Duration::from_secs(10),
+        "shutdown took {:?}",
+        started.elapsed()
+    );
+    backend
+        .shutdown_store(Duration::from_millis(500))
+        .expect("second shutdown is not an error");
 }

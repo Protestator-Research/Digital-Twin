@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include "../../State/ValueCodec.h"
+
 namespace DigitalTwin::Model
 {
 
@@ -32,12 +34,34 @@ namespace DigitalTwin::Model
 	void ComplexVariable::setValue(const double& real, const double& imaginary)
 	{
 		Value = std::complex<double>(real, imaginary);
+		notifyChanged();
 	}
 
 	void ComplexVariable::setValue(const std::complex<double>& value)
 	{
 		Value = value;
+		notifyChanged();
 		updateLinkedVariables();
+	}
+
+	ValueType ComplexVariable::getValueType() const
+	{
+		return ValueType::Complex;
+	}
+
+	VariableValue ComplexVariable::getStateValue() const
+	{
+		return ValueCodec::encodeComplex(Value.real(), Value.imag());
+	}
+
+	bool ComplexVariable::setStateValue(const VariableValue& value)
+	{
+		double real = 0.0;
+		double imaginary = 0.0;
+		if (!ValueCodec::decodeComplex(value, real, imaginary))
+			return false;
+		setValueWithoutPropagation(std::complex<double>(real, imaginary));
+		return true;
 	}
 
 	IVariable* ComplexVariable::copy()
@@ -68,6 +92,7 @@ namespace DigitalTwin::Model
 	void ComplexVariable::setValueWithoutPropagation(std::complex<double> value)
 	{
 		Value = value;
+		notifyChanged();
 	}
 
 }

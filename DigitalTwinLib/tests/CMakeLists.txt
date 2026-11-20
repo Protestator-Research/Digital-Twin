@@ -3,6 +3,7 @@
 add_executable(DigitalTwinLibTests
         main.cpp
         TestModelBlocks.cpp
+        TestModelState.cpp
         TestLiveBackend.cpp)
 
 target_include_directories(DigitalTwinLibTests PRIVATE

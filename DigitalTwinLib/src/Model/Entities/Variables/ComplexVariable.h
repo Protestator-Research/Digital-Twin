@@ -10,7 +10,7 @@
 
 namespace DigitalTwin::Model
 {
-    class ComplexVariable : public IVariable
+    class CPPDIGITALTWINLIB_EXPORT ComplexVariable : public IVariable
     {
     public:
         ComplexVariable() = delete;
@@ -24,6 +24,10 @@ namespace DigitalTwin::Model
         void setValue(const std::complex<double>& value);
         IVariable* copy() override;
         std::string getType() override;
+
+        ValueType getValueType() const override;
+        VariableValue getStateValue() const override;
+        bool setStateValue(const VariableValue& value) override;
 
 	protected:
         void updateLinkedVariables() override;

@@ -164,16 +164,22 @@ pub struct RestConfig {
     pub cert_private_key: String,
 }
 
-/// `run.history.*`. Parsed but not used yet.
+/// `run.history.*`: the history store of the C++ core (only with the `ffi` feature). The values are passed to
+/// the backend as they are.
 #[derive(Clone, PartialEq, Eq)]
 pub struct HistoryConfig {
-    /// May contain a password, never logged.
+    /// May contain a password, never logged. Empty: no history.
     pub database_url: String,
     /// 0 keeps the data forever.
     pub retention_days: u32,
-    pub queue_capacity: usize,
-    pub batch_size: usize,
-    pub flush_interval_ms: u64,
+    /// Seconds between two checkpoints of the full state (default 600). 0 switches the interval checkpoints off;
+    /// the checkpoints at load, in a new month, after data loss and at shutdown remain.
+    pub checkpoint_interval_s: u32,
+    /// Rows (not change sets) that may wait for the writer.
+    pub queue_capacity: u32,
+    /// Rows per insert.
+    pub batch_size: u32,
+    pub flush_interval_ms: u32,
 }
 
 impl fmt::Debug for HistoryConfig {
@@ -188,9 +194,53 @@ impl fmt::Debug for HistoryConfig {
                 },
             )
             .field("retention_days", &self.retention_days)
+            .field("checkpoint_interval_s", &self.checkpoint_interval_s)
             .field("queue_capacity", &self.queue_capacity)
             .field("batch_size", &self.batch_size)
             .field("flush_interval_ms", &self.flush_interval_ms)
+            .finish()
+    }
+}
+
+/// `run.api.*`: the read-only REST API over the history database.
+#[derive(Clone, PartialEq, Eq)]
+pub struct ApiConfig {
+    /// Socket address to listen on (`127.0.0.1:8080`). Empty (default): the API is disabled.
+    pub listen: String,
+    /// May contain a password, never logged. Empty: the history database URL is used. Should name a database
+    /// role that may only `SELECT`.
+    pub database_url: String,
+    /// The API is only reachable through a reverse proxy that sets or appends `X-Forwarded-For` (default false).
+    /// Then the client address for the login throttling is the last entry of that header instead of the peer
+    /// address. Switch it on only if nothing but the proxy can reach the API port: otherwise a client could send
+    /// any header it likes.
+    pub behind_proxy: bool,
+}
+
+impl ApiConfig {
+    /// The database URL the API connects with: its own, or else the history URL.
+    pub fn effective_database_url<'a>(&'a self, history: &'a HistoryConfig) -> &'a str {
+        if self.database_url.is_empty() {
+            &history.database_url
+        } else {
+            &self.database_url
+        }
+    }
+}
+
+impl fmt::Debug for ApiConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ApiConfig")
+            .field("listen", &self.listen)
+            .field(
+                "database_url",
+                &if self.database_url.is_empty() {
+                    ""
+                } else {
+                    "<redacted>"
+                },
+            )
+            .field("behind_proxy", &self.behind_proxy)
             .finish()
     }
 }
@@ -201,6 +251,7 @@ pub struct Config {
     pub mqtt: MqttConfig,
     pub rest: RestConfig,
     pub history: HistoryConfig,
+    pub api: ApiConfig,
     /// Path given by `instance.config`, if any.
     pub config_file: Option<String>,
     /// Invalid command line ports. They only count as errors if the file does not override them
@@ -276,6 +327,7 @@ struct FileSysml {
 struct FileRun {
     mqtt: Option<FileMqtt>,
     rest: Option<FileRest>,
+    api: Option<FileApi>,
     history: Option<FileHistory>,
 }
 
@@ -318,9 +370,45 @@ struct FileRest {
 struct FileHistory {
     database_url: Option<String>,
     retention_days: Option<StrNum>,
+    checkpoint_interval_s: Option<StrNum>,
     queue_capacity: Option<StrNum>,
     batch_size: Option<StrNum>,
     flush_interval_ms: Option<StrNum>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct FileApi {
+    listen: Option<String>,
+    database_url: Option<String>,
+    behind_proxy: Option<BoolValue>,
+}
+
+/// A JSON value that may be written as boolean or as text (`true`, `"true"`, `"yes"`, `"on"`, `"1"` and the
+/// opposites, case-insensitive).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum BoolValue {
+    Bool(bool),
+    Str(String),
+}
+
+/// Parses the text form of a boolean setting.
+fn parse_bool(text: &str) -> Option<bool> {
+    match text.trim().to_ascii_lowercase().as_str() {
+        "true" | "yes" | "on" | "1" => Some(true),
+        "false" | "no" | "off" | "0" => Some(false),
+        _ => None,
+    }
+}
+
+impl BoolValue {
+    fn to_bool(&self, key: &str) -> Result<bool, ConfigError> {
+        match self {
+            BoolValue::Bool(b) => Ok(*b),
+            BoolValue::Str(s) => parse_bool(s)
+                .ok_or_else(|| invalid(key, format!("{s:?} is not a boolean (true or false)"))),
+        }
+    }
 }
 
 impl Config {
@@ -391,9 +479,15 @@ impl Config {
             history: HistoryConfig {
                 database_url: String::new(),
                 retention_days: 0,
+                checkpoint_interval_s: 600,
                 queue_capacity: 10_000,
                 batch_size: 500,
                 flush_interval_ms: 200,
+            },
+            api: ApiConfig {
+                listen: String::new(),
+                database_url: String::new(),
+                behind_proxy: false,
             },
             config_file: (!config_file.is_empty()).then_some(config_file),
             deferred,
@@ -409,7 +503,8 @@ impl Config {
     }
 
     /// Environment overrides, they beat the file and the command line:
-    /// `DT_SYSML_PASSWORD` and `DT_HISTORY_DATABASE_URL`. Empty values are ignored.
+    /// `DT_SYSML_PASSWORD`, `DT_HISTORY_DATABASE_URL`, `DT_API_LISTEN`, `DT_API_DATABASE_URL` and
+    /// `DT_API_BEHIND_PROXY`. Empty values are ignored; an invalid boolean is reported by [`Config::validate`].
     pub fn apply_env(&mut self, get: impl Fn(&str) -> Option<String>) {
         let non_empty = |name: &str| get(name).filter(|v| !v.is_empty());
         if let Some(v) = non_empty("DT_SYSML_PASSWORD") {
@@ -417,6 +512,23 @@ impl Config {
         }
         if let Some(v) = non_empty("DT_HISTORY_DATABASE_URL") {
             self.history.database_url = v;
+        }
+        if let Some(v) = non_empty("DT_API_LISTEN") {
+            self.api.listen = v;
+        }
+        if let Some(v) = non_empty("DT_API_DATABASE_URL") {
+            self.api.database_url = v;
+        }
+        if let Some(v) = non_empty("DT_API_BEHIND_PROXY") {
+            match parse_bool(&v) {
+                Some(b) => self.api.behind_proxy = b,
+                // reported by `validate`, like an invalid command line value
+                None => self.deferred.push(Deferred {
+                    file_key: "run.api.behind_proxy",
+                    cli_key: "DT_API_BEHIND_PROXY",
+                    message: format!("{v:?} is not a boolean (true or false)"),
+                }),
+            }
         }
     }
 
@@ -590,6 +702,11 @@ impl Config {
                 &mut self.history.retention_days,
             )?;
             convert(
+                "run.history.checkpoint_interval_s",
+                &h.checkpoint_interval_s,
+                &mut self.history.checkpoint_interval_s,
+            )?;
+            convert(
                 "run.history.queue_capacity",
                 &h.queue_capacity,
                 &mut self.history.queue_capacity,
@@ -604,6 +721,13 @@ impl Config {
                 &h.flush_interval_ms,
                 &mut self.history.flush_interval_ms,
             )?;
+        }
+        if let Some(api) = &run.api {
+            set_string(&api.listen, &mut self.api.listen);
+            set_string(&api.database_url, &mut self.api.database_url);
+            if let Some(v) = &api.behind_proxy {
+                self.api.behind_proxy = v.to_bool("run.api.behind_proxy")?;
+            }
         }
         Ok(())
     }
@@ -647,6 +771,47 @@ mod tests {
         assert_eq!(c.history.batch_size, 500);
         assert_eq!(c.history.flush_interval_ms, 200);
         assert_eq!(c.history.retention_days, 0);
+        assert_eq!(c.history.checkpoint_interval_s, 600);
+        assert_eq!(c.history.database_url, "");
+        // the API is disabled by default
+        assert_eq!(c.api.listen, "");
+        assert_eq!(c.api.database_url, "");
+        assert!(!c.api.behind_proxy);
+    }
+
+    #[test]
+    fn behind_proxy_is_parsed_from_file_and_environment() {
+        let mut c = config(&[]);
+        for (json, expected) in [
+            (r#"{"run":{"api":{"behind_proxy":true}}}"#, true),
+            (r#"{"run":{"api":{"behind_proxy":"false"}}}"#, false),
+            (r#"{"run":{"api":{"behind_proxy":"Yes"}}}"#, true),
+            (r#"{"run":{"api":{"behind_proxy":"0"}}}"#, false),
+            (r#"{"run":{"api":{}}}"#, false),
+        ] {
+            c.apply_json(json).unwrap();
+            assert_eq!(c.api.behind_proxy, expected, "{json}");
+        }
+        for bad in [
+            r#"{"run":{"api":{"behind_proxy":"maybe"}}}"#,
+            r#"{"run":{"api":{"behind_proxy":2}}}"#,
+        ] {
+            assert!(c.apply_json(bad).is_err(), "{bad}");
+        }
+        // the environment beats the file
+        let mut c = config(&[]);
+        c.apply_json(r#"{"run":{"api":{"behind_proxy":false}}}"#)
+            .unwrap();
+        c.apply_env(|name| (name == "DT_API_BEHIND_PROXY").then(|| "true".to_owned()));
+        assert!(c.api.behind_proxy);
+        c.apply_env(|name| (name == "DT_API_BEHIND_PROXY").then(String::new));
+        assert!(c.api.behind_proxy, "empty is ignored");
+        assert!(c.validate().is_ok());
+        // an invalid value is an error, not silently false
+        let mut c = config(&[]);
+        c.apply_env(|name| (name == "DT_API_BEHIND_PROXY").then(|| "perhaps".to_owned()));
+        assert!(!c.api.behind_proxy);
+        assert!(c.validate().is_err());
     }
 
     #[test]
@@ -901,6 +1066,19 @@ mod tests {
         c.apply_env(env);
         assert_eq!(c.sysml.password, "env-secret");
         assert_eq!(c.history.database_url, "postgres://env");
+        let mut c = config(&[]);
+        c.apply_json(r#"{"run":{"api":{"listen":"file:1","database_url":"postgres://file"}}}"#)
+            .unwrap();
+        c.apply_env(|name| match name {
+            "DT_API_LISTEN" => Some("127.0.0.1:9000".to_owned()),
+            "DT_API_DATABASE_URL" => Some("postgres://api-env".to_owned()),
+            _ => None,
+        });
+        assert_eq!(c.api.listen, "127.0.0.1:9000");
+        assert_eq!(c.api.database_url, "postgres://api-env");
+        // empty variables change nothing
+        c.apply_env(|_| Some(String::new()));
+        assert_eq!(c.api.listen, "127.0.0.1:9000");
         // unset or empty variables change nothing
         let mut c = config(&["--sysml.password", "cli"]);
         c.apply_env(|name| (name == "DT_SYSML_PASSWORD").then(String::new));
@@ -947,10 +1125,12 @@ mod tests {
             "history": {
                 "database_url": "postgres://u:p@h/db",
                 "retention_days": 30,
+                "checkpoint_interval_s": "60",
                 "queue_capacity": 11,
                 "batch_size": 12,
                 "flush_interval_ms": 13
-            }
+            },
+            "api": { "listen": "127.0.0.1:8081", "database_url": "postgres://ro:pw@h/db" }
         }
     }"#;
 
@@ -987,6 +1167,43 @@ mod tests {
         assert_eq!(c.history.queue_capacity, 11);
         assert_eq!(c.history.batch_size, 12);
         assert_eq!(c.history.flush_interval_ms, 13);
+        assert_eq!(c.history.checkpoint_interval_s, 60);
+        assert_eq!(c.api.listen, "127.0.0.1:8081");
+        assert_eq!(c.api.database_url, "postgres://ro:pw@h/db");
+    }
+
+    #[test]
+    fn api_database_url_defaults_to_the_history_url() {
+        let mut c = config(&[]);
+        c.apply_json(r#"{"run":{"history":{"database_url":"postgres://h"}}}"#)
+            .unwrap();
+        assert_eq!(c.api.effective_database_url(&c.history), "postgres://h");
+        c.apply_json(r#"{"run":{"api":{"database_url":"postgres://ro"}}}"#)
+            .unwrap();
+        assert_eq!(c.api.effective_database_url(&c.history), "postgres://ro");
+    }
+
+    #[test]
+    fn history_values_must_fit_the_bridge() {
+        let mut c = config(&[]);
+        for key in [
+            "checkpoint_interval_s",
+            "queue_capacity",
+            "batch_size",
+            "flush_interval_ms",
+            "retention_days",
+        ] {
+            let json = format!(r#"{{"run":{{"history":{{"{key}":4294967296}}}}}}"#);
+            assert!(
+                matches!(c.apply_json(&json), Err(ConfigError::Invalid { .. })),
+                "{key}"
+            );
+            let json = format!(r#"{{"run":{{"history":{{"{key}":"x"}}}}}}"#);
+            assert!(
+                matches!(c.apply_json(&json), Err(ConfigError::Invalid { .. })),
+                "{key}"
+            );
+        }
     }
 
     #[test]
@@ -1062,6 +1279,7 @@ mod tests {
         assert!(!shown.contains("secret"));
         assert!(!shown.contains("hunter2"));
         assert!(!shown.contains("u:p@h"));
+        assert!(!shown.contains("ro:pw@h"));
         assert!(shown.contains("<redacted>"));
     }
 }

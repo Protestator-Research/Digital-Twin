@@ -16,8 +16,8 @@ path = "src/main.rs"
 [features]
 # Real twin backend: cxx bridge to the C++ facade in ffi/ (needs the existing C++ build tree, see README).
 ffi = ["dep:cxx", "dep:cxx-build", "dep:serde_json"]
-# Unit test that checks the syntax of all SQL with PostgreSQL's own parser (libpg_query, no server needed). Off by
-# default because its build needs libclang.
+# Unit test that checks the syntax of the schema and of the SQL of the REST API with PostgreSQL's own parser
+# (libpg_query, no server needed). Off by default because its build needs libclang.
 sql-syntax-check = ["dep:pg_query"]
 
 [dependencies]
@@ -26,6 +26,7 @@ chrono = { version = "0.4", default-features = false, features = ["std", "clock"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "rustls-tls-native-roots"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
+serde_urlencoded = "0.7"
 sha2 = "0.10"
 socket2 = "0.6"
 thiserror = "2"
@@ -33,9 +34,11 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-uti
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["serde", "v4"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
+base64 = "0.22"
 cxx = { version = "1", optional = true }
 pg_query = { version = "6", optional = true }
-sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "chrono", "uuid", "migrate", "macros"] }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "chrono", "uuid", "json"] }
 
 [build-dependencies]
 cxx-build = { version = "1", optional = true }
@@ -43,5 +46,7 @@ cxx-build = { version = "1", optional = true }
 serde_json = { version = "1", optional = true }
 
 [dev-dependencies]
+http-body-util = "0.1"
+tower = { version = "0.5", features = ["util"] }
 rumqttc = { version = "0.25", default-features = false }
 tokio = { version = "1", features = ["full", "test-util"] }

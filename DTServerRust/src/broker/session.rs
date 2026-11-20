@@ -20,7 +20,7 @@ use super::subscriptions::{AddResult, SessionId};
 use super::topic;
 use super::tracker::ConnectionPermit;
 use crate::auth::{AuthOutcome, Denied};
-use crate::hub::{Message, Origin};
+use crate::hub::{now_unix_ms, Message, Origin};
 
 pub(crate) enum Outgoing {
     Publish(Message),
@@ -636,6 +636,8 @@ fn handle_packet(
             None
         }
         Packet::Publish(publish) => {
+            // the arrival time of the message: stamped before validation and before any queueing
+            let received_at_ms = now_unix_ms();
             if !topic::is_valid_topic_name(&publish.topic) {
                 return Some(End::closed_with(
                     "invalid topic name",
@@ -652,6 +654,7 @@ fn handle_packet(
                     origin: Origin::Client,
                     topic: Arc::from(publish.topic),
                     payload: publish.payload,
+                    received_at_ms,
                 },
                 Some(id),
             );
@@ -671,6 +674,7 @@ mod tests {
             origin: Origin::Client,
             topic: Arc::from(s),
             payload: Bytes::new(),
+            received_at_ms: 0,
         }
     }
 

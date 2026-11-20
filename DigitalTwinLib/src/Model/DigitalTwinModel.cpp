@@ -26,6 +26,7 @@
 #include <sysml/parts/PartDefinition.h>
 #include "DigitalTwinModel.h"
 #include "ModelBlocks.h"
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
@@ -59,6 +60,8 @@
 #include "MQTT/entities/values/RealValueEntity.h"
 #include "MQTT/entities/values/StringValueEntity.h"
 #include "MQTT/entities/FunctionValueEntity.h"
+#include "State/ModelTree.h"
+#include "State/StateTracking.h"
 
 namespace {
 	// IN and OUT are empty macros of the Windows headers, so the enumerators cannot be named while they are defined.
@@ -91,7 +94,15 @@ namespace DigitalTwin::Model {
 	}
 
 	DigitalTwinModel::~DigitalTwinModel() {
+		delete Tracking;   // removes the observers from the variables
 		delete Instance;
+	}
+
+	StateTracking& DigitalTwinModel::stateTracking()
+	{
+		if (!Tracking)
+			Tracking = new StateTracking(walkModelTree(PackageMap, ComponentMap, PortMap));
+		return *Tracking;
 	}
 
 	void DigitalTwinModel::generateDigitalTwinBackend() {
@@ -99,8 +110,9 @@ namespace DigitalTwin::Model {
 
 	}
 
-	void DigitalTwinModel::updateVariable(const std::string& path, const std::string& payload)
+	UpdateResult DigitalTwinModel::updateVariable(const std::string& path, const std::string& payload)
 	{
+		UpdateResult result;
 		//std::cout << "Variable with Address: " << path << " is updated with Value:" << std::endl << payload << std::endl;
 		// A path ending in the return segment addresses the result of a variable that has a function attached.
 		std::string variablePath = path;
@@ -118,49 +130,95 @@ namespace DigitalTwin::Model {
 			variableToBeEdited = nullptr;
 		if (variableToBeEdited!=nullptr)
 		{
+			auto& tracking = stateTracking();
+			const StateTracking::Scope recording(tracking);
 			//std::cout << "Variable found?" << std::endl;
 			//std::cout << "Varialbe To Be Edited: " << variableToBeEdited->getName() <<std::endl;
 			const std::string &type = variableToBeEdited->getType();
 			if (type== "BooelanVariable")
 			{
 				auto json_value = DigitalTwin::Communication::BooleanValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
 				dynamic_cast<BooleanVariable*>(variableToBeEdited)->setValue(json_value.getValue());
 			}
 			if (type == "ComplexVariable")
 			{
 				auto json_value = DigitalTwin::Communication::ComplexValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
 				dynamic_cast<ComplexVariable*>(variableToBeEdited)->setValue(json_value.getValue());
 			}
 			if (type == "IntegerVariable")
 			{
 				auto json_value = DigitalTwin::Communication::IntegerValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
 				dynamic_cast<IntegerVariable*>(variableToBeEdited)->setValue(json_value.getValue());
 			}
 			if (type == "PositiveVariable")
 			{
 				auto json_value = DigitalTwin::Communication::PositiveValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
 				dynamic_cast<PositiveVariable*>(variableToBeEdited)->setValue(json_value.getValue());
 			}
 			if (type == "RationalVariable")
 			{
 				auto json_value = DigitalTwin::Communication::RationalValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
 				dynamic_cast<RationalVariable*>(variableToBeEdited)->setValue(json_value.getValue());
 			}
 			if (type == "RealVariable")
 			{
 				auto json_value = DigitalTwin::Communication::RealValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
 				dynamic_cast<RealVariable*>(variableToBeEdited)->setValue(json_value.getValue());
 			}
 			if (type == "StringVariable")
 			{
 				auto json_value = DigitalTwin::Communication::StringValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
 				dynamic_cast<StringVariable*>(variableToBeEdited)->setValue(json_value.getValue());
 			}
 
 			//TODO Some Variable Types are missing that need to be filled.
+
+			result.changes = tracking.collectChanges(variableToBeEdited, variablePath);
 		}
 		else
 			std::cout << "Error in Variable search. Variable not found." << std::endl;
+		return result;
+	}
+
+	std::vector<ModelElementInfo> DigitalTwinModel::getModelTree()
+	{
+		std::vector<ModelElementInfo> tree;
+		const auto& entries = stateTracking().entries();
+		tree.reserve(entries.size());
+		for (const auto& entry : entries)
+			tree.push_back(entry.info);
+		return tree;
+	}
+
+	std::vector<VariableState> DigitalTwinModel::snapshotState()
+	{
+		return stateTracking().snapshot();
+	}
+
+	size_t DigitalTwinModel::restoreState(const std::vector<VariableState>& state)
+	{
+		return stateTracking().restore(state);
+	}
+
+	boost::uuids::uuid DigitalTwinModel::commitId() const
+	{
+		if (!DigitalTwin->referencedCommit())
+			throw std::runtime_error("The digital twin references no commit.");
+		return DigitalTwin->referencedCommit()->getId();
+	}
+
+	boost::uuids::uuid DigitalTwinModel::projectId() const
+	{
+		if (!DigitalTwin->owningProject())
+			throw std::runtime_error("The digital twin references no project.");
+		return DigitalTwin->owningProject()->getId();
 	}
 
 	std::string DigitalTwinModel::digitalTwinName() {

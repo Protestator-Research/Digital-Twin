@@ -8,7 +8,7 @@
 
 namespace DigitalTwin::Model
 {
-    class RealVariable : public IVariable
+    class CPPDIGITALTWINLIB_EXPORT RealVariable : public IVariable
     {
     public:
         RealVariable() = delete;
@@ -20,6 +20,10 @@ namespace DigitalTwin::Model
 
         IVariable* copy() override;
         std::string getType() override;
+
+        ValueType getValueType() const override;
+        VariableValue getStateValue() const override;
+        bool setStateValue(const VariableValue& value) override;
 
         double getValue() const;
         void setValue(const double& value);

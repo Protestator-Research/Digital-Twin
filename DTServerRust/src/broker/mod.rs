@@ -125,6 +125,12 @@ impl Broker {
         self.local_addr.port()
     }
 
+    /// The login throttle of this broker. Other front ends (the REST API) share it, so that a user name blocked
+    /// over one protocol is blocked over the other and the failure budget is not doubled.
+    pub fn throttle(&self) -> Arc<crate::auth::LoginThrottle> {
+        Arc::clone(&self.core.throttle)
+    }
+
     pub fn hub(&self) -> Hub {
         self.hub.clone()
     }

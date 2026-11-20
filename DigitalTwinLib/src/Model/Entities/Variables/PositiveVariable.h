@@ -8,7 +8,7 @@
 
 namespace DigitalTwin::Model
 {
-    class PositiveVariable : public IVariable
+    class CPPDIGITALTWINLIB_EXPORT PositiveVariable : public IVariable
     {
     public:
         PositiveVariable() = delete;
@@ -23,6 +23,10 @@ namespace DigitalTwin::Model
         void setValue(const unsigned int& value);
     	
     	std::string getType() override;
+
+        ValueType getValueType() const override;
+        VariableValue getStateValue() const override;
+        bool setStateValue(const VariableValue& value) override;
 
 protected:
         void updateLinkedVariables() override;

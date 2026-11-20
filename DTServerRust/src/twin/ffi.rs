@@ -3,9 +3,11 @@
 //! The facade catches every C++ exception and returns an error code and message. All calls block; the twin
 //! logic calls them from `spawn_blocking`.
 
+use std::time::Duration;
+
 use uuid::Uuid;
 
-use super::backend::{BackendError, TwinBackend, TwinElement, TwinInfo};
+use super::backend::{BackendError, StoreSettings, StoreStats, TwinBackend, TwinElement, TwinInfo};
 
 #[cxx::bridge(namespace = "dtrs")]
 mod bridge {
@@ -28,6 +30,27 @@ mod bridge {
         initial_json: String,
     }
 
+    /// Settings of the history store, see `run.history.*`. `database_url` may contain a password.
+    struct StoreConfig {
+        database_url: String,
+        retention_days: u32,
+        checkpoint_interval_s: u32,
+        queue_capacity: u32,
+        batch_size: u32,
+        flush_interval_ms: u32,
+    }
+
+    /// Counters of the history store; `enabled` is false and everything else zero if it is not configured.
+    struct StoreStats {
+        enabled: bool,
+        connected: bool,
+        pending: u64,
+        written: u64,
+        dropped: u64,
+        retries: u64,
+        checkpoints: u64,
+    }
+
     unsafe extern "C++" {
         include!("dt_facade.h");
 
@@ -38,7 +61,18 @@ mod bridge {
         fn facade_register_function(twin_id: &str, request_json: &str) -> CallResult;
         fn facade_release_twin(twin_id: &str) -> CallResult;
 
-        fn facade_update_variable(twin_id: &str, path: &str, payload_json: &str) -> CallResult;
+        /// `received_at_ms`: Unix time in milliseconds (UTC) at which the broker accepted the message.
+        fn facade_update_variable(
+            twin_id: &str,
+            path: &str,
+            payload_json: &str,
+            received_at_ms: i64,
+        ) -> CallResult;
+
+        /// Creates the history store once; a second call is an error.
+        fn facade_store_configure(config: &StoreConfig) -> CallResult;
+        fn facade_store_stats() -> StoreStats;
+        fn facade_store_shutdown(timeout_ms: u32) -> CallResult;
     }
 }
 
@@ -126,8 +160,45 @@ impl TwinBackend for FfiBackend {
         twin_id: Uuid,
         path: &str,
         payload_json: &str,
+        received_at_ms: i64,
     ) -> Result<(), BackendError> {
-        let r = bridge::facade_update_variable(&twin_id.to_string(), path, payload_json);
+        let r = bridge::facade_update_variable(
+            &twin_id.to_string(),
+            path,
+            payload_json,
+            received_at_ms,
+        );
+        check(r.code, r.message)
+    }
+
+    fn configure_store(&self, settings: &StoreSettings) -> Result<(), BackendError> {
+        let r = bridge::facade_store_configure(&bridge::StoreConfig {
+            database_url: settings.database_url.clone(),
+            retention_days: settings.retention_days,
+            checkpoint_interval_s: settings.checkpoint_interval_s,
+            queue_capacity: settings.queue_capacity,
+            batch_size: settings.batch_size,
+            flush_interval_ms: settings.flush_interval_ms,
+        });
+        check(r.code, r.message)
+    }
+
+    fn store_stats(&self) -> StoreStats {
+        let s = bridge::facade_store_stats();
+        StoreStats {
+            enabled: s.enabled,
+            connected: s.connected,
+            pending: s.pending,
+            written: s.written,
+            dropped: s.dropped,
+            retries: s.retries,
+            checkpoints: s.checkpoints,
+        }
+    }
+
+    fn shutdown_store(&self, timeout: Duration) -> Result<(), BackendError> {
+        let timeout_ms = u32::try_from(timeout.as_millis()).unwrap_or(u32::MAX);
+        let r = bridge::facade_store_shutdown(timeout_ms);
         check(r.code, r.message)
     }
 }
