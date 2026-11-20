@@ -143,7 +143,12 @@ impl TwinBackend for FakeBackend {
         Ok(())
     }
 
-    fn update_variable(&self, twin_id: Uuid, path: &str, payload_json: &str) -> Result<(), BackendError> {
+    fn update_variable(
+        &self,
+        twin_id: Uuid,
+        path: &str,
+        payload_json: &str,
+    ) -> Result<(), BackendError> {
         todo!()
     }
 }

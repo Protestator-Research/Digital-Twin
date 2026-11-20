@@ -29,7 +29,6 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("boost/[>=1.86.0 <2]")
         self.requires("libcurl/[>=8.4.0 <9]")
         self.requires("nlohmann_json/[>=3.11.3 <4]")
-        self.requires("async-mqtt/10.2.8")
         self.requires("paho-mqtt-cpp/1.6.0")
         self.requires("date/3.0.5")
         if self.options.with_client:
@@ -52,7 +51,6 @@ class CppDigitalTwinRecipe(ConanFile):
             #self.options.rm_safe("fPIC")
             self.options["boost/*"].shared = True
             self.options["gtest/*"].shared = True
-            self.options["redboltz-mqtt_cpp/*"].shared = True
             self.options["libcurl/*"].shared = True
             self.options["nlohmann_json/*"].shared = True
             self.options["date/*"].shared = True
@@ -64,7 +62,6 @@ class CppDigitalTwinRecipe(ConanFile):
         else:
             self.options["boost/*"].shared = False
             self.options["gtest/*"].shared = False
-            self.options["redboltz-mqtt_cpp/*"].shared = True
             self.options["libcurl/*"].shared = False
             self.options["nlohmann_json/*"].shared = False
             self.options["date/*"].shared = False

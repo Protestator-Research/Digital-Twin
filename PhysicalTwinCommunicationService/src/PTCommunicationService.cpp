@@ -15,9 +15,11 @@
 
 namespace DigitalTwin::Communication {
 
-    CommunicationService::CommunicationService(std::string mqttPort) {
+    CommunicationService::CommunicationService(std::string mqttPort, MqttProtocolVersion version,
+                                               std::string username, std::string password) {
         MqttPort=std::stoi(mqttPort);
-        ClientService = new MqttClientService("localhost",std::to_string(MqttPort),"");
+        ClientService = new MqttClientService("localhost",std::to_string(MqttPort),"", version,
+                                              std::move(username), std::move(password));
     }
 
     void CommunicationService::startThreads() {

@@ -21,6 +21,8 @@ pub enum AddResult {
 pub struct SubscriptionStore {
     by_filter: HashMap<String, Vec<SessionId>>,
     by_session: HashMap<SessionId, HashSet<String>>,
+    /// Subscriptions (session, filter) made with the MQTT 5 No Local option.
+    no_local: HashSet<(SessionId, String)>,
 }
 
 impl SubscriptionStore {
@@ -30,11 +32,24 @@ impl SubscriptionStore {
 
     /// Adds or updates a subscription. Updating an existing filter never counts against the quota.
     pub fn add(&mut self, session: SessionId, filter: &str, max_subscriptions: usize) -> AddResult {
+        self.add_with_options(session, filter, max_subscriptions, false)
+    }
+
+    /// Like [`SubscriptionStore::add`] with the MQTT 5 No Local option: with `no_local` the session does not
+    /// get the messages it published itself through this subscription. An update replaces the option.
+    pub fn add_with_options(
+        &mut self,
+        session: SessionId,
+        filter: &str,
+        max_subscriptions: usize,
+        no_local: bool,
+    ) -> AddResult {
         if self
             .by_filter
             .get(filter)
             .is_some_and(|sessions| sessions.contains(&session))
         {
+            self.set_no_local(session, filter, no_local);
             return AddResult::Updated;
         }
         let owned = self.by_session.entry(session).or_default();
@@ -49,7 +64,16 @@ impl SubscriptionStore {
             .entry(filter.to_owned())
             .or_default()
             .push(session);
+        self.set_no_local(session, filter, no_local);
         AddResult::Added
+    }
+
+    fn set_no_local(&mut self, session: SessionId, filter: &str, no_local: bool) {
+        if no_local {
+            self.no_local.insert((session, filter.to_owned()));
+        } else if !self.no_local.is_empty() {
+            self.no_local.remove(&(session, filter.to_owned()));
+        }
     }
 
     /// Removes one subscription. Returns true if the session had it.
@@ -62,6 +86,9 @@ impl SubscriptionStore {
             if sessions.is_empty() {
                 self.by_filter.remove(filter);
             }
+        }
+        if !self.no_local.is_empty() {
+            self.no_local.remove(&(session, filter.to_owned()));
         }
         if let Some(owned) = self.by_session.get_mut(&session) {
             owned.remove(filter);
@@ -78,6 +105,9 @@ impl SubscriptionStore {
             return;
         };
         for filter in filters {
+            if !self.no_local.is_empty() {
+                self.no_local.remove(&(session, filter.clone()));
+            }
             if let Some(sessions) = self.by_filter.get_mut(&filter) {
                 sessions.retain(|s| *s != session);
                 if sessions.is_empty() {
@@ -103,8 +133,15 @@ impl SubscriptionStore {
     }
 
     /// Sessions that receive a message on `topic`, each session once, even if several of its filters match.
-    /// The publisher is not excluded (MQTT 3.1.1 has no no-local option).
+    /// The publisher is not excluded.
     pub fn matching(&self, topic: &str) -> Vec<SessionId> {
+        self.matching_from(topic, None)
+    }
+
+    /// Like [`SubscriptionStore::matching`] for a message published by session `publisher`: a subscription
+    /// with the No Local option does not count for the publisher, so the publisher only receives the message
+    /// if one of its other matching subscriptions allows it.
+    pub fn matching_from(&self, topic: &str, publisher: Option<SessionId>) -> Vec<SessionId> {
         let mut seen = HashSet::new();
         let mut out = Vec::new();
         for (filter, sessions) in &self.by_filter {
@@ -112,6 +149,10 @@ impl SubscriptionStore {
                 continue;
             }
             for &session in sessions {
+                if publisher == Some(session) && self.no_local.contains(&(session, filter.clone()))
+                {
+                    continue;
+                }
                 if seen.insert(session) {
                     out.push(session);
                 }
@@ -180,5 +221,41 @@ mod tests {
         s.add(1, "#", 10);
         s.add(2, "a/#", 10);
         assert_eq!(sorted(s.matching("a/b")), vec![1, 2]);
+    }
+
+    #[test]
+    fn no_local_excludes_only_the_publisher() {
+        let mut s = SubscriptionStore::new();
+        s.add_with_options(1, "a/#", 10, true);
+        s.add(2, "a/#", 10);
+        assert_eq!(sorted(s.matching_from("a/b", Some(1))), vec![2]);
+        assert_eq!(sorted(s.matching_from("a/b", Some(2))), vec![1, 2]);
+        assert_eq!(sorted(s.matching_from("a/b", None)), vec![1, 2]);
+        assert_eq!(sorted(s.matching("a/b")), vec![1, 2]);
+    }
+
+    #[test]
+    fn no_local_needs_every_matching_subscription_to_have_it() {
+        let mut s = SubscriptionStore::new();
+        s.add_with_options(1, "a/#", 10, true);
+        s.add(1, "a/b", 10);
+        // the second subscription has no no-local: the publisher still gets the message once
+        assert_eq!(s.matching_from("a/b", Some(1)), vec![1]);
+        assert!(s.matching_from("a/c", Some(1)).is_empty());
+    }
+
+    #[test]
+    fn no_local_is_replaced_by_an_update_and_cleaned_up() {
+        let mut s = SubscriptionStore::new();
+        s.add_with_options(1, "a", 10, true);
+        assert_eq!(s.add_with_options(1, "a", 10, false), AddResult::Updated);
+        assert_eq!(s.matching_from("a", Some(1)), vec![1]);
+        s.add_with_options(1, "a", 10, true);
+        assert!(s.matching_from("a", Some(1)).is_empty());
+        s.remove(1, "a");
+        assert!(s.no_local.is_empty());
+        s.add_with_options(1, "b", 10, true);
+        s.remove_all(1);
+        assert!(s.no_local.is_empty() && s.is_empty());
     }
 }

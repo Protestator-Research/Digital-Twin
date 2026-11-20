@@ -37,8 +37,10 @@ add_library(PhysicalTwinCommunication
         src/MQTT/entities/JsonEntities.cpp
         src/MQTT/entities/FunctionRegistrationRequest.hpp)
 
+# Paho is PUBLIC: MqttClientService.h exposes mqtt::async_client.
 target_link_libraries(PhysicalTwinCommunication
-        mqtt_cpp::mqtt_cpp
+        PUBLIC
+        paho-mqtt-cpp::paho-mqtt-cpp
         nlohmann_json::nlohmann_json
         Threads::Threads
         boost::boost
@@ -63,7 +65,7 @@ endforeach()
 if(MSVC)
     target_compile_options(PhysicalTwinCommunication PRIVATE /W4 /WX- /bigobj)
 elseif (UNIX AND NOT APPLE)
-    target_compile_options(PhysicalTwinCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror -fcoroutines)
+    target_compile_options(PhysicalTwinCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror)
 else ()
     target_compile_options(PhysicalTwinCommunication PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()

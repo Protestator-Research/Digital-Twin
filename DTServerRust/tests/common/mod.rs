@@ -1,10 +1,10 @@
 //! Helpers for the integration tests: a hand written raw MQTT client (independent of the broker's own
-//! codec) and a thin wrapper around the rumqttc (MQTT 3.1.1) client.
+//! codec) and thin wrappers around the rumqttc clients (MQTT 3.1.1 and MQTT 5).
 #![allow(dead_code)]
 
 use std::time::Duration;
 
-use dt_server::broker::{Broker, BrokerLimits};
+use dt_server::broker::{Broker, BrokerLimits, ProtocolMode};
 use rumqttc::{AsyncClient, Event, MqttOptions, Packet};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -15,6 +15,13 @@ pub const WAIT: Duration = Duration::from_secs(5);
 
 pub async fn start(limits: BrokerLimits) -> Broker {
     Broker::start(0, limits)
+        .await
+        .expect("broker starts on an ephemeral port")
+}
+
+/// Like [`start`] with an explicit protocol mode.
+pub async fn start_mode(limits: BrokerLimits, mode: ProtocolMode) -> Broker {
+    Broker::start_with_protocol(0, limits, mode)
         .await
         .expect("broker starts on an ephemeral port")
 }
@@ -114,6 +121,53 @@ pub fn pingreq() -> Vec<u8> {
     vec![0xC0, 0]
 }
 
+// --- MQTT 5 packets (property blocks are empty unless given) ---
+
+/// MQTT 5 CONNECT with clean start and keep alive 30.
+pub fn connect5(client_id: &str) -> Vec<u8> {
+    connect5_raw(0b10, 30, &[], client_id)
+}
+
+/// MQTT 5 CONNECT with arbitrary flags, CONNECT property bytes (without their length) and keep alive.
+pub fn connect5_raw(flags: u8, keep_alive: u16, props: &[u8], client_id: &str) -> Vec<u8> {
+    let mut body = string("MQTT");
+    body.extend([5, flags]);
+    body.extend(keep_alive.to_be_bytes());
+    body.extend(varint(props.len()));
+    body.extend_from_slice(props);
+    body.extend(string(client_id));
+    packet(0x10, &body)
+}
+
+/// MQTT 5 SUBSCRIBE; each filter comes with its subscription options byte.
+pub fn subscribe5(packet_id: u16, filters: &[(&str, u8)]) -> Vec<u8> {
+    let mut body = packet_id.to_be_bytes().to_vec();
+    body.push(0);
+    for (filter, options) in filters {
+        body.extend(string(filter));
+        body.push(*options);
+    }
+    packet(0x82, &body)
+}
+
+pub fn unsubscribe5(packet_id: u16, filters: &[&str]) -> Vec<u8> {
+    let mut body = packet_id.to_be_bytes().to_vec();
+    body.push(0);
+    for filter in filters {
+        body.extend(string(filter));
+    }
+    packet(0xA2, &body)
+}
+
+/// MQTT 5 PUBLISH (QoS 0) with the given property bytes (without their length).
+pub fn publish5(topic: &str, props: &[u8], payload: &[u8]) -> Vec<u8> {
+    let mut body = string(topic);
+    body.extend(varint(props.len()));
+    body.extend_from_slice(props);
+    body.extend_from_slice(payload);
+    packet(0x30, &body)
+}
+
 // ---------------------------------------------------------------------------------------------
 // Raw connection
 // ---------------------------------------------------------------------------------------------
@@ -143,6 +197,20 @@ impl Raw {
     pub async fn connected_keep_alive(addr: &str, client_id: &str, keep_alive: u16) -> Raw {
         let (raw, _) = Raw::connected_with(addr, &connect_keep_alive(client_id, keep_alive)).await;
         raw
+    }
+
+    /// Opens a connection and completes an MQTT 5 CONNECT / CONNACK handshake. Returns the body of the CONNACK.
+    pub async fn connected5(addr: &str, client_id: &str) -> (Raw, Vec<u8>) {
+        let mut raw = Raw::open(addr).await;
+        raw.send(&connect5(client_id)).await;
+        let (first, body) = raw.read_packet().await.expect("CONNACK");
+        assert_eq!(first, 0x20, "expected CONNACK");
+        assert_eq!(
+            &body[..2],
+            &[0x00, 0x00],
+            "CONNACK: session present 0, accepted"
+        );
+        (raw, body)
     }
 
     /// Sends `connect` and returns the connection with the body of the CONNACK.
@@ -214,6 +282,26 @@ impl Raw {
         assert_eq!(first, 0x90);
         assert_eq!(u16::from_be_bytes([body[0], body[1]]), packet_id);
         body[2..].to_vec()
+    }
+
+    /// MQTT 5 subscribe with the given options bytes; waits for the SUBACK and returns its reason codes.
+    pub async fn subscribe5(&mut self, packet_id: u16, filters: &[(&str, u8)]) -> Vec<u8> {
+        self.send(&subscribe5(packet_id, filters)).await;
+        let (first, body) = self.read_packet().await.expect("SUBACK");
+        assert_eq!(first, 0x90);
+        assert_eq!(u16::from_be_bytes([body[0], body[1]]), packet_id);
+        assert_eq!(body[2], 0, "SUBACK properties length");
+        body[3..].to_vec()
+    }
+
+    /// Reads an MQTT 5 PUBLISH (empty properties expected) and returns topic and payload.
+    pub async fn read_publish5(&mut self) -> (String, Vec<u8>) {
+        let (first, body) = self.read_packet().await.expect("PUBLISH");
+        assert_eq!(first & 0xF0, 0x30, "expected PUBLISH, got {first:#x}");
+        let tlen = usize::from(u16::from_be_bytes([body[0], body[1]]));
+        let topic = String::from_utf8(body[2..2 + tlen].to_vec()).unwrap();
+        assert_eq!(body[2 + tlen], 0, "the broker sends no PUBLISH properties");
+        (topic, body[3 + tlen..].to_vec())
     }
 
     /// Reads a PUBLISH and returns topic and payload.
@@ -313,6 +401,103 @@ impl Client {
                 Err(_) => return true,
                 Ok(None) => return true,
                 Ok(Some(Event::Incoming(Packet::Publish(_)))) => return false,
+                Ok(Some(_)) => {}
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// rumqttc, MQTT 5
+// ---------------------------------------------------------------------------------------------
+
+pub struct ClientV5 {
+    pub client: rumqttc::v5::AsyncClient,
+    pub events: mpsc::UnboundedReceiver<rumqttc::v5::Event>,
+    pub connack: rumqttc::v5::mqttbytes::v5::ConnAck,
+}
+
+impl ClientV5 {
+    pub async fn connect(port: u16, id: &str) -> ClientV5 {
+        use rumqttc::v5::{AsyncClient, Event, Incoming, MqttOptions};
+        let mut options = MqttOptions::new(id, "127.0.0.1", port);
+        options.set_keep_alive(Duration::from_secs(30));
+        let (client, mut eventloop) = AsyncClient::new(options, 16);
+        let (tx, mut events) = mpsc::unbounded_channel();
+        tokio::spawn(async move {
+            while let Ok(event) = eventloop.poll().await {
+                if tx.send(event).is_err() {
+                    break;
+                }
+            }
+        });
+        let connack = loop {
+            match timeout(WAIT, events.recv())
+                .await
+                .expect("CONNACK in time")
+                .expect("event loop running")
+            {
+                Event::Incoming(Incoming::ConnAck(ack)) => break ack,
+                _ => continue,
+            }
+        };
+        ClientV5 {
+            client,
+            events,
+            connack,
+        }
+    }
+
+    /// Waits for the next incoming packet that matches `pick`.
+    pub async fn wait_for<T>(
+        &mut self,
+        mut pick: impl FnMut(&rumqttc::v5::Incoming) -> Option<T>,
+    ) -> T {
+        loop {
+            match timeout(WAIT, self.events.recv())
+                .await
+                .expect("event in time")
+                .expect("event loop running")
+            {
+                rumqttc::v5::Event::Incoming(p) => {
+                    if let Some(v) = pick(&p) {
+                        return v;
+                    }
+                }
+                rumqttc::v5::Event::Outgoing(_) => {}
+            }
+        }
+    }
+
+    pub async fn wait_suback(&mut self) -> Vec<rumqttc::v5::mqttbytes::v5::SubscribeReasonCode> {
+        self.wait_for(|p| match p {
+            rumqttc::v5::Incoming::SubAck(s) => Some(s.return_codes.clone()),
+            _ => None,
+        })
+        .await
+    }
+
+    pub async fn next_publish(&mut self) -> (String, Vec<u8>) {
+        self.wait_for(|p| match p {
+            rumqttc::v5::Incoming::Publish(p) => Some((
+                String::from_utf8(p.topic.to_vec()).unwrap(),
+                p.payload.to_vec(),
+            )),
+            _ => None,
+        })
+        .await
+    }
+
+    /// True if no PUBLISH arrives within `limit`.
+    pub async fn no_publish_within(&mut self, limit: Duration) -> bool {
+        let deadline = tokio::time::Instant::now() + limit;
+        loop {
+            match tokio::time::timeout_at(deadline, self.events.recv()).await {
+                Err(_) => return true,
+                Ok(None) => return true,
+                Ok(Some(rumqttc::v5::Event::Incoming(rumqttc::v5::Incoming::Publish(_)))) => {
+                    return false
+                }
                 Ok(Some(_)) => {}
             }
         }

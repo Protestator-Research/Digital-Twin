@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use dt_server::broker::Broker;
+use dt_server::auth::{redact_url, AuthMode, Authenticator, SysmlAuthOptions, SysmlAuthenticator};
+use dt_server::broker::{Broker, BrokerOptions};
 use dt_server::config::Config;
 use dt_server::history::HistoryService;
 use dt_server::twin::{TwinBackend, TwinObserver, TwinOptions, TwinService};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 fn main() -> std::process::ExitCode {
     tracing_subscriber::fmt()
@@ -56,7 +57,50 @@ async fn run() -> std::process::ExitCode {
     // Debug output of the configuration redacts passwords.
     info!(?config, "configuration loaded");
 
-    let broker = match Broker::start(config.mqtt.port, config.mqtt.limits.clone()).await {
+    let authenticator: Option<Arc<dyn Authenticator>> = match config.mqtt.authentication {
+        AuthMode::None => {
+            warn!("MQTT authentication is disabled (run.mqtt.authentication = \"none\"): every client is accepted");
+            None
+        }
+        AuthMode::Sysml => {
+            if config.sysml.url.trim().is_empty() {
+                error!("MQTT authentication needs the SysML backend: sysml.url is empty (or set run.mqtt.authentication to \"none\")");
+                return std::process::ExitCode::FAILURE;
+            }
+            let options = SysmlAuthOptions {
+                cache_ttl: Duration::from_secs(config.mqtt.auth_cache_s),
+                max_concurrent: config.mqtt.auth_max_concurrent,
+                ..SysmlAuthOptions::default()
+            };
+            match SysmlAuthenticator::new(&config.sysml.url, config.sysml.port, options) {
+                Ok(auth) => {
+                    if config.sysml.url.contains("://") && !matches!(config.sysml.port, 80 | 443) {
+                        warn!(
+                            port = config.sysml.port,
+                            "sysml.url contains a scheme, so sysml.port is ignored for the login URL"
+                        );
+                    }
+                    info!(login_url = %redact_url(auth.url()), "MQTT clients are authenticated against the SysML backend");
+                    Some(Arc::new(auth))
+                }
+                Err(e) => {
+                    error!("cannot set up the MQTT authentication: {e}");
+                    return std::process::ExitCode::FAILURE;
+                }
+            }
+        }
+    };
+    let broker = match Broker::start_with(
+        config.mqtt.port,
+        config.mqtt.limits.clone(),
+        BrokerOptions {
+            protocol: config.mqtt.protocol,
+            authenticator,
+            throttle: config.mqtt.auth_throttle.clone(),
+        },
+    )
+    .await
+    {
         Ok(broker) => broker,
         Err(e) => {
             error!("cannot start MQTT broker on port {}: {e}", config.mqtt.port);

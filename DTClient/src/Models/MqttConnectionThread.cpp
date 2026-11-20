@@ -3,85 +3,62 @@
 //
 
 #include "MqttConnectionThread.h"
-#include <chrono>
 #include <Services/MqttClientService.h>
 #include <QDebug>
+#include <QMetaObject>
 
 namespace DigitalTwin::Client {
 
-    MQTTConnectionThread::MQTTConnectionThread(std::string url, std::string port, [[maybe_unused]] std::string username, [[maybe_unused]] std::string password) :
-    Client(mqtt::async_client(url + ":" + port, "digital-twin-client"))
+    MQTTConnectionThread::MQTTConnectionThread(std::string url, std::string port, DigitalTwin::Communication::MqttProtocolVersion version,
+                                               std::string username, std::string password) :
+        Service(std::make_unique<DigitalTwin::Communication::MqttClientService>(std::move(url), std::move(port), "digital-twin-client", version,
+                                                                                std::move(username), std::move(password)))
     {
-
-
-        Client.set_connected_handler([this](const std::string&) {
-            connected();
-        });
-
-        IoC = new boost::asio::io_context();
-
         connect(this, SIGNAL(connected()), this, SLOT(onConnect()));
-
+        // Called on a thread of the Paho library; the signal is delivered in the thread of this object.
+        // The raw pointer, not Service: while Service is reset in the destructor the unique_ptr is already null,
+        // but the handler may still run until the service has finished its callbacks.
+        DigitalTwin::Communication::MqttClientService* service = Service.get();
+        Service->setErrorHandler([this, service](const std::string& message) {
+            qWarning() << QString::fromStdString(message);
+            if (service->isAuthenticationFailed())
+                QMetaObject::invokeMethod(this, [this]() { emit loginRefused(); }, Qt::QueuedConnection);
+        });
+        Service->setConnectedHandler([this]() {
+            QMetaObject::invokeMethod(this, [this]() { emit connected(); }, Qt::QueuedConnection);
+        });
     }
 
+    MQTTConnectionThread::~MQTTConnectionThread() {
+        // Waits for the Paho callbacks, which use this object, before it is destroyed.
+        Service.reset();
+    }
 
     void MQTTConnectionThread::start() {
-        if (Connected)
-            return;
-
-        auto connOpts = mqtt::connect_options_builder::v3()
-            .keep_alive_interval(std::chrono::seconds(30))
-            .clean_session(false)
-            .automatic_reconnect()
-            .finalize();
-
-        mqttClientThread = std::thread([this, connOpts]()
-        {
-        	Client.start_consuming();
-            std::cout << "Connecting to the MQTT server..." << std::endl;
-            auto tok = Client.connect(connOpts);
-            auto rsp = tok->get_connect_response();
-
-            if (!rsp.is_session_present()) {
-                std::cout << "  No session present on server. Subscribing..." << std::endl;
-                //Client.subscribe(TOPIC, QOS)->wait();
-            }
-            std::cout << "OK" << std::endl;
-
-        });
-        
-
-        //mqttClientThread = std::thread([this]() {
-            //ClientService->start();
-        //});
-
-    	//ClientService->connectToHost();
+        Service->start();
     }
 
-    void MQTTConnectionThread::addObserverForTopic(const std::string &,
-                                                   std::function<void(std::string)> ) {
-        //ClientService->subscribe(topic,[callbackFunction](const std::string&, const std::string& payload)->void {callbackFunction(payload);});
+    bool MQTTConnectionThread::isLoginRefused() const {
+        return Service->isAuthenticationFailed();
+    }
+
+    void MQTTConnectionThread::addObserverForTopic(const std::string& topic,
+                                                   std::function<void(std::string)> callbackFunction) {
+        subscribe(topic, [callbackFunction](const std::string&, const std::string& payload) -> void {
+            callbackFunction(payload);
+        });
     }
 
     void MQTTConnectionThread::publish(std::string topic, std::string value) {
-        std::cout << "Sending message..." << std::endl;
-        std::cout << topic << std::endl << value;
-        mqtt::message_ptr pubmsg = mqtt::make_message(topic, value);
-        pubmsg->set_qos(QUALITY_OF_SERVICE);
-        const auto resultPublish = Client.publish(pubmsg, nullptr, SendingListener);
-        std::cout << "  ...OK" << std::endl;
+        Service->publish(std::move(topic), std::move(value));
+    }
+
+    void MQTTConnectionThread::subscribe(std::string topic, std::function<void(std::string topic, std::string payload)> callback) {
+        Service->subscribe(std::move(topic), std::move(callback));
     }
 
     void MQTTConnectionThread::onConnect() {
         qDebug()<<"MQTTConnectionThread::onConnect()";
         Connected = true;
-    }
-
-    void MQTTConnectionThread::onDisconnect() {
-        qDebug()<<"MQTTConnectionThread::onDisconnect()";
-    }
-
-    void MQTTConnectionThread::onErrorChanged() {
-        qDebug()<<"MQTTConnectionThread::onErrorChanged()";
     }
 }

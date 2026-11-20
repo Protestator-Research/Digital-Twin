@@ -5,63 +5,58 @@
 #ifndef DIGITALTWIN_MQTTCONNECTIONTHREAD_H
 #define DIGITALTWIN_MQTTCONNECTIONTHREAD_H
 
-#include <string>
 #include <functional>
-#include <mqtt/iaction_listener.h>
-//#include <QMqttClient>
-#include <QThread>
-#include <QDebug>
+#include <memory>
+#include <string>
 #include <QObject>
-#include <boost/asio/io_context.hpp>
-#include <mqtt/async_client.h>
 #include <Services/IMqttClientService.h>
 
-namespace PHYSICAL_TWIN_COMMUNICATION {
+namespace DigitalTwin::Communication {
 	class MqttClientService;
 }
 
 namespace DigitalTwin::Client {
-	class MQTTActionListener : public mqtt::iaction_listener {
-	public:
-		// Geerbt über iaction_listener
-		void on_failure([[maybe_unused]] const mqtt::token& asyncActionToken) override {
-			qDebug() << "Message not successfully delivered";
-		}
-
-		void on_success([[maybe_unused]] const mqtt::token& asyncActionToken) override {
-			qDebug() << "Message successully delivered";
-		}
-	};
-
+	/**
+	 * Qt wrapper around the MqttClientService (Paho). The connection runs on the threads of the Paho library; this
+	 * class only turns the "connected" event into a Qt signal of the thread this object lives in.
+	 */
 	class MQTTConnectionThread : public QObject, public DigitalTwin::Communication::IMqttClientService {
 		Q_OBJECT
 	public:
 		MQTTConnectionThread() = delete;
-		MQTTConnectionThread(std::string url, std::string port, std::string username = "", std::string password = "");
-		virtual ~MQTTConnectionThread() = default;
+		MQTTConnectionThread(std::string url, std::string port,
+		                     DigitalTwin::Communication::MqttProtocolVersion version = DigitalTwin::Communication::MqttProtocolVersion::V3_1_1,
+		                     std::string username = "", std::string password = "");
+		~MQTTConnectionThread() override;
 
+		/**
+		 * Connects asynchronously, returns immediately.
+		 */
 		void start();
+
+		/**
+		 * True if the DT server refused the login (wrong SysML user name or password). The client does not try
+		 * again then.
+		 */
+		bool isLoginRefused() const;
 
 		void addObserverForTopic(const std::string& topic, std::function<void(std::string)> callbackFunction);
 		void publish(std::string topic, std::string value) override;
-		
-		signals:
-			void connected();
-			void messageReceived(const std::string& topic, const std::string& message);
+		void subscribe(std::string topic, std::function<void(std::string topic, std::string payload)> callback) override;
+
+	signals:
+		void connected();
+		/**
+		 * The DT server refused the user name or password of the connection.
+		 */
+		void loginRefused();
 
 	private slots:
 		void onConnect();
-		void onDisconnect();
-		void onErrorChanged();
 
 	private:
-		const std::chrono::seconds TIMEOUT = std::chrono::seconds(10);
-		const int QUALITY_OF_SERVICE = 0;
-		MQTTActionListener SendingListener;
 		bool Connected = false;
-		boost::asio::io_context* IoC;
-		std::thread mqttClientThread;
-		mqtt::async_client Client;
+		std::unique_ptr<DigitalTwin::Communication::MqttClientService> Service;
 	};
 }
 

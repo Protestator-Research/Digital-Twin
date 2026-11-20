@@ -338,10 +338,19 @@ async fn first_packet_not_connect_closes_the_connection() {
 
 #[tokio::test]
 async fn mqtt_5_and_3_1_clients_are_refused() {
+    // the default mode is MQTT 3.1.1 only; the MQTT 5 modes are covered in mqtt5_integration.rs
     let broker = start(BrokerLimits::default()).await;
-    // MQTT 5: protocol level 5 and a properties length byte: CONNACK 0x01, then closed
+    // MQTT 5: protocol level 5 and a properties length byte: CONNACK in the MQTT 5 format with reason code
+    // 0x84 (unsupported protocol version) and an empty property block, then closed
     let mut raw = Raw::open(&addr(&broker)).await;
     raw.send(&[0x10, 13, 0, 4, b'M', b'Q', b'T', b'T', 5, 2, 0, 10, 0, 0, 0])
+        .await;
+    let (first, body) = raw.read_packet().await.expect("CONNACK");
+    assert_eq!((first, &body[..]), (0x20, &[0, 0x84, 0][..]));
+    assert!(raw.read_until_closed().await.is_none());
+    // level 6 (unknown): CONNACK 0x01 in the 3.1.1 format, the version of the client is not known
+    let mut raw = Raw::open(&addr(&broker)).await;
+    raw.send(&[0x10, 12, 0, 4, b'M', b'Q', b'T', b'T', 6, 2, 0, 10, 0, 0])
         .await;
     let (first, body) = raw.read_packet().await.expect("CONNACK");
     assert_eq!((first, &body[..]), (0x20, &[0, 0x01][..]));

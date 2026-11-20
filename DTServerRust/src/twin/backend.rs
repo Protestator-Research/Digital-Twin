@@ -62,7 +62,12 @@ pub trait TwinBackend: Send + Sync + 'static {
     fn release_twin(&self, twin_id: Uuid) -> Result<(), BackendError>;
 
     /// Hands a client update of the value of a variable (`path` relative to the twin name, valid value payload) to the model.
-    fn update_variable(&self, twin_id: Uuid, path: &str, payload_json: &str) -> Result<(), BackendError>;
+    fn update_variable(
+        &self,
+        twin_id: Uuid,
+        path: &str,
+        payload_json: &str,
+    ) -> Result<(), BackendError>;
 }
 
 /// Backend of a binary without the `ffi` feature: every request fails with "twin backend not available".

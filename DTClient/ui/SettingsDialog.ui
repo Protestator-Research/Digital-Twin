@@ -160,6 +160,31 @@
             </item>
            </layout>
           </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_mqttversion">
+            <item>
+             <widget class="QLabel" name="label_mqttversion">
+              <property name="text">
+               <string>MQTT version</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="MqttVersionComboBox">
+              <item>
+               <property name="text">
+                <string>MQTT 3.1.1</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>MQTT 5</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
          </layout>
         </widget>
        </item>

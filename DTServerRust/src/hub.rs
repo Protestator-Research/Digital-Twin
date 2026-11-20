@@ -11,7 +11,7 @@ use bytes::Bytes;
 use thiserror::Error;
 use tokio::sync::mpsc::{self, error::TrySendError};
 
-use crate::broker::codec;
+use crate::broker::codec::{self, ProtocolVersion};
 use crate::broker::core::Core;
 use crate::broker::topic;
 
@@ -171,16 +171,25 @@ impl Hub {
             return Err(HubError::Closed);
         }
         let payload = payload.into();
-        if codec::publish_encoded_len(topic.len(), payload.len())
+        // sized for the largest encoding any allowed client gets (MQTT 5 adds a property length byte)
+        let version = if self.core.protocol.allows(ProtocolVersion::V5) {
+            ProtocolVersion::V5
+        } else {
+            ProtocolVersion::V311
+        };
+        if codec::publish_encoded_len(version, topic.len(), payload.len())
             .is_none_or(|len| len > self.core.limits.max_packet_size as usize)
         {
             return Err(HubError::PayloadTooLarge);
         }
-        self.core.dispatch(Message {
-            origin: Origin::Server,
-            topic: Arc::from(topic),
-            payload,
-        });
+        self.core.dispatch(
+            Message {
+                origin: Origin::Server,
+                topic: Arc::from(topic),
+                payload,
+            },
+            None,
+        );
         Ok(())
     }
 
@@ -196,7 +205,7 @@ mod tests {
     use crate::broker::limits::BrokerLimits;
 
     fn hub() -> Hub {
-        Hub::new(Core::new(BrokerLimits::default()))
+        Hub::new(Core::new(BrokerLimits::default(), Default::default()))
     }
 
     #[test]

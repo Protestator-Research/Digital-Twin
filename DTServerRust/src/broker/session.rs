@@ -1,7 +1,7 @@
 //! One task per client connection plus a writer task. Port of `Session`.
 
 use std::net::SocketAddr;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU8, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -13,19 +13,21 @@ use tokio::sync::{mpsc, watch, Notify};
 use tokio::time::{sleep_until, timeout, Instant};
 use tracing::{debug, info, warn};
 
-use super::codec::{self, connack, suback, DecodeError, Packet};
+use super::codec::{self, connack, disconnect, suback, unsuback, Connect, DecodeError, Packet};
 use super::core::Core;
+use super::protocol::ProtocolVersion;
 use super::subscriptions::{AddResult, SessionId};
 use super::topic;
 use super::tracker::ConnectionPermit;
+use crate::auth::{AuthOutcome, Denied};
 use crate::hub::{Message, Origin};
 
 pub(crate) enum Outgoing {
     Publish(Message),
     /// A control packet (CONNACK, SUBACK, PINGRESP, ...). Counted like publishes in the pending bytes.
     Raw(Bytes),
-    /// Writes the optional final packet (only a CONNACK refusing the connection, MQTT 3.1.1 has no
-    /// server DISCONNECT), then closes the connection.
+    /// Writes the optional final packet (a CONNACK refusing the connection, or the server DISCONNECT of
+    /// an MQTT 5 session), then closes the connection.
     Close(Option<Bytes>),
 }
 
@@ -47,6 +49,8 @@ pub(crate) struct SessionOut {
     max_overflows: usize,
     kick: Notify,
     writer_done: Notify,
+    /// Protocol version of the connection, set when the CONNECT is accepted (0 = not yet).
+    version: AtomicU8,
 }
 
 impl SessionOut {
@@ -63,11 +67,31 @@ impl SessionOut {
             max_overflows,
             kick: Notify::new(),
             writer_done: Notify::new(),
+            version: AtomicU8::new(0),
         });
         (out, rx)
     }
 
-    /// Queues a QoS 0 PUBLISH unless the pending bytes (topic + payload) would exceed the limit.
+    /// Records the version negotiated by CONNECT; the writer encodes PUBLISH accordingly.
+    fn set_version(&self, version: ProtocolVersion) {
+        let v = match version {
+            ProtocolVersion::V311 => 1,
+            ProtocolVersion::V5 => 2,
+        };
+        self.version.store(v, Ordering::Release);
+    }
+
+    /// The negotiated version, `None` until a CONNECT was accepted.
+    fn version(&self) -> Option<ProtocolVersion> {
+        match self.version.load(Ordering::Acquire) {
+            1 => Some(ProtocolVersion::V311),
+            2 => Some(ProtocolVersion::V5),
+            _ => None,
+        }
+    }
+
+    /// Queues a QoS 0 PUBLISH unless the pending bytes (topic + payload) would exceed the limit. The
+    /// version dependent bytes of the encoding (properties) are not counted, in any version.
     /// Never blocks.
     pub(crate) fn offer_publish(&self, message: &Message) -> Offer {
         let size = message_size(message);
@@ -126,7 +150,9 @@ async fn writer_task(
         let result = match msg {
             Outgoing::Publish(message) => {
                 buf.clear();
-                codec::encode_publish(&mut buf, &message.topic, &message.payload);
+                // deliveries only start after a subscription, so the CONNECT has set the version
+                let version = out.version().unwrap_or_default();
+                codec::encode_publish(version, &mut buf, &message.topic, &message.payload);
                 let r = wr.write_all(&buf).await;
                 out.pending
                     .fetch_sub(message_size(&message), Ordering::AcqRel);
@@ -152,11 +178,14 @@ async fn writer_task(
     out.writer_done.notify_one();
 }
 
-/// Why the session ended, with an optional last packet for the client. The connection is always just closed
-/// (MQTT 3.1.1 has no server DISCONNECT); `why` is only for the log.
+/// Why the session ended, with an optional last packet for the client. `why` is for the log.
 struct End {
     why: &'static str,
+    /// Last packet for the client: the CONNACK of a refused CONNECT.
     goodbye: Option<Bytes>,
+    /// MQTT 5 DISCONNECT reason code. Sent as the last packet to MQTT 5 clients that are connected;
+    /// MQTT 3.1.1 has no server DISCONNECT, those connections are just closed.
+    reason: Option<u8>,
     /// Let the writer flush the queued messages before closing. False for slow or broken connections.
     flush: bool,
 }
@@ -166,7 +195,16 @@ impl End {
         Self {
             why,
             goodbye: None,
+            reason: None,
             flush: true,
+        }
+    }
+
+    /// Like [`End::closed`], with the reason code of the DISCONNECT an MQTT 5 client is told.
+    fn closed_with(why: &'static str, reason: u8) -> Self {
+        Self {
+            reason: Some(reason),
+            ..End::closed(why)
         }
     }
 
@@ -174,18 +212,35 @@ impl End {
         Self {
             why,
             goodbye: None,
+            reason: None,
             flush: false,
         }
     }
 
-    /// Refuses the CONNECT with a CONNACK carrying `return_code`, then closes.
-    fn refused(why: &'static str, return_code: u8) -> Self {
+    /// Refuses the CONNECT with the given CONNACK (already in the format of the client's version), then
+    /// closes.
+    fn refused(why: &'static str, connack: Bytes) -> Self {
         Self {
             why,
-            goodbye: Some(codec::encode_connack(return_code)),
+            goodbye: Some(connack),
+            reason: None,
             flush: true,
         }
     }
+}
+
+/// What the session knows about its connection.
+struct State {
+    connected: bool,
+    client_id: String,
+    /// Keep alive of the client from its CONNECT (3.1.2.10): the connection is closed after 1.5 times
+    /// that interval without any packet; `None` (keep alive 0) disables the check.
+    keep_alive: Option<Duration>,
+    /// Version of the CONNECT; 3.1.1 until then, so that nothing is parsed as MQTT 5 before the client
+    /// asked for it.
+    version: ProtocolVersion,
+    /// Address of the peer, for the throttling of logins.
+    peer_ip: std::net::IpAddr,
 }
 
 /// Runs a session until it ends. `_alive` is dropped at the end so the broker can wait for all sessions.
@@ -207,15 +262,27 @@ pub(crate) async fn run_session(
     let writer = tokio::spawn(writer_task(wr, rx, Arc::clone(&out)));
     core.sessions.lock().unwrap().insert(id, Arc::clone(&out));
 
-    let mut client_id = String::new();
-    let end = drive(&mut rd, &core, id, &out, shutdown, &mut client_id).await;
+    let mut state = State {
+        connected: false,
+        client_id: String::new(),
+        keep_alive: None,
+        version: ProtocolVersion::V311,
+        peer_ip: super::tracker::peer_key(peer),
+    };
+    let end = drive(&mut rd, &core, id, &out, shutdown, &mut state).await;
 
     // First stop deliveries, then say goodbye and close.
     core.remove_session(id);
-    info!(session = id, %peer, client_id = %client_id, reason = end.why, "connection closed");
+    info!(session = id, %peer, client_id = %state.client_id, reason = end.why, "connection closed");
     let mut writer = writer;
     if end.flush {
-        out.close(end.goodbye);
+        let goodbye = end.goodbye.or_else(|| {
+            // only a connected MQTT 5 client understands a server DISCONNECT
+            (out.version() == Some(ProtocolVersion::V5))
+                .then(|| end.reason.map(codec::encode_disconnect))
+                .flatten()
+        });
+        out.close(goodbye);
         if timeout(Duration::from_secs(2), &mut writer).await.is_err() {
             debug!(
                 session = id,
@@ -235,64 +302,67 @@ async fn drive(
     id: SessionId,
     out: &Arc<SessionOut>,
     mut shutdown: watch::Receiver<bool>,
-    client_id: &mut String,
+    state: &mut State,
 ) -> End {
     let limits = &core.limits;
     let mut buf = BytesMut::with_capacity(4096);
-    let mut connected = false;
     let connect_deadline =
         Instant::now() + Duration::from_secs(u64::from(limits.connect_timeout_s));
-    // Keep alive of the client from its CONNECT (3.1.1, 3.1.2.10): the connection is closed after 1.5 times
-    // that interval without any packet; 0 disables the check.
-    let mut keep_alive: Option<Duration> = None;
     let mut deadline = Some(connect_deadline);
 
     loop {
         loop {
-            match codec::decode(&mut buf, limits.max_packet_size) {
+            match codec::decode(&mut buf, limits.max_packet_size, state.version) {
                 Ok(Some(packet)) => {
-                    if let Some(end) = handle_packet(
-                        packet,
-                        core,
-                        id,
-                        out,
-                        &mut connected,
-                        client_id,
-                        &mut keep_alive,
-                    ) {
+                    let ended = match packet {
+                        Packet::Connect(connect) if !state.connected => {
+                            handle_connect(
+                                connect,
+                                core,
+                                id,
+                                out,
+                                state,
+                                &mut shutdown,
+                                connect_deadline,
+                            )
+                            .await
+                        }
+                        packet => handle_packet(packet, core, id, out, state),
+                    };
+                    if let Some(end) = ended {
                         return end;
                     }
-                    if connected {
+                    if state.connected {
                         // CONNECT was handled, from now on the keep alive applies
-                        deadline = keep_alive.map(|d| Instant::now() + d);
+                        deadline = state.keep_alive.map(|d| Instant::now() + d);
                     }
                 }
                 Ok(None) => break,
-                Err(e) => return decode_failure(e, connected),
+                Err(e) => return decode_failure(e, state.connected),
             }
         }
         tokio::select! {
             biased;
             _ = shutdown.wait_for(|stop| *stop) => {
-                return End::closed("server shutting down");
+                return End::closed_with("server shutting down", disconnect::SERVER_SHUTTING_DOWN);
             }
             _ = out.kick.notified() => {
-                warn!(session = id, client_id = %client_id, "disconnecting slow client");
+                warn!(session = id, client_id = %state.client_id, "disconnecting slow client");
                 return End::abandoned("send queue overflow");
             }
             _ = out.writer_done.notified() => return End::abandoned("write failed"),
             read = rd.read_buf(&mut buf) => match read {
                 Ok(0) => return End::closed("closed by peer"),
                 Ok(_) => {
-                    if connected {
-                        deadline = keep_alive.map(|d| Instant::now() + d);
+                    if state.connected {
+                        deadline = state.keep_alive.map(|d| Instant::now() + d);
                     }
                 }
                 Err(_) => return End::closed("read error"),
             },
             _ = sleep_deadline(deadline) => {
-                return if connected {
-                    End::closed("keep alive timeout")
+                return if state.connected {
+                    End::closed_with("keep alive timeout", disconnect::KEEP_ALIVE_TIMEOUT)
                 } else {
                     End::closed("CONNECT timeout")
                 };
@@ -310,14 +380,19 @@ async fn sleep_deadline(deadline: Option<Instant>) {
 
 fn decode_failure(e: DecodeError, connected: bool) -> End {
     debug!(error = %e, "closing connection after invalid packet");
-    // Nothing is sent: in 3.1.1 a protocol violation is answered by closing the network connection.
-    // The one exception is a CONNECT with an unsupported protocol level, which gets CONNACK 0x01
-    // ([MQTT-3.1.2-2]); a wrong protocol name is just closed.
+    // In 3.1.1 a protocol violation is answered by closing the network connection, in MQTT 5 by a DISCONNECT
+    // with a reason code first (added by the caller for connected MQTT 5 clients only).
+    // The one exception before the connection is established is a CONNECT with an unsupported protocol level,
+    // which gets CONNACK 0x01 ([MQTT-3.1.2-2]; the version of the client is not known, so in the 3.1.1
+    // format); a wrong protocol name is just closed.
     if !connected {
         if e == DecodeError::UnacceptableProtocolLevel {
             return End::refused(
                 "unacceptable protocol level",
-                connack::UNACCEPTABLE_PROTOCOL_VERSION,
+                codec::encode_connack(
+                    ProtocolVersion::V311,
+                    connack::UNACCEPTABLE_PROTOCOL_VERSION,
+                ),
             );
         }
         return End::closed(match e {
@@ -325,15 +400,26 @@ fn decode_failure(e: DecodeError, connected: bool) -> End {
             _ => "invalid first packet",
         });
     }
-    End::closed(match e {
-        DecodeError::PacketTooLarge { .. } => "packet too large",
-        DecodeError::Malformed(_) => "malformed packet",
-        DecodeError::QosNotSupported => "QoS above 0 is not supported",
-        DecodeError::UnsupportedProtocol | DecodeError::UnacceptableProtocolLevel => {
-            "unsupported protocol"
+    match e {
+        DecodeError::PacketTooLarge { .. } => {
+            End::closed_with("packet too large", disconnect::PACKET_TOO_LARGE)
         }
-    })
+        DecodeError::Malformed(_) => {
+            End::closed_with("malformed packet", disconnect::MALFORMED_PACKET)
+        }
+        DecodeError::QosNotSupported => End::closed_with(
+            "QoS above 0 is not supported",
+            disconnect::QOS_NOT_SUPPORTED,
+        ),
+        DecodeError::UnsupportedProtocol | DecodeError::UnacceptableProtocolLevel => {
+            End::closed_with("unsupported protocol", disconnect::PROTOCOL_ERROR)
+        }
+        DecodeError::ProtocolError(why) => End::closed_with(why, disconnect::PROTOCOL_ERROR),
+    }
 }
+
+/// How long before the CONNECT deadline a running login check is given up, to leave time for the CONNACK.
+const AUTH_MARGIN: Duration = Duration::from_millis(500);
 
 const QUEUE_FULL: &str = "control packet queue overflow";
 
@@ -345,49 +431,155 @@ fn generate_client_id(session: SessionId) -> String {
     format!("dt-{nanos:x}-{session}")
 }
 
+/// Handles the CONNECT of a session that is not connected yet: checks version, client id and credentials,
+/// then accepts it. Returns `Some` if the session has to end.
+async fn handle_connect(
+    connect: Connect,
+    core: &Arc<Core>,
+    id: SessionId,
+    out: &Arc<SessionOut>,
+    state: &mut State,
+    shutdown: &mut watch::Receiver<bool>,
+    connect_deadline: Instant,
+) -> Option<End> {
+    let limits = &core.limits;
+    let version = connect.protocol;
+    if !core.protocol.allows(version) {
+        // refused in the format of the version the client speaks: 0x01 (3.1.1) or 0x84 (MQTT 5)
+        return Some(End::refused(
+            "protocol version not enabled",
+            codec::encode_connack(version, connack::unsupported_protocol(version)),
+        ));
+    }
+    let mut assigned = None;
+    if connect.client_id.is_empty() {
+        if version == ProtocolVersion::V5 {
+            // MQTT 5, 3.1.3.2: the server assigns an identifier and tells the client in CONNACK
+            state.client_id = generate_client_id(id);
+            assigned = Some(state.client_id.clone());
+        } else if connect.clean_session {
+            // With clean session the broker makes up an id for its own bookkeeping; a 3.1.1
+            // client has no way to be told about it.
+            state.client_id = generate_client_id(id);
+        } else {
+            // 3.1.1, 3.1.3.1: an empty client id is only allowed with clean session = 1,
+            // otherwise the server answers CONNACK 0x02 (identifier rejected) and closes.
+            return Some(End::refused(
+                "empty client id without clean session",
+                codec::encode_connack(version, connack::identifier_rejected(version)),
+            ));
+        }
+    } else {
+        state.client_id = connect.client_id;
+    }
+    if let Some(authenticator) = &core.authenticator {
+        // After the version and client id checks, before anything is accepted. Pipelined packets stay in the
+        // read buffer until the verdict is in.
+        let (Some(username), Some(password)) = (&connect.username, &connect.password) else {
+            warn!(session = id, client_id = %state.client_id, "CONNECT refused: no user name and password");
+            return Some(End::refused(
+                "missing credentials",
+                codec::encode_connack(version, connack::bad_credentials(version)),
+            ));
+        };
+        let refuse_credentials = |why: &'static str| {
+            Some(End::refused(
+                why,
+                codec::encode_connack(version, connack::bad_credentials(version)),
+            ))
+        };
+        let refuse_unavailable = |why: &'static str| {
+            Some(End::refused(
+                why,
+                codec::encode_connack(version, connack::server_unavailable(version)),
+            ))
+        };
+        // Throttling: too many failures of this user name / address, or too many checks running for the address
+        let _pending = match core.throttle.begin(username, state.peer_ip) {
+            Ok(guard) => guard,
+            Err(Denied::Blocked) => {
+                warn!(session = id, username = ?username, "login refused: too many failed logins");
+                return refuse_credentials("too many failed logins");
+            }
+            Err(Denied::TooManyPending) => {
+                warn!(session = id, ip = %state.peer_ip, "login refused: too many pending checks");
+                return refuse_unavailable("too many pending login checks");
+            }
+        };
+        // The check, including the wait for a free slot at the backend, is bounded by the CONNECT deadline
+        // minus a margin, so that the client gets a CONNACK before the connection would be closed for timing out.
+        let limit = connect_deadline
+            .checked_sub(AUTH_MARGIN)
+            .unwrap_or(connect_deadline);
+        let verdict = tokio::select! {
+            biased;
+            _ = shutdown.wait_for(|stop| *stop) => {
+                return Some(End::closed_with(
+                    "server shutting down",
+                    disconnect::SERVER_SHUTTING_DOWN,
+                ));
+            }
+            verdict = tokio::time::timeout_at(limit, authenticator.verify(username, password)) => {
+                verdict.unwrap_or_else(|_| AuthOutcome::Unavailable("login check timed out".into()))
+            }
+        };
+        // the user name comes from the network: escaped by the debug format
+        match verdict {
+            AuthOutcome::Accepted => {
+                core.throttle.record_success(username);
+                info!(session = id, username = ?username, "login accepted");
+            }
+            AuthOutcome::Rejected => {
+                core.throttle.record_failure(username, state.peer_ip);
+                warn!(session = id, username = ?username, "login rejected");
+                return refuse_credentials("bad user name or password");
+            }
+            AuthOutcome::Unavailable(why) => {
+                warn!(session = id, username = ?username, reason = %why, "login check unavailable");
+                return refuse_unavailable("authentication unavailable");
+            }
+        }
+    }
+    info!(
+        session = id,
+        client_id = %state.client_id,
+        keep_alive = connect.keep_alive,
+        protocol = ?version,
+        "CONNECT"
+    );
+    state.connected = true;
+    state.version = version;
+    state.keep_alive = (connect.keep_alive > 0)
+        .then(|| Duration::from_millis(u64::from(connect.keep_alive) * 1500));
+    out.set_version(version);
+    let connack =
+        codec::encode_connack_accepted(version, limits.max_packet_size, assigned.as_deref());
+    if !out.send_control(connack) {
+        return Some(End::abandoned(QUEUE_FULL));
+    }
+    None
+}
+
 /// Returns `Some` if the session has to end.
 fn handle_packet(
     packet: Packet,
     core: &Arc<Core>,
     id: SessionId,
     out: &Arc<SessionOut>,
-    connected: &mut bool,
-    client_id: &mut String,
-    keep_alive: &mut Option<Duration>,
+    state: &mut State,
 ) -> Option<End> {
     let limits = &core.limits;
-    if !*connected {
-        return match packet {
-            Packet::Connect(connect) => {
-                if connect.client_id.is_empty() {
-                    // 3.1.1, 3.1.3.1: an empty client id is only allowed with clean session = 1, otherwise
-                    // the server answers CONNACK 0x02 (identifier rejected) and closes. With clean session
-                    // the broker makes up an id for its own bookkeeping; the client is not told about it.
-                    if !connect.clean_session {
-                        return Some(End::refused(
-                            "empty client id without clean session",
-                            connack::IDENTIFIER_REJECTED,
-                        ));
-                    }
-                    *client_id = generate_client_id(id);
-                } else {
-                    *client_id = connect.client_id;
-                }
-                info!(session = id, client_id = %client_id, keep_alive = connect.keep_alive, "CONNECT");
-                *connected = true;
-                *keep_alive = (connect.keep_alive > 0)
-                    .then(|| Duration::from_millis(u64::from(connect.keep_alive) * 1500));
-                if !out.send_control(codec::encode_connack(connack::ACCEPTED)) {
-                    return Some(End::abandoned(QUEUE_FULL));
-                }
-                None
-            }
-            // The first packet has to be CONNECT.
-            _ => Some(End::closed("first packet is not CONNECT")),
-        };
+    if !state.connected {
+        // CONNECT is handled by `handle_connect`; whatever else comes first is a protocol violation.
+        return Some(End::closed("first packet is not CONNECT"));
     }
+    let version = state.version;
+    let v5 = version == ProtocolVersion::V5;
     match packet {
-        Packet::Connect(_) => Some(End::closed("second CONNECT")),
+        Packet::Connect(_) => Some(End::closed_with(
+            "second CONNECT",
+            disconnect::PROTOCOL_ERROR,
+        )),
         Packet::PingReq => {
             if !out.send_control(codec::encode_pingresp()) {
                 return Some(End::abandoned(QUEUE_FULL));
@@ -398,49 +590,71 @@ fn handle_packet(
             let mut reasons = Vec::with_capacity(entries.len());
             let mut store = core.store.lock().unwrap();
             for entry in &entries {
+                // MQTT 5 has specific failure codes, 3.1.1 only the generic one
+                let failure = |v5_code: u8| if v5 { v5_code } else { suback::FAILURE };
+                if v5 && entry.filter.starts_with("$share/") {
+                    reasons.push(suback::V5_SHARED_NOT_SUPPORTED);
+                    continue;
+                }
                 if !topic::within_limits(&entry.filter, limits)
                     || !topic::is_valid_filter(&entry.filter)
                 {
-                    reasons.push(suback::FAILURE);
+                    reasons.push(failure(suback::V5_TOPIC_FILTER_INVALID));
                     continue;
                 }
-                match store.add(id, &entry.filter, limits.max_subscriptions_per_session) {
-                    AddResult::QuotaExceeded => reasons.push(suback::FAILURE),
+                match store.add_with_options(
+                    id,
+                    &entry.filter,
+                    limits.max_subscriptions_per_session,
+                    entry.no_local,
+                ) {
+                    AddResult::QuotaExceeded => reasons.push(failure(suback::V5_QUOTA_EXCEEDED)),
                     // QoS 0 is the only level the broker grants, whatever the client asked for
                     AddResult::Added | AddResult::Updated => reasons.push(suback::GRANTED_QOS_0),
                 }
             }
             drop(store);
-            if !out.send_control(codec::encode_suback(packet_id, &reasons)) {
+            if !out.send_control(codec::encode_suback(version, packet_id, &reasons)) {
                 return Some(End::abandoned(QUEUE_FULL));
             }
             None
         }
         Packet::Unsubscribe { packet_id, filters } => {
+            let mut reasons = Vec::with_capacity(filters.len());
             let mut store = core.store.lock().unwrap();
             for filter in &filters {
-                store.remove(id, filter);
+                reasons.push(if store.remove(id, filter) {
+                    unsuback::SUCCESS
+                } else {
+                    unsuback::NO_SUBSCRIPTION_EXISTED
+                });
             }
             drop(store);
-            if !out.send_control(codec::encode_unsuback(packet_id)) {
+            if !out.send_control(codec::encode_unsuback(version, packet_id, &reasons)) {
                 return Some(End::abandoned(QUEUE_FULL));
             }
             None
         }
         Packet::Publish(publish) => {
             if !topic::is_valid_topic_name(&publish.topic) {
-                return Some(End::closed("invalid topic name"));
+                return Some(End::closed_with(
+                    "invalid topic name",
+                    disconnect::TOPIC_NAME_INVALID,
+                ));
             }
             if !topic::within_limits(&publish.topic, limits) {
                 debug!(session = id, "PUBLISH dropped: topic exceeds limits");
                 return None;
             }
             debug!(session = id, topic = %publish.topic, payload_bytes = publish.payload.len(), "PUBLISH");
-            core.dispatch(Message {
-                origin: Origin::Client,
-                topic: Arc::from(publish.topic),
-                payload: publish.payload,
-            });
+            core.dispatch(
+                Message {
+                    origin: Origin::Client,
+                    topic: Arc::from(publish.topic),
+                    payload: publish.payload,
+                },
+                Some(id),
+            );
             None
         }
         Packet::Disconnect => Some(End::closed("client disconnect")),

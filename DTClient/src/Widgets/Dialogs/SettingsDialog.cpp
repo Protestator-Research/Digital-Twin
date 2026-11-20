@@ -15,6 +15,9 @@ namespace DigitalTwin::Client {
     SettingsDialog::SettingsDialog(DigitalTwinClientSettings *settings, QWidget *parent) :
             QDialog(parent), Ui(new Ui::SettingsDialog) {
         Ui->setupUi(this);
+        // The values stored in the settings; the texts of the entries are for the user.
+        Ui->MqttVersionComboBox->setItemData(0, "3.1.1");
+        Ui->MqttVersionComboBox->setItemData(1, "5");
         makeConnections();
         Settings = settings;
         initSettings();
@@ -52,6 +55,7 @@ namespace DigitalTwin::Client {
     void SettingsDialog::onButtonAcceptedClicked() {
         Settings->setMQTTServer(Ui->DTServerLineEdit->text());
         Settings->setMQTTPort(Ui->DTPortLineEdit->text());
+        Settings->setMQTTProtocolVersion(Ui->MqttVersionComboBox->currentData().toString());
         Settings->setRESTServer(Ui->SysMLServerURL->text());
         Settings->setRESTPort(Ui->SysMLServerPort->text());
         Settings->setRESTPassword(Ui->PasswordLineEdit->text());
@@ -66,6 +70,7 @@ namespace DigitalTwin::Client {
         Ui->SameNameCheckBox->setChecked(Settings->getRESTServer()==Settings->getMQTTServer());
         Ui->DTServerLineEdit->setText(Settings->getMQTTServer());
         Ui->DTPortLineEdit->setText(Settings->getMQTTPort());
+        Ui->MqttVersionComboBox->setCurrentIndex(qMax(0, Ui->MqttVersionComboBox->findData(Settings->getMQTTProtocolVersionAsText())));
         Ui->UserLineEdit->setText(Settings->getRESTUser());
         Ui->PasswordLineEdit->setText(Settings->getRESTPassword());
         Ui->FolderLineEdit->setText(Settings->getRESTFolder());

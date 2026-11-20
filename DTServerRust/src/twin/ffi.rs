@@ -121,7 +121,12 @@ impl TwinBackend for FfiBackend {
         check(r.code, r.message)
     }
 
-    fn update_variable(&self, twin_id: Uuid, path:&str, payload_json:&str) -> Result<(), BackendError> {
+    fn update_variable(
+        &self,
+        twin_id: Uuid,
+        path: &str,
+        payload_json: &str,
+    ) -> Result<(), BackendError> {
         let r = bridge::facade_update_variable(&twin_id.to_string(), path, payload_json);
         check(r.code, r.message)
     }

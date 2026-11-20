@@ -4,7 +4,8 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BrokerLimits {
     /// Maximum size of a received packet in bytes (fixed header included). A larger packet closes the
-    /// connection (MQTT 3.1.1 cannot announce this limit to the client).
+    /// connection (MQTT 5 clients get DISCONNECT 0x95 and are told the limit in CONNACK; MQTT 3.1.1 cannot
+    /// announce it).
     pub max_packet_size: u32,
     /// Maximum number of open connections in total.
     pub max_connections: usize,

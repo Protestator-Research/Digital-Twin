@@ -1,8 +1,9 @@
-//! MQTT 3.1.1 broker (QoS 0 only). Port of `MqttBrokerService`.
+//! MQTT broker for 3.1.1 and 5, selectable per [`ProtocolMode`] (QoS 0 only). Port of `MqttBrokerService`.
 
 pub mod codec;
 pub(crate) mod core;
 pub mod limits;
+pub mod protocol;
 pub(crate) mod session;
 pub mod subscriptions;
 pub mod topic;
@@ -18,12 +19,25 @@ use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
 pub use limits::BrokerLimits;
+pub use protocol::{ProtocolMode, ProtocolVersion};
 
 use self::core::Core;
+use crate::auth::{Authenticator, ThrottleConfig};
 use crate::hub::Hub;
 
-/// A running broker. Dropping it starts the same shutdown as [`Broker::shutdown`] (clients receive
-/// DISCONNECT "server shutting down", the hub is closed) but does not wait for the sessions to end;
+/// Everything besides the port and the limits that configures a broker.
+#[derive(Clone, Default)]
+pub struct BrokerOptions {
+    /// MQTT versions clients may connect with.
+    pub protocol: ProtocolMode,
+    /// Verifies user name and password of every CONNECT; `None` accepts all clients.
+    pub authenticator: Option<Arc<dyn Authenticator>>,
+    /// Blocking of repeated failed logins and limit of simultaneous checks (only used with an authenticator).
+    pub throttle: ThrottleConfig,
+}
+
+/// A running broker. Dropping it starts the same shutdown as [`Broker::shutdown`] (MQTT 5 clients receive
+/// DISCONNECT "server shutting down", MQTT 3.1.1 clients are just disconnected, the hub is closed) but does not wait for the sessions to end;
 /// use [`Broker::shutdown`] to wait.
 pub struct Broker {
     local_addr: SocketAddr,
@@ -36,12 +50,53 @@ pub struct Broker {
 
 impl Broker {
     /// Binds the listener (dual stack, IPv4 only as fallback) and starts accepting connections.
-    /// Port 0 selects an ephemeral port, see [`Broker::local_addr`].
+    /// Port 0 selects an ephemeral port, see [`Broker::local_addr`]. Accepts MQTT 3.1.1 clients only, see
+    /// [`Broker::start_with_protocol`] for the other modes.
     pub async fn start(port: u16, limits: BrokerLimits) -> std::io::Result<Broker> {
+        Broker::start_with_protocol(port, limits, ProtocolMode::default()).await
+    }
+
+    /// Like [`Broker::start`]; `protocol` selects the MQTT versions clients may connect with. A client with
+    /// another version is refused with a CONNACK in its own protocol version. Without authentication.
+    pub async fn start_with_protocol(
+        port: u16,
+        limits: BrokerLimits,
+        protocol: ProtocolMode,
+    ) -> std::io::Result<Broker> {
+        Broker::start_with(
+            port,
+            limits,
+            BrokerOptions {
+                protocol,
+                authenticator: None,
+                throttle: ThrottleConfig::default(),
+            },
+        )
+        .await
+    }
+
+    /// Like [`Broker::start`] with the given options. With an authenticator, a client is only accepted after
+    /// its CONNECT credentials were verified; otherwise it gets a CONNACK with "bad user name or password" or
+    /// "server unavailable" and is disconnected.
+    pub async fn start_with(
+        port: u16,
+        limits: BrokerLimits,
+        options: BrokerOptions,
+    ) -> std::io::Result<Broker> {
+        let BrokerOptions {
+            protocol,
+            authenticator,
+            throttle,
+        } = options;
         let listener = bind_dual_stack(port)?;
         let local_addr = listener.local_addr()?;
-        info!(%local_addr, "MQTT broker listening");
-        let core = Core::new(limits);
+        info!(
+            %local_addr,
+            protocol = %protocol,
+            authentication = authenticator.is_some(),
+            "MQTT broker listening"
+        );
+        let core = Core::with_authenticator(limits, protocol, authenticator, throttle);
         let hub = Hub::new(Arc::clone(&core));
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
         let (alive_tx, sessions_done) = mpsc::channel::<()>(1);
@@ -89,8 +144,8 @@ impl Broker {
         let _ = self.shutdown_tx.send(true);
     }
 
-    /// Stops accepting, closes the connections of all clients (no DISCONNECT, 3.1.1 has none from the server) and waits until
-    /// all sessions are gone (at most 5 seconds).
+    /// Stops accepting, closes the connections of all clients (MQTT 5 clients get a DISCONNECT first, 3.1.1 has
+    /// none from the server) and waits until all sessions are gone (at most 5 seconds).
     ///
     /// Afterwards the hub is closed: internal subscriptions end (`recv()` returns `None`) and
     /// `Hub::publish` / `Hub::subscribe` return `HubError::Closed`.

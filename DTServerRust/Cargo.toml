@@ -2,7 +2,7 @@
 name = "dt-server"
 version = "2611.1.0"
 edition = "2021"
-description = "Rust port of the Digital Twin Server: embedded MQTT 3.1.1 broker and server logic"
+description = "Rust port of the Digital Twin Server: embedded MQTT broker (3.1.1 and 5) and server logic"
 publish = false
 
 [lib]
@@ -23,8 +23,10 @@ sql-syntax-check = ["dep:pg_query"]
 [dependencies]
 bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "rustls-tls-native-roots"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
+sha2 = "0.10"
 socket2 = "0.6"
 thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "signal"] }

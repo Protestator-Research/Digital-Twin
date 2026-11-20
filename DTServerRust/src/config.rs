@@ -10,7 +10,8 @@ use std::path::Path;
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::broker::BrokerLimits;
+use crate::auth::{AuthMode, ThrottleConfig};
+use crate::broker::{BrokerLimits, ProtocolMode};
 
 /// The command line keys, in the order of the C++ `ARGUMENTS` enum.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -20,18 +21,22 @@ pub enum Argument {
     SysmlUsername,
     SysmlPassword,
     InstanceMqttPort,
+    InstanceMqttProtocolVersion,
+    InstanceMqttAuthentication,
     InstanceMqttCertChain,
     InstanceMqttCertPrivateKey,
     InstanceConfig,
 }
 
 impl Argument {
-    pub const ALL: [Argument; 8] = [
+    pub const ALL: [Argument; 10] = [
         Argument::SysmlUrl,
         Argument::SysmlPort,
         Argument::SysmlUsername,
         Argument::SysmlPassword,
         Argument::InstanceMqttPort,
+        Argument::InstanceMqttProtocolVersion,
+        Argument::InstanceMqttAuthentication,
         Argument::InstanceMqttCertChain,
         Argument::InstanceMqttCertPrivateKey,
         Argument::InstanceConfig,
@@ -45,6 +50,8 @@ impl Argument {
             Argument::SysmlUsername => "sysml.username",
             Argument::SysmlPassword => "sysml.password",
             Argument::InstanceMqttPort => "instance.mqtt.port",
+            Argument::InstanceMqttProtocolVersion => "instance.mqtt.protocol_version",
+            Argument::InstanceMqttAuthentication => "instance.mqtt.authentication",
             Argument::InstanceMqttCertChain => "instance.mqtt.cert_chain",
             Argument::InstanceMqttCertPrivateKey => "instance.mqtt.cert_private_key",
             Argument::InstanceConfig => "instance.config",
@@ -58,6 +65,8 @@ impl Argument {
             Argument::SysmlPort => "8088",
             Argument::SysmlUsername | Argument::SysmlPassword => "admin",
             Argument::InstanceMqttPort => "1883",
+            Argument::InstanceMqttProtocolVersion => "3.1.1",
+            Argument::InstanceMqttAuthentication => "sysml",
             Argument::InstanceMqttCertChain
             | Argument::InstanceMqttCertPrivateKey
             | Argument::InstanceConfig => "",
@@ -123,9 +132,25 @@ impl fmt::Debug for SysmlConfig {
     }
 }
 
+/// Smallest accepted `run.mqtt.limits.max_packet_size` in bytes.
+pub const MIN_MAX_PACKET_SIZE: u32 = 64;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MqttConfig {
     pub port: u16,
+    /// MQTT versions the broker accepts (`run.mqtt.protocol_version`: "3.1.1", "5" or "both").
+    pub protocol: ProtocolMode,
+    /// How MQTT clients are authenticated (`run.mqtt.authentication`: "none" or "sysml", default "sysml").
+    pub authentication: AuthMode,
+    /// Seconds a successful login is remembered (`run.mqtt.auth_cache_s`, default 300, 0 = no cache).
+    pub auth_cache_s: u64,
+    /// Maximum number of simultaneous login requests to the SysML backend (`run.mqtt.auth_max_concurrent`,
+    /// default 8, at least 1).
+    pub auth_max_concurrent: usize,
+    /// Blocking of repeated failed logins (`run.mqtt.auth_max_failures` 5, `auth_failure_window_s` 60,
+    /// `auth_block_s` 10; 0 failures disables it) and the limit of simultaneous checks per IP address
+    /// (`auth_max_pending_per_ip`, 4; 0 = no limit).
+    pub auth_throttle: ThrottleConfig,
     pub cert_chain: String,
     pub cert_private_key: String,
     pub limits: BrokerLimits,
@@ -257,6 +282,16 @@ struct FileRun {
 #[derive(Debug, Default, Deserialize)]
 struct FileMqtt {
     port: Option<StrNum>,
+    /// "3.1.1", "5" or "both"; a number is accepted for 5 (`"protocol_version": 5`).
+    protocol_version: Option<StrNum>,
+    /// "none" or "sysml".
+    authentication: Option<String>,
+    auth_cache_s: Option<StrNum>,
+    auth_max_concurrent: Option<StrNum>,
+    auth_max_failures: Option<StrNum>,
+    auth_failure_window_s: Option<StrNum>,
+    auth_block_s: Option<StrNum>,
+    auth_max_pending_per_ip: Option<StrNum>,
     cert_chain: Option<String>,
     cert_private_key: Option<String>,
     limits: Option<FileLimits>,
@@ -309,6 +344,26 @@ impl Config {
         };
         let sysml_port = port(Argument::SysmlPort, "sysml.port");
         let mqtt_port = port(Argument::InstanceMqttPort, "run.mqtt.port");
+        let protocol = get(Argument::InstanceMqttProtocolVersion)
+            .parse()
+            .unwrap_or_else(|e: crate::broker::protocol::ParseProtocolModeError| {
+                deferred.push(Deferred {
+                    file_key: "run.mqtt.protocol_version",
+                    cli_key: Argument::InstanceMqttProtocolVersion.key(),
+                    message: e.to_string(),
+                });
+                ProtocolMode::default()
+            });
+        let authentication = get(Argument::InstanceMqttAuthentication)
+            .parse()
+            .unwrap_or_else(|e: crate::auth::ParseAuthModeError| {
+                deferred.push(Deferred {
+                    file_key: "run.mqtt.authentication",
+                    cli_key: Argument::InstanceMqttAuthentication.key(),
+                    message: e.to_string(),
+                });
+                AuthMode::default()
+            });
         let config_file = get(Argument::InstanceConfig);
         Config {
             sysml: SysmlConfig {
@@ -319,6 +374,11 @@ impl Config {
             },
             mqtt: MqttConfig {
                 port: mqtt_port,
+                protocol,
+                authentication,
+                auth_cache_s: crate::auth::DEFAULT_CACHE_TTL_S,
+                auth_max_concurrent: crate::auth::DEFAULT_MAX_CONCURRENT,
+                auth_throttle: ThrottleConfig::default(),
                 cert_chain: get(Argument::InstanceMqttCertChain),
                 cert_private_key: get(Argument::InstanceMqttCertPrivateKey),
                 limits: BrokerLimits::default(),
@@ -410,6 +470,69 @@ impl Config {
             if mqtt.port.is_some() {
                 self.deferred.retain(|d| d.file_key != "run.mqtt.port");
             }
+            if let Some(v) = &mqtt.protocol_version {
+                let text = match v {
+                    StrNum::Str(s) => s.clone(),
+                    StrNum::Num(n) => n.to_string(),
+                };
+                self.mqtt.protocol = text.parse().map_err(
+                    |e: crate::broker::protocol::ParseProtocolModeError| {
+                        invalid("run.mqtt.protocol_version", e.to_string())
+                    },
+                )?;
+                self.deferred
+                    .retain(|d| d.file_key != "run.mqtt.protocol_version");
+            }
+            if let Some(v) = &mqtt.authentication {
+                self.mqtt.authentication =
+                    v.parse().map_err(|e: crate::auth::ParseAuthModeError| {
+                        invalid("run.mqtt.authentication", e.to_string())
+                    })?;
+                self.deferred
+                    .retain(|d| d.file_key != "run.mqtt.authentication");
+            }
+            convert(
+                "run.mqtt.auth_cache_s",
+                &mqtt.auth_cache_s,
+                &mut self.mqtt.auth_cache_s,
+            )?;
+            convert(
+                "run.mqtt.auth_max_concurrent",
+                &mqtt.auth_max_concurrent,
+                &mut self.mqtt.auth_max_concurrent,
+            )?;
+            if mqtt.auth_max_concurrent.is_some() && self.mqtt.auth_max_concurrent == 0 {
+                return Err(invalid(
+                    "run.mqtt.auth_max_concurrent",
+                    "must be at least 1",
+                ));
+            }
+            convert(
+                "run.mqtt.auth_max_failures",
+                &mqtt.auth_max_failures,
+                &mut self.mqtt.auth_throttle.max_failures,
+            )?;
+            let seconds = |key: &str, value: &Option<StrNum>, target: &mut std::time::Duration| {
+                let mut n = target.as_secs();
+                convert(key, value, &mut n)?;
+                *target = std::time::Duration::from_secs(n);
+                Ok::<(), ConfigError>(())
+            };
+            seconds(
+                "run.mqtt.auth_failure_window_s",
+                &mqtt.auth_failure_window_s,
+                &mut self.mqtt.auth_throttle.window,
+            )?;
+            seconds(
+                "run.mqtt.auth_block_s",
+                &mqtt.auth_block_s,
+                &mut self.mqtt.auth_throttle.block,
+            )?;
+            convert(
+                "run.mqtt.auth_max_pending_per_ip",
+                &mqtt.auth_max_pending_per_ip,
+                &mut self.mqtt.auth_throttle.max_pending_per_ip,
+            )?;
             set_string(&mqtt.cert_chain, &mut self.mqtt.cert_chain);
             set_string(&mqtt.cert_private_key, &mut self.mqtt.cert_private_key);
             if let Some(l) = &mqtt.limits {
@@ -419,6 +542,14 @@ impl Config {
                     &l.max_packet_size,
                     &mut limits.max_packet_size,
                 )?;
+                // announced to MQTT 5 clients as Maximum Packet Size, where 0 is a protocol error; and a CONNECT
+                // has to fit
+                if l.max_packet_size.is_some() && limits.max_packet_size < MIN_MAX_PACKET_SIZE {
+                    return Err(invalid(
+                        "run.mqtt.limits.max_packet_size",
+                        format!("must be at least {MIN_MAX_PACKET_SIZE}"),
+                    ));
+                }
                 convert(
                     "run.mqtt.limits.max_connections",
                     &l.max_connections,
@@ -503,6 +634,10 @@ mod tests {
         assert_eq!(c.sysml.username, "admin");
         assert_eq!(c.sysml.password, "admin");
         assert_eq!(c.mqtt.port, 1883);
+        assert_eq!(c.mqtt.protocol, ProtocolMode::V311);
+        assert_eq!(c.mqtt.authentication, AuthMode::Sysml);
+        assert_eq!(c.mqtt.auth_cache_s, 300);
+        assert_eq!(c.mqtt.auth_max_concurrent, 8);
         assert_eq!(c.mqtt.cert_chain, "");
         assert_eq!(c.mqtt.cert_private_key, "");
         assert_eq!(c.config_file, None);
@@ -541,6 +676,8 @@ mod tests {
             "pw",
             "--instance.mqtt.port",
             "1884",
+            "--instance.mqtt.protocol_version",
+            "both",
             "--instance.mqtt.cert_chain",
             "chain.pem",
             "--instance.mqtt.cert_private_key",
@@ -553,6 +690,7 @@ mod tests {
         assert_eq!(c.sysml.username, "bob");
         assert_eq!(c.sysml.password, "pw");
         assert_eq!(c.mqtt.port, 1884);
+        assert_eq!(c.mqtt.protocol, ProtocolMode::Both);
         assert_eq!(c.mqtt.cert_chain, "chain.pem");
         assert_eq!(c.mqtt.cert_private_key, "key.pem");
         assert_eq!(c.config_file.as_deref(), Some("x.cfg"));
@@ -599,6 +737,156 @@ mod tests {
     }
 
     #[test]
+    fn protocol_version_from_cli() {
+        for (value, mode) in [
+            ("3.1.1", ProtocolMode::V311),
+            ("5", ProtocolMode::V5),
+            ("both", ProtocolMode::Both),
+        ] {
+            let c = config(&["--instance.mqtt.protocol_version", value]);
+            assert_eq!(c.mqtt.protocol, mode, "{value}");
+        }
+        // does not collide with the port key, which is a substring match
+        let c = config(&["--instance.mqtt.port", "1884"]);
+        assert_eq!(c.mqtt.protocol, ProtocolMode::V311);
+    }
+
+    #[test]
+    fn protocol_version_from_file_wins_over_cli() {
+        let mut c = config(&["--instance.mqtt.protocol_version", "5"]);
+        c.apply_json(r#"{"run":{"mqtt":{"protocol_version":"both"}}}"#)
+            .unwrap();
+        assert_eq!(c.mqtt.protocol, ProtocolMode::Both);
+        // a file without the key keeps the command line value
+        let mut c = config(&["--instance.mqtt.protocol_version", "5"]);
+        c.apply_json(r#"{"run":{"mqtt":{"port":1999}}}"#).unwrap();
+        assert_eq!(c.mqtt.protocol, ProtocolMode::V5);
+        // a number is accepted for 5
+        let mut c = config(&[]);
+        c.apply_json(r#"{"run":{"mqtt":{"protocol_version":5}}}"#)
+            .unwrap();
+        assert_eq!(c.mqtt.protocol, ProtocolMode::V5);
+    }
+
+    #[test]
+    fn too_small_max_packet_size_is_an_error() {
+        for bad in ["0", "63"] {
+            let mut c = config(&[]);
+            let json = format!(r#"{{"run":{{"mqtt":{{"limits":{{"max_packet_size":{bad}}}}}}}}}"#);
+            assert!(
+                matches!(c.apply_json(&json), Err(ConfigError::Invalid { .. })),
+                "{bad}"
+            );
+        }
+        let mut c = config(&[]);
+        c.apply_json(r#"{"run":{"mqtt":{"limits":{"max_packet_size":64}}}}"#)
+            .unwrap();
+        assert_eq!(c.mqtt.limits.max_packet_size, 64);
+    }
+
+    #[test]
+    fn invalid_protocol_version_is_an_error() {
+        let cli = parse_cli(args(&["--instance.mqtt.protocol_version", "4"]));
+        assert!(matches!(
+            Config::from_cli_map(&cli).validate(),
+            Err(ConfigError::Invalid { .. })
+        ));
+        // ... unless the file overrides it
+        let mut c = Config::from_cli_map(&cli);
+        c.apply_json(r#"{"run":{"mqtt":{"protocol_version":"both"}}}"#)
+            .unwrap();
+        assert_eq!(c.validate().unwrap().mqtt.protocol, ProtocolMode::Both);
+        // an invalid value in the file is an error right away
+        let mut c = config(&[]);
+        for bad in [r#""3.1""#, r#""""#, "4", "true"] {
+            let json = format!(r#"{{"run":{{"mqtt":{{"protocol_version":{bad}}}}}}}"#);
+            assert!(c.apply_json(&json).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn authentication_from_cli_and_file() {
+        for (value, mode) in [("none", AuthMode::None), ("SysML", AuthMode::Sysml)] {
+            let c = config(&["--instance.mqtt.authentication", value]);
+            assert_eq!(c.mqtt.authentication, mode, "{value}");
+        }
+        // the file wins over the command line
+        let mut c = config(&["--instance.mqtt.authentication", "sysml"]);
+        c.apply_json(r#"{"run":{"mqtt":{"authentication":"none"}}}"#)
+            .unwrap();
+        assert_eq!(c.mqtt.authentication, AuthMode::None);
+        // missing key keeps the value
+        c.apply_json(r#"{"run":{"mqtt":{}}}"#).unwrap();
+        assert_eq!(c.mqtt.authentication, AuthMode::None);
+    }
+
+    #[test]
+    fn invalid_authentication_is_an_error() {
+        let cli = parse_cli(args(&["--instance.mqtt.authentication", "ldap"]));
+        assert!(matches!(
+            Config::from_cli_map(&cli).validate(),
+            Err(ConfigError::Invalid { .. })
+        ));
+        // ... unless the file overrides it
+        let mut c = Config::from_cli_map(&cli);
+        c.apply_json(r#"{"run":{"mqtt":{"authentication":"none"}}}"#)
+            .unwrap();
+        assert_eq!(c.validate().unwrap().mqtt.authentication, AuthMode::None);
+        // an invalid value in the file is an error right away
+        let mut c = config(&[]);
+        for bad in [r#""ldap""#, r#""""#, "true", "1"] {
+            let json = format!(r#"{{"run":{{"mqtt":{{"authentication":{bad}}}}}}}"#);
+            assert!(c.apply_json(&json).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn auth_throttle_defaults_and_file() {
+        let mut c = config(&[]);
+        let t = &c.mqtt.auth_throttle;
+        assert_eq!(
+            (
+                t.max_failures,
+                t.window.as_secs(),
+                t.block.as_secs(),
+                t.max_pending_per_ip
+            ),
+            (5, 60, 10, 4)
+        );
+        c.apply_json(
+            r#"{"run":{"mqtt":{"auth_max_failures":"3","auth_failure_window_s":30,"auth_block_s":2,"auth_max_pending_per_ip":0}}}"#,
+        )
+        .unwrap();
+        let t = &c.mqtt.auth_throttle;
+        assert_eq!(
+            (
+                t.max_failures,
+                t.window.as_secs(),
+                t.block.as_secs(),
+                t.max_pending_per_ip
+            ),
+            (3, 30, 2, 0)
+        );
+        assert!(c
+            .apply_json(r#"{"run":{"mqtt":{"auth_block_s":"x"}}}"#)
+            .is_err());
+    }
+
+    #[test]
+    fn auth_cache_and_concurrency_from_file() {
+        let mut c = config(&[]);
+        c.apply_json(r#"{"run":{"mqtt":{"auth_cache_s":"60","auth_max_concurrent":2}}}"#)
+            .unwrap();
+        assert_eq!((c.mqtt.auth_cache_s, c.mqtt.auth_max_concurrent), (60, 2));
+        assert!(c
+            .apply_json(r#"{"run":{"mqtt":{"auth_max_concurrent":0}}}"#)
+            .is_err());
+        assert!(c
+            .apply_json(r#"{"run":{"mqtt":{"auth_cache_s":"x"}}}"#)
+            .is_err());
+    }
+
+    #[test]
     fn environment_beats_file_and_cli() {
         let mut c = config(&["--sysml.password", "cli"]);
         c.apply_json(
@@ -640,6 +928,10 @@ mod tests {
         "run": {
             "mqtt": {
                 "port": "2883",
+                "protocol_version": "5",
+                "authentication": "none",
+                "auth_cache_s": 0,
+                "auth_max_concurrent": "3",
                 "cert_chain": "c.pem",
                 "cert_private_key": "k.pem",
                 "limits": {
@@ -672,6 +964,10 @@ mod tests {
         assert_eq!(c.sysml.username, "u");
         assert_eq!(c.sysml.password, "secret");
         assert_eq!(c.mqtt.port, 2883);
+        assert_eq!(c.mqtt.protocol, ProtocolMode::V5);
+        assert_eq!(c.mqtt.authentication, AuthMode::None);
+        assert_eq!(c.mqtt.auth_cache_s, 0);
+        assert_eq!(c.mqtt.auth_max_concurrent, 3);
         assert_eq!(c.mqtt.cert_chain, "c.pem");
         assert_eq!(c.mqtt.cert_private_key, "k.pem");
         let l = &c.mqtt.limits;

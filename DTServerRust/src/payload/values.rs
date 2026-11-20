@@ -362,7 +362,9 @@ fn classify_parameters(payload: &[u8]) -> Result<Vec<FunctionParameter>, ValueEr
     let mut seen = std::collections::HashSet::new();
     for item in items {
         let json: serde_json::Value = serde_json::from_str(item.get())?;
-        let object = json.as_object().ok_or(ValueError::WrongType("parameters"))?;
+        let object = json
+            .as_object()
+            .ok_or(ValueError::WrongType("parameters"))?;
         let name = match object.get("name") {
             None => return Err(ValueError::MissingField("name")),
             // PostgreSQL jsonb cannot hold \u0000, so a NUL is rejected here and not first by the database
@@ -610,13 +612,21 @@ mod tests {
         .unwrap();
         assert_eq!(p.time_point, t());
         assert_eq!(p.value.type_name(), "Function");
-        let Value::Function(ps) = p.value else { panic!() };
+        let Value::Function(ps) = p.value else {
+            panic!()
+        };
         let got: Vec<(&str, &Value)> = ps.iter().map(|p| (p.name.as_str(), &p.value)).collect();
         assert_eq!(
             got,
             vec![
                 ("pressure", &Value::Real(2.5)),
-                ("z", &Value::Complex { real: 1.0, imaginary: 0.5 }),
+                (
+                    "z",
+                    &Value::Complex {
+                        real: 1.0,
+                        imaginary: 0.5
+                    }
+                ),
                 ("r", &Value::Rational(Rational::new(3, 4).unwrap())),
                 ("on", &Value::Boolean(true)),
                 ("s", &Value::Text("hi".into())),
@@ -629,8 +639,8 @@ mod tests {
                 ),
             ]
         );
-        let empty = classify(format!(r#"{{"time_point":"{TP}","parameters":[]}}"#).as_bytes())
-            .unwrap();
+        let empty =
+            classify(format!(r#"{{"time_point":"{TP}","parameters":[]}}"#).as_bytes()).unwrap();
         assert_eq!(empty.value, Value::Function(vec![]));
     }
 
@@ -642,9 +652,18 @@ mod tests {
         assert!(matches!(f("{}"), Err(ValueError::WrongType("parameters"))));
         assert!(matches!(f("5"), Err(ValueError::WrongType("parameters"))));
         assert!(matches!(f("[1]"), Err(ValueError::WrongType("parameters"))));
-        assert!(matches!(f(r#"[{"value":1}]"#), Err(ValueError::MissingField("name"))));
-        assert!(matches!(f(r#"[{"name":"","value":1}]"#), Err(ValueError::WrongType("name"))));
-        assert!(matches!(f(r#"[{"name":5,"value":1}]"#), Err(ValueError::WrongType("name"))));
+        assert!(matches!(
+            f(r#"[{"value":1}]"#),
+            Err(ValueError::MissingField("name"))
+        ));
+        assert!(matches!(
+            f(r#"[{"name":"","value":1}]"#),
+            Err(ValueError::WrongType("name"))
+        ));
+        assert!(matches!(
+            f(r#"[{"name":5,"value":1}]"#),
+            Err(ValueError::WrongType("name"))
+        ));
         assert!(matches!(
             f(r#"[{"name":"a","value":1},{"name":"a","value":2}]"#),
             Err(ValueError::DuplicateParameter(n)) if n == "a"
@@ -657,11 +676,23 @@ mod tests {
             f(r#"[{"name":"a","value":1,"parameters":[]}]"#),
             Err(ValueError::WrongType("parameters"))
         ));
-        assert!(matches!(f(r#"[{"name":"a","value":"1/0"}]"#), Err(ValueError::Rational(_))));
-        assert!(matches!(f(r#"[{"name":"a"}]"#), Err(ValueError::MissingField("value"))));
+        assert!(matches!(
+            f(r#"[{"name":"a","value":"1/0"}]"#),
+            Err(ValueError::Rational(_))
+        ));
+        assert!(matches!(
+            f(r#"[{"name":"a"}]"#),
+            Err(ValueError::MissingField("value"))
+        ));
         // jsonb cannot store \u0000: rejected in names and text values of parameters
-        assert!(matches!(f(r#"[{"name":"a\u0000b","value":1}]"#), Err(ValueError::WrongType("name"))));
-        assert!(matches!(f(r#"[{"name":"a","value":"x\u0000y"}]"#), Err(ValueError::WrongType("value"))));
+        assert!(matches!(
+            f(r#"[{"name":"a\u0000b","value":1}]"#),
+            Err(ValueError::WrongType("name"))
+        ));
+        assert!(matches!(
+            f(r#"[{"name":"a","value":"x\u0000y"}]"#),
+            Err(ValueError::WrongType("value"))
+        ));
         assert!(matches!(
             classify(br#"{"parameters":[]}"#),
             Err(ValueError::MissingField("time_point"))

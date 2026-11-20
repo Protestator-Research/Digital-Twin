@@ -5,13 +5,21 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use super::limits::BrokerLimits;
+use super::protocol::ProtocolMode;
 use super::session::SessionOut;
 use super::subscriptions::{SessionId, SubscriptionStore};
 use super::tracker::ConnectionTracker;
+use crate::auth::{Authenticator, LoginThrottle, ThrottleConfig};
 use crate::hub::{InternalBus, Message};
 
 pub(crate) struct Core {
     pub(crate) limits: BrokerLimits,
+    /// Which MQTT versions clients may connect with.
+    pub(crate) protocol: ProtocolMode,
+    /// Checks the credentials of every CONNECT; `None` accepts all clients.
+    pub(crate) authenticator: Option<Arc<dyn Authenticator>>,
+    /// Throttling of failed logins and pending checks.
+    pub(crate) throttle: Arc<LoginThrottle>,
     pub(crate) store: Mutex<SubscriptionStore>,
     pub(crate) sessions: Mutex<HashMap<SessionId, Arc<SessionOut>>>,
     pub(crate) tracker: Arc<ConnectionTracker>,
@@ -21,10 +29,23 @@ pub(crate) struct Core {
 }
 
 impl Core {
-    pub(crate) fn new(limits: BrokerLimits) -> Arc<Self> {
+    #[cfg(test)]
+    pub(crate) fn new(limits: BrokerLimits, protocol: ProtocolMode) -> Arc<Self> {
+        Self::with_authenticator(limits, protocol, None, ThrottleConfig::default())
+    }
+
+    pub(crate) fn with_authenticator(
+        limits: BrokerLimits,
+        protocol: ProtocolMode,
+        authenticator: Option<Arc<dyn Authenticator>>,
+        throttle: ThrottleConfig,
+    ) -> Arc<Self> {
         let tracker = ConnectionTracker::new(limits.max_connections, limits.max_connections_per_ip);
         Arc::new(Self {
             limits,
+            protocol,
+            authenticator,
+            throttle: LoginThrottle::new(throttle),
             store: Mutex::new(SubscriptionStore::new()),
             sessions: Mutex::new(HashMap::new()),
             tracker,
@@ -49,10 +70,15 @@ impl Core {
     }
 
     /// Delivers a message to the internal subscribers and to every session with a matching subscription
-    /// (once per session, the publishing session included). Never blocks.
-    pub(crate) fn dispatch(&self, message: Message) {
+    /// (once per session, the publishing session included unless its subscriptions use the MQTT 5 No Local
+    /// option). `publisher` is the session the message came from, `None` for the server itself. Never blocks.
+    pub(crate) fn dispatch(&self, message: Message, publisher: Option<SessionId>) {
         self.internal.offer(&message);
-        let targets = self.store.lock().unwrap().matching(&message.topic);
+        let targets = self
+            .store
+            .lock()
+            .unwrap()
+            .matching_from(&message.topic, publisher);
         if targets.is_empty() {
             return;
         }

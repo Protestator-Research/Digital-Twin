@@ -445,9 +445,18 @@ impl Shared {
             .filter(|e| !is_function_payload(&e.initial_json))
             .map(|e| e.path.clone())
             .collect();
-        match self.hub.subscribe(&format!("{}/#", info.name), self.options.subscription_capacity.max(1)) {
+        match self.hub.subscribe(
+            &format!("{}/#", info.name),
+            self.options.subscription_capacity.max(1),
+        ) {
             Ok(sub) => {
-                let handle = tokio::spawn(forward_variable_updates(Arc::clone(self), twin, info.name.clone(), paths, sub));
+                let handle = tokio::spawn(forward_variable_updates(
+                    Arc::clone(self),
+                    twin,
+                    info.name.clone(),
+                    paths,
+                    sub,
+                ));
                 if let Some(old) = self.registrations.lock().unwrap().insert(twin, handle) {
                     old.abort();
                 }
@@ -576,26 +585,48 @@ async fn forward_registrations(
 fn is_function_payload(json: &str) -> bool {
     serde_json::from_str::<serde_json::Value>(json)
         .ok()
-        .and_then(|value| value.as_object().map(|object| object.contains_key("parameters")))
+        .and_then(|value| {
+            value
+                .as_object()
+                .map(|object| object.contains_key("parameters"))
+        })
         .unwrap_or(false)
 }
 
 /// Updates variable of DT in the Backend.
-async fn forward_variable_updates(shared: Arc<Shared>, twin: Uuid, name: String,
-                                  paths: HashSet<String>, mut sub: HubSubscription) {
+async fn forward_variable_updates(
+    shared: Arc<Shared>,
+    twin: Uuid,
+    name: String,
+    paths: HashSet<String>,
+    mut sub: HubSubscription,
+) {
     let prefix = format!("{name}/");
     while let Some(message) = sub.recv().await {
-        if message.origin == Origin::Server { continue; }          // eigene Initialwerte ignorieren
-        let Some(path) = message.topic.strip_prefix(&prefix) else { continue };
-        if !paths.contains(path) { continue; }                      // registerFunction, Funktions-Topics usw.
-        // ungültige Werte und Funktions-Payloads nicht an C++ geben (eine Variable nimmt nur einen einzelnen Wert an)
+        if message.origin == Origin::Server {
+            continue;
+        } // eigene Initialwerte ignorieren
+        let Some(path) = message.topic.strip_prefix(&prefix) else {
+            continue;
+        };
+        if !paths.contains(path) {
+            continue;
+        } // registerFunction, Funktions-Topics usw.
+          // ungültige Werte und Funktions-Payloads nicht an C++ geben (eine Variable nimmt nur einen einzelnen Wert an)
         match classify(&message.payload) {
-            Ok(ValuePayload { value: Value::Function(_), .. }) | Err(_) => continue,
+            Ok(ValuePayload {
+                value: Value::Function(_),
+                ..
+            })
+            | Err(_) => continue,
             Ok(_) => {}
         }
-        let Ok(json) = String::from_utf8(message.payload.to_vec()) else { continue };
+        let Ok(json) = String::from_utf8(message.payload.to_vec()) else {
+            continue;
+        };
         let (backend, path) = (Arc::clone(&shared.backend), path.to_owned());
-        match tokio::task::spawn_blocking(move || backend.update_variable(twin, &path, &json)).await {
+        match tokio::task::spawn_blocking(move || backend.update_variable(twin, &path, &json)).await
+        {
             Ok(Ok(())) => {}
             Ok(Err(e)) => warn!(%twin, "cannot update variable: {e}"),
             Err(e) => error!(%twin, "variable update ended abnormally: {e}"),
@@ -610,9 +641,15 @@ mod tests {
     #[test]
     fn function_payloads_are_recognized_by_shape() {
         // valid and invalid (NaN dumped as null) function payloads are both never forwardable
-        assert!(is_function_payload(r#"{"time_point":"2026-11-19T10:00:00Z","parameters":[{"name":"p","value":1.0}]}"#));
-        assert!(is_function_payload(r#"{"time_point":"2026-11-19T10:00:00Z","parameters":[{"name":"p","value":null}]}"#));
-        assert!(!is_function_payload(r#"{"time_point":"2026-11-19T10:00:00Z","value":1.0}"#));
+        assert!(is_function_payload(
+            r#"{"time_point":"2026-11-19T10:00:00Z","parameters":[{"name":"p","value":1.0}]}"#
+        ));
+        assert!(is_function_payload(
+            r#"{"time_point":"2026-11-19T10:00:00Z","parameters":[{"name":"p","value":null}]}"#
+        ));
+        assert!(!is_function_payload(
+            r#"{"time_point":"2026-11-19T10:00:00Z","value":1.0}"#
+        ));
         assert!(!is_function_payload(""));
         assert!(!is_function_payload("[]"));
     }

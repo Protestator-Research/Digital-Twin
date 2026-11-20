@@ -29,9 +29,6 @@
 #include <cmath>
 #include <stdexcept>
 
-#include <async_mqtt/protocol/impl/buffer_to_packet_variant.ipp>
-#include <async_mqtt/protocol/impl/store.hpp>
-
 #include "Entities/IDigitalTwinElement.h"
 #include "Entities/ICollectionType.h"
 #include "Entities/Component.h"
@@ -715,10 +712,14 @@ namespace DigitalTwin::Model {
 	void DigitalTwinModel::registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest* functionRegistrationRequest)
 	{
 		std::string functionName = functionRegistrationRequest->getQualifiedName();
+		if (functionName.empty())
+			return;
 		std::cout<<"Registering Function: "<<functionName<<std::endl;
 		std::string functionPartsInDTCode = CPSBASELIB::STD_EXTENTION::StringExtention::replaceAll(functionName, "::", "/");
 
 		const auto parts = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(functionPartsInDTCode, '/');
+		if (parts.empty())
+			return;
 
 		std::string componentPath = "";
 		for (size_t i = 0; i < parts.size() - 1; i++)

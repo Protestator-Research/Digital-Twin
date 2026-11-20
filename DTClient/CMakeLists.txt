@@ -105,7 +105,6 @@ target_link_libraries(DigitalTwinClient PUBLIC
         Qt::Widgets
         Qt::Network
         Qt::Charts
-        mqtt_cpp::mqtt_cpp
         paho-mqtt-cpp::paho-mqtt-cpp
         md4c::md4c
         sysmllib::sysmllib)

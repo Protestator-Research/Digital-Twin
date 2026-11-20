@@ -37,6 +37,7 @@ namespace dtrs {
         class NoopMqttClient : public DigitalTwin::Communication::IMqttClientService {
         public:
             void publish(std::string, std::string) override {}
+            void subscribe(std::string, std::function<void(std::string, std::string)>) override {}
         };
 
         // One login. Models keep it alive through a shared_ptr, so a new login does not pull the manager away

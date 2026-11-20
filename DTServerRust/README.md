@@ -1,9 +1,9 @@
 # dt-server (Rust port of the Digital Twin Server)
 
 Port described in `Markdownfiles/Rust_Server_Portierung_Implementierungsplan.md`: configuration/CLI, embedded
-MQTT 3.1.1 broker, in-process hub and payload types (first increment), twin logic with the FFI bridge to the C++
-libraries (phase 3) and the history in PostgreSQL (phase 5). Not included: REST API, TLS, authentication, removal
-of the C++ server.
+MQTT broker (3.1.1 and 5, selectable), in-process hub and payload types (first increment), twin logic with the FFI bridge to the C++
+libraries (phase 3) and the history in PostgreSQL (phase 5). Not included: REST API, TLS, removal
+of the C++ server. MQTT clients log in with their SysML credentials, see "Authentication".
 
 ## Build and test
 
@@ -18,6 +18,64 @@ Environment overrides (beat file and command line): `DT_SYSML_PASSWORD` (Structu
 `DT_HISTORY_DATABASE_URL` (history database URL, may contain a password). Empty values are ignored.
 
 Run: `cargo run -- --instance.config config.cfg --instance.mqtt.port 1883` (same keys as the C++ server).
+
+MQTT protocol version of the broker: `--instance.mqtt.protocol_version <value>` or `run.mqtt.protocol_version` in the
+configuration file (the file wins, like for the port). Values:
+
+| Value | Accepts |
+|---|---|
+| `"3.1.1"` (default) | MQTT 3.1.1 clients only (the behaviour before MQTT 5 was added) |
+| `"5"` | MQTT 5 clients only |
+| `"both"` | MQTT 3.1.1 and MQTT 5, decided per connection by the protocol level of the CONNECT |
+
+A client with a version that is not enabled is refused with a CONNACK in its own format (3.1.1: return code `0x01`,
+MQTT 5: reason code `0x84`, then the connection is closed). The old MQTT 3.1 (`MQIsdp`, level 3) is not supported;
+`"3.1.1"` is the protocol with level 4. An invalid value is a startup error.
+
+### Authentication
+
+Every MQTT client has to log in: the user name and password of its CONNECT packet (3.1.1 and MQTT 5) are checked
+against the SysMLv2 backend (`sysml.url` / `sysml.port`) with `POST <base>/login`, JSON body
+`{"username": "...", "password": "..."}`. A 2xx answer with a `{"bearer": "<token>"}` body means the credentials are
+valid (the token is not used), 401 and 403 mean they are wrong. The base URL is built like in the C++ code: port 443 is
+`https://<url>`, port 80 `http://<url>`, any other port `http://<url>:<port>/`; a `sysml.url` that already contains
+`://` is used as it is and `sysml.port` is then ignored (the server logs a warning at start if it is not 80 or 443; the login URL is logged without any `user:password@` part). No redirects are followed; connect timeout 10 s, request timeout 15 s. HTTPS certificates are checked against the operating system's root store (and the bundled webpki roots), so a backend behind a corporate CA works like with the C++ client.
+
+Setting: `--instance.mqtt.authentication <value>` or `run.mqtt.authentication` in the configuration file (the file wins).
+
+| Value | Effect |
+|---|---|
+| `"sysml"` (default) | CONNECT needs user name and password, verified at the backend. An empty `sysml.url` is a startup error |
+| `"none"` | every client is accepted, user name and password are ignored |
+
+Further keys under `run.mqtt`: `auth_cache_s` (default 300; seconds a successful login is remembered, 0 = no cache; only
+successes are cached, the key is the user name plus a salted SHA-256 of the password, never the password itself) and
+`auth_max_concurrent` (default 8; simultaneous `/login` requests, further CONNECTs wait). The whole check, including that
+wait, is bounded by the CONNECT timeout (`run.mqtt.limits.connect_timeout_s`) minus 0.5 s: a backend that is too slow
+gives CONNACK `0x03` / `0x88` (below) before the connection would be closed for timing out.
+
+Throttling of failed logins (`run.mqtt`): after `auth_max_failures` (default 5, 0 = off) wrong logins of one user name or
+from one IP address within `auth_failure_window_s` (60) that user name / address is refused for `auth_block_s` (10)
+seconds without asking the backend, with the same CONNACK as a wrong password (`0x04` / `0x86`). A valid login clears
+the failures of the user name. At most `auth_max_pending_per_ip` (4, 0 = no limit) checks of one address run at the same
+time; more are answered with `0x03` / `0x88`. Note that a blocked user name is also blocked for its legitimate owner
+until the block ends.
+
+CONNACK of a refused login: wrong or missing user name or password: 3.1.1 return code `0x04`, MQTT 5 reason `0x86`;
+backend not reachable, throttled (429), server error or an answer that is not a login response: 3.1.1 `0x03`, MQTT 5
+`0x88` (this includes a check that does not finish in time). The connection is closed after the CONNACK. Packets that follow the CONNECT in the same TCP segment are only
+processed after the login was accepted. Passwords and tokens are never logged; the user name and the result are
+(`info` for accepted, `warn` otherwise).
+
+The C++ client (`MqttClientService`, Paho) sends the SysML REST user name and password of its settings. It does the
+reconnect itself (pauses of 1 s growing to 60 s) instead of using Paho's automatic reconnect, and stops for good on
+CONNACK `0x04` / `0x05` (3.1.1) or `0x86` / `0x87` (MQTT 5), so a wrong password does not make it ask the backend again
+and again.
+
+Notes: the broker has no TLS yet, so **passwords travel in clear text over MQTT**. Physical twin devices and test
+tools (`mosquitto_pub`, ...) now need SysML credentials in their CONNECT as well, or the broker has to run with
+`authentication: "none"`. The SysML credentials of the broker itself (`sysml.username` / `sysml.password`) are not
+related to the login of the clients.
 Log level via `RUST_LOG` (default `info`). Output goes to `target/` (ignored by `.gitignore`).
 
 ## Features, build and run
@@ -280,19 +338,20 @@ that recording is off. `run.history.{retention_days,queue_capacity,batch_size,fl
 
 | Path | Content |
 |---|---|
+| `src/auth/` | MQTT login: `Authenticator` trait, `SysmlAuthenticator` (`POST /login`, cache, concurrency limit) |
 | `src/config.rs` | CLI keys, defaults and JSON file layout, compatible with `DigitalTwinServerInstanceManager` |
-| `src/broker/` | `codec` (MQTT 3.1.1 packets), `topic` (matching, limits), `subscriptions` (store), `tracker` (connection limits), `session`, `limits` |
+| `src/broker/` | `codec` (MQTT 3.1.1 and 5 packets), `protocol` (protocol versions and the configurable mode), `topic` (matching, limits), `subscriptions` (store), `tracker` (connection limits), `session` (includes the login check of the CONNECT), `limits` |
 | `src/hub.rs` | in-process hub: `subscribe(filter, capacity)` and `publish(topic, payload)`; messages carry their `Origin` |
 | `src/twin/` | `TwinBackend` trait, twin service (`mod.rs`), `ffi.rs` (feature `ffi`, cxx bridge) |
 | `ffi/`, `build.rs` | C++ facade (`dt_facade.h/.cpp`); `build.rs` compiles it against the C++ build tree (feature `ffi`) and emits the link and run-time settings; `ffi/link_plan.rs` is its pure planning logic (paths, libraries, rpath, DLLs), also included by `tests/link_plan.rs` (runs without the feature, covers all three target systems) |
 | `src/history/` | `partition`, `registry`, `row`, `store` (trait), `pg` (sqlx), `recorder` (ingest, stats), `writer` (batches, maintenance) |
 | `migrations/` | embedded SQL migrations |
 | `src/payload/` | `time` (`time_point`), `twin` (`connectToTwin`, `registerFunction`), `values` (value types and `classify`) |
-| `tests/` | integration tests against the real broker (rumqttc MQTT 3.1.1 client and a raw socket client) |
+| `tests/` | integration tests against the real broker (rumqttc MQTT 3.1.1 and MQTT 5 clients and a raw socket client; MQTT 5 and the protocol modes in `mqtt5_integration.rs`) |
 
 ## Decision: MQTT codec (phase 0)
 
-Decision: **own small codec** (`src/broker/codec.rs`, QoS 0 only, about 300 lines plus tests), no codec crate.
+Decision: **own small codec** (`src/broker/codec.rs`, QoS 0 only, MQTT 3.1.1 and 5, plus tests), no codec crate.
 
 Candidates, checked against the crate sources (downloaded and read, not run against Paho or Python clients):
 
@@ -308,19 +367,24 @@ Candidates, checked against the crate sources (downloaded and read, not run agai
   later per-topic authorization).
 
 The needed subset is small (QoS 0): decode CONNECT, PUBLISH, SUBSCRIBE, UNSUBSCRIBE, PINGREQ, DISCONNECT, encode
-CONNACK, PUBLISH, SUBACK, UNSUBACK, PINGRESP. MQTT 3.1.1 has no properties and no server DISCONNECT, so there is
-nothing of that to encode or skip. The codec is covered by unit tests with hand computed bytes, and by integration
-tests with `rumqttc` (a real, independent MQTT 3.1.1 client, `rumqttc::{AsyncClient, MqttOptions, ...}`) and a raw
-socket client. `rumqttc` 0.25 is used as dev-dependency only (default features off are enough for plain TCP).
+CONNACK, PUBLISH, SUBACK, UNSUBACK, PINGRESP. MQTT 5 adds property blocks (incoming ones are length-checked and
+skipped, outgoing ones are empty except in CONNACK), reason codes in SUBACK/UNSUBACK and the server DISCONNECT; the
+codec functions take the protocol version that the CONNECT of the connection negotiated. The codec is covered by unit
+tests with hand computed bytes, and by integration tests with `rumqttc` (a real, independent client with a 3.1.1 API,
+`rumqttc::{AsyncClient, MqttOptions, ...}`, and an MQTT 5 API, `rumqttc::v5`) and a raw socket client. `rumqttc` 0.25
+is used as dev-dependency only (default features off are enough for plain TCP).
 
 ## Behaviour and deviations from the C++ server
 
-MQTT 3.1.1 only (protocol name `MQTT`, level 4; another level, e.g. MQTT 5, gets CONNACK return code 0x01 and is closed [MQTT-3.1.2-2]; another protocol name, e.g. 3.1 `MQIsdp`, is closed without a reply),
+MQTT 3.1.1 (protocol name `MQTT`, level 4) and MQTT 5 (level 5), selected by `run.mqtt.protocol_version` (see above; default
+3.1.1 only). A level that is neither 4 nor 5 gets CONNACK return code 0x01 and is closed [MQTT-3.1.2-2]; a level that
+is valid but not enabled gets the refusal CONNACK of its own version (0x01 for 3.1.1, 0x84 for MQTT 5); another
+protocol name, e.g. 3.1 `MQIsdp`, is closed without a reply,
 QoS 0 only (a QoS > 0 PUBLISH closes the connection; SUBSCRIBE with QoS 1/2 is granted with QoS 0), first packet must
 be CONNECT, CONNECT timeout, CONNACK with `session_present = 0` and return code 0, subscription quota (updates never
 count; over the quota and invalid filters get SUBACK return code 0x80), topic length/level limits (SUBSCRIBE: 0x80;
 PUBLISH: dropped silently), `matchFilter` semantics (also `a/#` matches `a`, `#` matches `$SYS/...`),
-one delivery per session (the publishing session included, there is no no-local in 3.1.1), pending-send limit with drop and disconnect after 3 consecutive overflows (accounting
+one delivery per session (the publishing session included, unless an MQTT 5 subscription uses No Local), pending-send limit with drop and disconnect after 3 consecutive overflows (accounting
 topic + payload bytes, like C++), dual-stack listener with IPv4 fallback, IPv4-mapped IPv6 counted as IPv4, CLI
 matching by substring with first match winning, file values overriding the command line.
 
@@ -332,15 +396,18 @@ Deviations:
   contains the key is accepted and the key is ignored.
 - MQTT 3.1.1 has no server DISCONNECT: whenever the broker ends a connection (shutdown, keep alive timeout, protocol
   error, malformed or oversize packet, second CONNECT, invalid topic name, slow client) it just closes the TCP
-  connection; the reason is only logged. The DISCONNECT of a client is accepted.
-- Empty client identifier: accepted only with clean session = 1 (the broker generates an id for its own bookkeeping
-  and does not announce it). Without clean session the broker answers CONNACK return code 0x02 (identifier rejected)
-  and closes (3.1.1, 3.1.3.1). Sessions are never persisted, so `session_present` is always 0.
+  connection; the reason is only logged. The DISCONNECT of a client is accepted. MQTT 5 clients get a DISCONNECT with a
+  reason code first (see "MQTT 5").
+- Empty client identifier: in 3.1.1 accepted only with clean session = 1 (the broker generates an id for its own
+  bookkeeping and does not announce it). Without clean session the broker answers CONNACK return code 0x02 (identifier
+  rejected) and closes (3.1.1, 3.1.3.1). In MQTT 5 an empty id is always accepted and the generated one is returned in
+  the CONNACK property Assigned Client Identifier. Sessions are never persisted, so `session_present` is always 0.
 - Control packets (CONNACK, SUBACK, UNSUBACK, PINGRESP) count against `max_pending_send_bytes` like publishes. A client
   that sends requests without reading the answers is disconnected when the limit is exceeded, so the memory of a
   session is bounded. (C++ had no such limit.)
-- `max_packet_size` is only enforced for incoming packets (3.1.1 cannot announce it). `Hub::publish` rejects payloads
-  that do not fit into it.
+- `max_packet_size` is only enforced for incoming packets. MQTT 5 clients are told the limit in the CONNACK (Maximum
+  Packet Size); 3.1.1 cannot announce it. `Hub::publish` rejects payloads that do not fit into it (counted with the
+  MQTT 5 encoding if MQTT 5 is enabled, which is one byte larger).
 - Nothing but CONNACK is sent before the connection is established: an invalid first packet (e.g. QoS 1 PUBLISH,
   malformed CONNECT) just closes the connection.
 - Reserved fixed header flags (SUBSCRIBE/UNSUBSCRIBE must be 0x2, CONNECT/PINGREQ/DISCONNECT 0x0), QoS 3 and
@@ -348,13 +415,13 @@ Deviations:
   in strings.
 - A second CONNECT, and a PUBLISH with an empty topic or a wildcard in the topic, close the connection. C++
   would only drop or ignore (not verified). Packet type 0 and 15 are reserved in 3.1.1 and malformed; other types the broker does not act on (PUBACK, ...) are ignored like in C++.
-- A SUBSCRIBE filter that is syntactically invalid (empty, `a/#/b`, `a#`) gets return code 0x80. C++ only checks
+- A SUBSCRIBE filter that is syntactically invalid (empty, `a/#/b`, `a#`) gets return code 0x80 (MQTT 5: 0x8F). C++ only checks
   the length/level limits and would store a filter that never matches.
 - Oversize packets: the size is checked on the fixed header; the connection is closed. C++ just closes.
 - Dropping a `Broker` starts the shutdown (client connections are closed, the hub closes) without waiting;
   `shutdown().await` waits. After either, `HubSubscription::recv()` returns `None` and `Hub::publish` / `subscribe`
   fail with `HubError::Closed`.
-- A connection that does not speak MQTT 3.1.1 (level 4) is closed without a reply.
+- A connection whose first packet has another protocol name than `MQTT` is closed without a reply.
 - The file is applied before the command line ports are validated: an invalid command line port is only an error if
   the file does not provide the value (C++: the file value wins).
 - Arguments are read with `args_os` and converted lossily (no panic on non-UTF-8).
@@ -421,12 +488,45 @@ Phase 3 and 5:
 
 Broker and payloads (first increment):
 
-- No shared subscriptions: `$share/...` filters are stored like ordinary filters.
-- UNSUBACK carries only the packet id in 3.1.1 (no per-filter codes), also for filters the session did not have.
+- No shared subscriptions: in 3.1.1 `$share/...` filters are stored like ordinary filters; MQTT 5 clients get SUBACK
+  reason code 0x9E (and Shared Subscription Available = 0 in the CONNACK).
+- UNSUBACK carries only the packet id in 3.1.1 (no per-filter codes), also for filters the session did not have. In
+  MQTT 5 it has one reason code per filter: 0x00, or 0x11 (no subscription existed).
 - QoS > 0 PUBLISH closes the connection (3.1.1 has no way to announce a maximum QoS); the retain flag of a PUBLISH is
   accepted and ignored, nothing is retained.
 - Floating point formatting: serde_json writes small and large exponents like `1e-7`, nlohmann::json (C++) writes
   `1e-07`. Both parse back to the same value; the bytes differ for such values. Not compared against a C++ build.
-- Will topic/message, user name and password of CONNECT are not parsed or used (the decoder stops after the client
-  id; no authentication yet). Only the CONNECT flags are validated: will QoS 3, will QoS or will retain without will
-  flag, and password flag without user name flag are malformed. A PUBLISH with DUP = 1 at QoS 0 is malformed.
+- The will (properties, topic, message) of CONNECT is validated for length and skipped; user name and password are
+  decoded and used for the login (see "Authentication"). The CONNECT flags are validated: will QoS 3, will QoS or will
+  retain without will flag, and (3.1.1 only; MQTT 5 allows it) password flag without user name flag are malformed, as is data behind the payload. A CONNECT with a password but no user name is refused with `0x86` when authentication is on, accepted with `none`. A PUBLISH with DUP = 1 at QoS 0 is malformed.
+
+## MQTT 5
+
+Enabled with `run.mqtt.protocol_version` = `"5"` or `"both"`. Scope: the same as for 3.1.1 (QoS 0 publish/subscribe,
+no sessions, no retained messages, login by user name and password only, see "Authentication"), plus the parts of MQTT 5 that a QoS 0 broker needs. Verified with
+unit tests, hand written packets and `rumqttc::v5`; not verified against other client libraries (Paho and others).
+
+- CONNECT properties are length-checked and skipped (session expiry, receive maximum, maximum packet size, topic alias
+  maximum, user properties, ...). In particular the **client's Maximum Packet Size is not applied**: the broker does not
+  drop publishes that exceed it. Will properties are not parsed (the will itself is not used either).
+- CONNACK announces: Maximum QoS 0, Retain Available 0, Subscription Identifiers Available 0, Shared Subscription Available 0, Maximum Packet Size (the limit
+  `max_packet_size`) and, for an empty client id, the Assigned Client Identifier. Topic aliases are not offered (no Topic
+  Alias Maximum): a client must not use them, a PUBLISH with an empty topic closes the connection.
+- Incoming PUBLISH, SUBSCRIBE, UNSUBSCRIBE and DISCONNECT properties are skipped; outgoing PUBLISH, SUBACK and UNSUBACK
+  have empty properties. Retain As Published and Retain Handling of a subscription are accepted and have no effect
+  (nothing is retained). **No Local is honoured**: a session does not receive its own publishes through a subscription
+  that has it. A QoS above 0 in a subscription is granted as QoS 0.
+- Retain flag: although Retain Available is announced as 0, a PUBLISH with the retain flag is not an error; it is
+  accepted and the flag is ignored (as for 3.1.1). The specification asks for DISCONNECT 0x9A here.
+- SUBACK reason codes: 0x00 (granted QoS 0), 0x8F (topic filter invalid or beyond the topic limits), 0x97 (quota
+  exceeded), 0x9E (shared subscriptions not supported). Subscription options with QoS 3, Retain Handling 3 or reserved
+  bits 6-7 set are malformed packets.
+- DISCONNECT sent by the broker (MQTT 5 clients only, after the queued messages): 0x8B server shutting down, 0x8D keep
+  alive timeout, 0x81 malformed packet, 0x82 protocol error (second CONNECT), 0x90 topic name invalid, 0x95 packet too
+  large, 0x9B QoS not supported (QoS 1/2 PUBLISH). A client that is dropped because it is too slow, or whose connection
+  fails, gets nothing. DISCONNECT of a client with a reason code and properties is accepted. The AUTH packet (type 15)
+  is a protocol error, DISCONNECT 0x82 (no enhanced authentication).
+- PUBLISH properties of a client (user properties, content type, message expiry, ...) are skipped and **not forwarded** to
+  subscribers, and the RETAIN flag (=1) of a PUBLISH is accepted and ignored: nothing is retained.
+- `run.mqtt.limits.max_packet_size` must be at least 64 (it is announced as Maximum Packet Size, and 0 is invalid).
+- Keep alive, connect timeout, limits and the in-process hub work as for 3.1.1. Server Keep Alive is not used.
