@@ -5,6 +5,7 @@
 //! | Real, Integer, Natural, Positive, Boolean | `{"time_point": "...", "value": <number or bool>}` |
 //! | Rational | `{"time_point": "...", "value": "n/d"}` |
 //! | Complex | `{"imaginary_value": x, "real_value": y, "time_point": "..."}` |
+//! | Function | `{"time_point": "...", "parameters": [{"name": "p", <fields of a value payload without time_point>}, ...]}` |
 //!
 //! [`classify`] determines the type of an arbitrary payload, see there for the limits.
 
@@ -204,6 +205,8 @@ pub enum ValueError {
     MissingField(&'static str),
     #[error("field {0:?} has an unsupported type")]
     WrongType(&'static str),
+    #[error("duplicate function parameter {0:?}")]
+    DuplicateParameter(String),
     #[error(transparent)]
     Time(#[from] super::time::TimeError),
     #[error(transparent)]
@@ -228,6 +231,15 @@ pub enum Value {
         real: f64,
         imaginary: f64,
     },
+    /// A function payload (`FunctionValueEntity`): the named parameters of a call. Parameters are never `Function`.
+    Function(Vec<FunctionParameter>),
+}
+
+/// A named parameter of a function payload.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionParameter {
+    pub name: String,
+    pub value: Value,
 }
 
 impl Value {
@@ -240,6 +252,7 @@ impl Value {
             Value::Boolean(_) => "Boolean",
             Value::Rational(_) => "Rational",
             Value::Complex { .. } => "Complex",
+            Value::Function(_) => "Function",
         }
     }
 }
@@ -261,6 +274,8 @@ pub struct ValuePayload {
 ///   (`"5/0"`) is therefore rejected, not published as Text
 /// - `value` is a JSON integer: Integer; beyond `i64`: BigInteger (exact digits kept, never silently a Real)
 /// - `value` is any other number (fraction or exponent): Real
+/// - `parameters` present: Function, a list of named parameters, each with the fields of a value payload
+///   (without `time_point`). Names must be non-empty and unique, parameters cannot nest.
 ///
 /// Natural and Positive are integers on the wire and cannot be told apart from Integer by the payload
 /// alone; they are classified as Integer (their values are valid Integers). Use [`NaturalValue`] or
@@ -274,6 +289,23 @@ pub fn classify(payload: &[u8]) -> Result<ValuePayload, ValueError> {
         Some(_) => return Err(ValueError::WrongType("time_point")),
     };
 
+    let value = if object.contains_key("parameters") {
+        Value::Function(classify_parameters(payload)?)
+    } else {
+        classify_value(object, payload)?
+    };
+    Ok(ValuePayload { time_point, value })
+}
+
+/// The single-value shapes. `raw` is the JSON text of `object`, used to keep the digits of big integers.
+fn classify_value(
+    object: &serde_json::Map<String, serde_json::Value>,
+    raw: &[u8],
+) -> Result<Value, ValueError> {
+    if object.contains_key("parameters") {
+        // parameters cannot nest
+        return Err(ValueError::WrongType("parameters"));
+    }
     if object.contains_key("real_value") || object.contains_key("imaginary_value") {
         let number = |key: &'static str| -> Result<f64, ValueError> {
             object
@@ -286,7 +318,7 @@ pub fn classify(payload: &[u8]) -> Result<ValuePayload, ValueError> {
             real: number("real_value")?,
             imaginary: number("imaginary_value")?,
         };
-        return Ok(ValuePayload { time_point, value });
+        return Ok(value);
     }
 
     let value = match object
@@ -304,7 +336,7 @@ pub fn classify(payload: &[u8]) -> Result<ValuePayload, ValueError> {
             Some(i) => Value::Integer(i),
             None => {
                 let approx = n.as_f64().ok_or(ValueError::WrongType("value"))?;
-                match raw_integer_token(payload) {
+                match raw_integer_token(raw) {
                     Some(digits) => Value::BigInteger { digits, approx },
                     None => Value::Real(approx),
                 }
@@ -312,7 +344,41 @@ pub fn classify(payload: &[u8]) -> Result<ValuePayload, ValueError> {
         },
         _ => return Err(ValueError::WrongType("value")),
     };
-    Ok(ValuePayload { time_point, value })
+    Ok(value)
+}
+
+/// The `parameters` of a function payload.
+fn classify_parameters(payload: &[u8]) -> Result<Vec<FunctionParameter>, ValueError> {
+    #[derive(serde::Deserialize)]
+    struct Raw<'a> {
+        #[serde(borrow)]
+        parameters: &'a serde_json::value::RawValue,
+    }
+    let raw: Raw = serde_json::from_slice(payload)?;
+    // not an array: WrongType; element texts stay raw so that big integers keep their digits
+    let items: Vec<&serde_json::value::RawValue> = serde_json::from_str(raw.parameters.get())
+        .map_err(|_| ValueError::WrongType("parameters"))?;
+    let mut parameters = Vec::with_capacity(items.len());
+    let mut seen = std::collections::HashSet::new();
+    for item in items {
+        let json: serde_json::Value = serde_json::from_str(item.get())?;
+        let object = json.as_object().ok_or(ValueError::WrongType("parameters"))?;
+        let name = match object.get("name") {
+            None => return Err(ValueError::MissingField("name")),
+            // PostgreSQL jsonb cannot hold \u0000, so a NUL is rejected here and not first by the database
+            Some(serde_json::Value::String(s)) if !s.is_empty() && !s.contains('\0') => s.clone(),
+            Some(_) => return Err(ValueError::WrongType("name")),
+        };
+        if !seen.insert(name.clone()) {
+            return Err(ValueError::DuplicateParameter(name));
+        }
+        let value = classify_value(object, item.get().as_bytes())?;
+        if matches!(&value, Value::Text(text) if text.contains('\0')) {
+            return Err(ValueError::WrongType("value"));
+        }
+        parameters.push(FunctionParameter { name, value });
+    }
+    Ok(parameters)
 }
 
 /// `-?digits/-?digits`
@@ -525,6 +591,81 @@ mod tests {
             Value::Text("a/b".into())
         );
         assert_eq!(Value::Text(String::new()).type_name(), "String");
+    }
+
+    #[test]
+    fn classify_function_payload() {
+        let p = classify(
+            format!(
+                r#"{{"time_point":"{TP}","parameters":[
+                {{"name":"pressure","value":2.5}},
+                {{"name":"z","real_value":1.0,"imaginary_value":0.5}},
+                {{"name":"r","value":"3/4"}},
+                {{"name":"on","value":true}},
+                {{"name":"s","value":"hi"}},
+                {{"name":"big","value":18446744073709551615}}]}}"#
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(p.time_point, t());
+        assert_eq!(p.value.type_name(), "Function");
+        let Value::Function(ps) = p.value else { panic!() };
+        let got: Vec<(&str, &Value)> = ps.iter().map(|p| (p.name.as_str(), &p.value)).collect();
+        assert_eq!(
+            got,
+            vec![
+                ("pressure", &Value::Real(2.5)),
+                ("z", &Value::Complex { real: 1.0, imaginary: 0.5 }),
+                ("r", &Value::Rational(Rational::new(3, 4).unwrap())),
+                ("on", &Value::Boolean(true)),
+                ("s", &Value::Text("hi".into())),
+                (
+                    "big",
+                    &Value::BigInteger {
+                        digits: "18446744073709551615".into(),
+                        approx: 18446744073709551615.0
+                    }
+                ),
+            ]
+        );
+        let empty = classify(format!(r#"{{"time_point":"{TP}","parameters":[]}}"#).as_bytes())
+            .unwrap();
+        assert_eq!(empty.value, Value::Function(vec![]));
+    }
+
+    #[test]
+    fn classify_function_errors() {
+        let f = |params: &str| {
+            classify(format!(r#"{{"time_point":"{TP}","parameters":{params}}}"#).as_bytes())
+        };
+        assert!(matches!(f("{}"), Err(ValueError::WrongType("parameters"))));
+        assert!(matches!(f("5"), Err(ValueError::WrongType("parameters"))));
+        assert!(matches!(f("[1]"), Err(ValueError::WrongType("parameters"))));
+        assert!(matches!(f(r#"[{"value":1}]"#), Err(ValueError::MissingField("name"))));
+        assert!(matches!(f(r#"[{"name":"","value":1}]"#), Err(ValueError::WrongType("name"))));
+        assert!(matches!(f(r#"[{"name":5,"value":1}]"#), Err(ValueError::WrongType("name"))));
+        assert!(matches!(
+            f(r#"[{"name":"a","value":1},{"name":"a","value":2}]"#),
+            Err(ValueError::DuplicateParameter(n)) if n == "a"
+        ));
+        assert!(matches!(
+            f(r#"[{"name":"a","parameters":[{"name":"b","value":1}]}]"#),
+            Err(ValueError::WrongType("parameters"))
+        ));
+        assert!(matches!(
+            f(r#"[{"name":"a","value":1,"parameters":[]}]"#),
+            Err(ValueError::WrongType("parameters"))
+        ));
+        assert!(matches!(f(r#"[{"name":"a","value":"1/0"}]"#), Err(ValueError::Rational(_))));
+        assert!(matches!(f(r#"[{"name":"a"}]"#), Err(ValueError::MissingField("value"))));
+        // jsonb cannot store \u0000: rejected in names and text values of parameters
+        assert!(matches!(f(r#"[{"name":"a\u0000b","value":1}]"#), Err(ValueError::WrongType("name"))));
+        assert!(matches!(f(r#"[{"name":"a","value":"x\u0000y"}]"#), Err(ValueError::WrongType("value"))));
+        assert!(matches!(
+            classify(br#"{"parameters":[]}"#),
+            Err(ValueError::MissingField("time_point"))
+        ));
     }
 
     #[test]

@@ -29,7 +29,7 @@ namespace DigitalTwin::Client {
         if (Connected)
             return;
 
-        auto connOpts = mqtt::connect_options_builder::v5()
+        auto connOpts = mqtt::connect_options_builder::v3()
             .keep_alive_interval(std::chrono::seconds(30))
             .clean_session(false)
             .automatic_reconnect()

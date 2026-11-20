@@ -61,6 +61,26 @@
 #include "MQTT/entities/values/RationalValueEntity.h"
 #include "MQTT/entities/values/RealValueEntity.h"
 #include "MQTT/entities/values/StringValueEntity.h"
+#include "MQTT/entities/FunctionValueEntity.h"
+
+namespace {
+	// IN and OUT are empty macros of the Windows headers, so the enumerators cannot be named while they are defined.
+#pragma push_macro("IN")
+#pragma push_macro("OUT")
+#undef IN
+#undef OUT
+	/**
+	 * True for a feature that is explicitly declared 'in' or 'inout'.
+	 */
+	bool isInputDirection(const std::optional<KerML::Entities::FeatureDirectionKind>& direction)
+	{
+		return direction.has_value()
+			&& (direction.value() == KerML::Entities::FeatureDirectionKind::IN
+				|| direction.value() == KerML::Entities::FeatureDirectionKind::IN_OUT);
+	}
+#pragma pop_macro("OUT")
+#pragma pop_macro("IN")
+}
 
 namespace DigitalTwin::Model {
 
@@ -85,7 +105,20 @@ namespace DigitalTwin::Model {
 	void DigitalTwinModel::updateVariable(const std::string& path, const std::string& payload)
 	{
 		//std::cout << "Variable with Address: " << path << " is updated with Value:" << std::endl << payload << std::endl;
-		const auto variableToBeEdited = getVariableWithAddress(path);
+		// A path ending in the return segment addresses the result of a variable that has a function attached.
+		std::string variablePath = path;
+		bool isReturnPath = false;
+		const std::string returnSuffix = std::string("/") + RETURN_TOPIC;
+		if (variablePath.size() > returnSuffix.size() &&
+			variablePath.compare(variablePath.size() - returnSuffix.size(), returnSuffix.size(), returnSuffix) == 0)
+		{
+			variablePath.resize(variablePath.size() - returnSuffix.size());
+			isReturnPath = true;
+		}
+
+		auto variableToBeEdited = getVariableWithAddress(variablePath);
+		if (isReturnPath && variableToBeEdited != nullptr && variableToBeEdited->getFunctionInvovation() == nullptr)
+			variableToBeEdited = nullptr;
 		if (variableToBeEdited!=nullptr)
 		{
 			//std::cout << "Variable found?" << std::endl;
@@ -171,6 +204,28 @@ namespace DigitalTwin::Model {
 		if (dynamic_cast<ScalarQuantities*>(variable))
 			return std::make_shared<RealValueEntity>(0.0); // Provisional default for scalar quantities.
 		return std::make_shared<IntegerValueEntity>(0); // Provisional default for unknown variable types.
+	}
+
+	std::shared_ptr<DigitalTwin::Communication::FunctionValueEntity> DigitalTwinModel::createFunctionValueEntity(Function* function)
+	{
+		if (!function)
+			return nullptr;
+		std::vector<DigitalTwin::Communication::FunctionValueEntity::NamedEntity> parameters;
+		const auto arguments = function->getParameters();
+		const auto& names = function->getParameterNames();
+		if (arguments.size() != names.size())
+			throw std::invalid_argument("function '" + function->getName() + "' has " + std::to_string(arguments.size()) +
+				" arguments but its definition declares " + std::to_string(names.size()) + " parameters");
+		for (std::size_t i = 0; i < arguments.size(); ++i)
+		{
+			const auto parameter = arguments[i];
+			// An argument that could not be resolved while building the model: publishing the remaining parameters would
+			// give clients a wrong signature, so the function gets no topic (the caller logs and skips it).
+			if (!parameter)
+				throw std::invalid_argument("function '" + function->getName() + "' has an unresolved argument for parameter '" + names[i] + "'");
+			parameters.emplace_back(names[i], createValueEntity(parameter));
+		}
+		return std::make_shared<DigitalTwin::Communication::FunctionValueEntity>(std::move(parameters));
 	}
 
 	void DigitalTwinModel::buildDigitalTwinModel()
@@ -279,13 +334,15 @@ namespace DigitalTwin::Model {
 			{
 				if (elem->declaredName().has_value())
 				{
-					if (elem->getType() == "Feature")
-					{
-						auto feature = std::dynamic_pointer_cast<KerML::Entities::Feature>(elem);
-						newParent->appendParameter(buildVariableOfFeature(feature));
-					}
+					// Only the formal names are recorded; an invocation's Parameters are its actual arguments.
+					// A parameter is a feature explicitly declared 'in' or 'inout'. The return feature and local
+					// features carry no direction, 'out' features are results. The cast (not the type name) also
+					// covers the parameters of a calc def, which are ReferenceUsages.
+					const auto feature = std::dynamic_pointer_cast<KerML::Entities::Feature>(elem);
+					if (feature && isInputDirection(feature->direction()))
+						newParent->appendParameterName(elem->declaredName().value());
 				}
-				else
+				else if (!newParent->getReturnVariable())
 					newParent->setReturnVariable(new RealVariable("Return"));
 			}
 			return;
@@ -320,17 +377,22 @@ namespace DigitalTwin::Model {
 					const auto invocationExpression = std::dynamic_pointer_cast<KerML::Entities::InvocationExpression>(elem);
 					if ((invocationExpression) && (!operatorExpression))
 					{
-						if (invocationExpression->instantiatedType()->qualifiedName().has_value()) {
+						if (invocationExpression->instantiatedType() && invocationExpression->instantiatedType()->qualifiedName().has_value()) {
 							const auto qualifiedName = invocationExpression->instantiatedType()->qualifiedName().value();
-							const auto invokedFunction = dynamic_cast<Function*>(getElementFromQualifiedName(qualifiedName))->invocate();
+							const auto definition = dynamic_cast<Function*>(getElementFromQualifiedName(qualifiedName));
+							if (!definition)
+								std::cerr << "Function " << qualifiedName << " invoked by variable " << variable->getName()
+									<< " is not (yet) part of the model, the variable gets no function topic." << std::endl;
+							const auto invokedFunction = definition ? definition->invocate() : nullptr;
 							if (invokedFunction) {
 								for (const auto& arg : invocationExpression->argument())
 								{
 									const auto reference = std::dynamic_pointer_cast<KerML::Entities::FeatureReferenceExpression>(arg);
-									if (reference->referent()->qualifiedName().has_value()) {
-										const auto connectedVariable = dynamic_cast<IVariable*>(getElementFromQualifiedName(reference->referent()->qualifiedName().value()));
-										invokedFunction->appendParameter(connectedVariable);
-									}
+									// Exactly one entry per argument keeps the positions aligned; nullptr marks an unresolved argument.
+									IVariable* connectedVariable = nullptr;
+									if (reference && reference->referent() && reference->referent()->qualifiedName().has_value())
+										connectedVariable = dynamic_cast<IVariable*>(getElementFromQualifiedName(reference->referent()->qualifiedName().value()));
+									invokedFunction->appendParameter(connectedVariable);
 								}
 								invokedFunction->setReturnVariable(variable);
 								variable->setFunctionInvocation(invokedFunction);
@@ -431,7 +493,7 @@ namespace DigitalTwin::Model {
 		if (featureType)
 		{
 			IVariable* variable = nullptr;
-			if (!featureType->declaredName().has_value())
+			if (featureType->declaredName().has_value())
 			{
 				switch (getTypeOfSysMLType(featureType->declaredName().value()))
 				{
@@ -601,12 +663,40 @@ namespace DigitalTwin::Model {
 	std::vector<std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>> DigitalTwinModel::getElementValueEntities() {
 		std::vector<std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>> elements;
 
+		// A variable with an attached function is published as <variable topic>/<functionName> (parameters,
+		// twin -> client) and <variable topic>/return (result, client -> twin); the plain variable topic is dropped.
+		// If the function entity cannot be created, only the plain variable topic is published.
+		const auto appendVariable = [this, &elements](const std::string& variableTopic, IVariable* variable)
+		{
+			const auto function = variable ? variable->getFunctionInvovation() : nullptr;
+			if (function)
+			{
+				const auto functionTopic = variableTopic + "/" + function->getName();
+				try
+				{
+					if (const auto entity = createFunctionValueEntity(function))
+					{
+						elements.push_back(std::make_pair(functionTopic, entity));
+						elements.push_back(std::make_pair(variableTopic + "/" + RETURN_TOPIC, createValueEntity(variable)));
+						return;
+					}
+				}
+				catch (const std::invalid_argument& e)
+				{
+					std::cerr << "Function topic " << functionTopic << " is skipped: " << e.what() << std::endl;
+				}
+			}
+			elements.push_back(std::make_pair(variableTopic, createValueEntity(variable)));
+		};
+
 		for (const auto& element : PackageMap) {
 			const auto package = dynamic_cast<Package*>(element.second);
 			if (!package)
 				continue;
 			for (const auto& variable : package->getAllMQTTVariables())
-				elements.push_back(std::make_pair(element.first + "/" + variable.first, createValueEntity(variable.second)));
+			{
+				appendVariable(element.first + "/" + variable.first, variable.second);
+			}
 		}
 
 		for (const auto& element : ComponentMap) {
@@ -614,7 +704,9 @@ namespace DigitalTwin::Model {
 			if (!component)
 				continue;
 			for (const auto& variable : component->getAllMQTTVariables())
-				elements.push_back(std::make_pair(element.first + "/" + variable.first, createValueEntity(variable.second)));
+			{
+				appendVariable(element.first + "/" + variable.first, variable.second);
+			}
 		}
 
 		return elements;
@@ -735,6 +827,8 @@ namespace DigitalTwin::Model {
 		}
 		else {
 			//std::cout << "Checking in Packages " << std::endl;
+			if (!PackageMap.contains(splittedAdress[0]))
+				throw DigitalTwinAddressException();
 			return dynamic_cast<Package*>(PackageMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
 		}
 	}

@@ -17,7 +17,7 @@ use dt_server::twin::{
     BackendError, LoadedTwin, TwinBackend, TwinElement, TwinInfo, TwinObserver, TwinOptions,
     TwinService, UnavailableBackend,
 };
-use rumqttc::v5::mqttbytes::QoS;
+use rumqttc::QoS;
 use uuid::Uuid;
 
 const PROJECT: Uuid = Uuid::from_u128(0xAAAA);

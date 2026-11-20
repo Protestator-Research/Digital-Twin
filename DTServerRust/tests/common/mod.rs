@@ -1,12 +1,11 @@
 //! Helpers for the integration tests: a hand written raw MQTT client (independent of the broker's own
-//! codec) and a thin wrapper around the rumqttc v5 client.
+//! codec) and a thin wrapper around the rumqttc (MQTT 3.1.1) client.
 #![allow(dead_code)]
 
 use std::time::Duration;
 
 use dt_server::broker::{Broker, BrokerLimits};
-use rumqttc::v5::mqttbytes::v5::Packet;
-use rumqttc::v5::{AsyncClient, Event, MqttOptions};
+use rumqttc::{AsyncClient, Event, MqttOptions, Packet};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
@@ -56,19 +55,21 @@ fn string(s: &str) -> Vec<u8> {
     out
 }
 
+/// MQTT 3.1.1 CONNECT with clean session and keep alive 30.
 pub fn connect(client_id: &str) -> Vec<u8> {
-    let mut body = string("MQTT");
-    body.extend([5, 0b10, 0, 30, 0]); // v5, clean start, keep alive 30, no properties
-    body.extend(string(client_id));
-    packet(0x10, &body)
+    connect_raw(0b10, 30, client_id, &[])
 }
 
-/// CONNECT with arbitrary connect flags, properties and extra payload bytes (will, user name, password).
-pub fn connect_raw(flags: u8, props: &[u8], client_id: &str, tail: &[u8]) -> Vec<u8> {
+/// MQTT 3.1.1 CONNECT (level 4) with a clean session and the given keep alive in seconds.
+pub fn connect_keep_alive(client_id: &str, keep_alive: u16) -> Vec<u8> {
+    connect_raw(0b10, keep_alive, client_id, &[])
+}
+
+/// CONNECT with arbitrary connect flags and extra payload bytes (will, user name, password).
+pub fn connect_raw(flags: u8, keep_alive: u16, client_id: &str, tail: &[u8]) -> Vec<u8> {
     let mut body = string("MQTT");
-    body.extend([5, flags, 0, 30]);
-    body.extend(varint(props.len()));
-    body.extend_from_slice(props);
+    body.extend([4, flags]);
+    body.extend(keep_alive.to_be_bytes());
     body.extend(string(client_id));
     body.extend_from_slice(tail);
     packet(0x10, &body)
@@ -78,19 +79,18 @@ pub fn string_bytes(s: &str) -> Vec<u8> {
     string(s)
 }
 
-pub fn subscribe(packet_id: u16, filters: &[(&str, bool)]) -> Vec<u8> {
+/// SUBSCRIBE for the filters, each with requested QoS 0.
+pub fn subscribe(packet_id: u16, filters: &[&str]) -> Vec<u8> {
     let mut body = packet_id.to_be_bytes().to_vec();
-    body.push(0);
-    for (filter, no_local) in filters {
+    for filter in filters {
         body.extend(string(filter));
-        body.push(if *no_local { 0b100 } else { 0 });
+        body.push(0);
     }
     packet(0x82, &body)
 }
 
 pub fn unsubscribe(packet_id: u16, filters: &[&str]) -> Vec<u8> {
     let mut body = packet_id.to_be_bytes().to_vec();
-    body.push(0);
     for filter in filters {
         body.extend(string(filter));
     }
@@ -99,14 +99,13 @@ pub fn unsubscribe(packet_id: u16, filters: &[&str]) -> Vec<u8> {
 
 pub fn publish(topic: &str, payload: &[u8]) -> Vec<u8> {
     let mut body = string(topic);
-    body.push(0);
     body.extend_from_slice(payload);
     packet(0x30, &body)
 }
 
 pub fn publish_qos1(topic: &str, payload: &[u8]) -> Vec<u8> {
     let mut body = string(topic);
-    body.extend([0, 1, 0]); // packet id 1, no properties
+    body.extend([0, 1]); // packet id 1
     body.extend_from_slice(payload);
     packet(0x32, &body)
 }
@@ -136,7 +135,13 @@ impl Raw {
         raw.send(&connect(client_id)).await;
         let (first, body) = raw.read_packet().await.expect("CONNACK");
         assert_eq!(first, 0x20, "expected CONNACK");
-        assert_eq!(body[1], 0x00, "CONNACK reason code");
+        assert_eq!(body, [0x00, 0x00], "CONNACK: session present 0, accepted");
+        raw
+    }
+
+    /// Like [`Raw::connected`] with the given keep alive (seconds) in the CONNECT.
+    pub async fn connected_keep_alive(addr: &str, client_id: &str, keep_alive: u16) -> Raw {
+        let (raw, _) = Raw::connected_with(addr, &connect_keep_alive(client_id, keep_alive)).await;
         raw
     }
 
@@ -146,7 +151,7 @@ impl Raw {
         raw.send(connect).await;
         let (first, body) = raw.read_packet().await.expect("CONNACK");
         assert_eq!(first, 0x20, "expected CONNACK");
-        assert_eq!(body[1], 0x00, "CONNACK reason code");
+        assert_eq!(body[1], 0x00, "CONNACK return code");
         (raw, body)
     }
 
@@ -189,7 +194,8 @@ impl Raw {
         Some((first, body))
     }
 
-    /// Reads packets until the connection is closed. Returns the last packet seen (e.g. a DISCONNECT).
+    /// Reads packets until the connection is closed. Returns the last packet seen (the broker sends no
+    /// DISCONNECT in MQTT 3.1.1, so this is `None` unless a CONNACK refusal was pending).
     pub async fn read_until_closed(&mut self) -> Option<(u8, Vec<u8>)> {
         let mut last = None;
         loop {
@@ -201,13 +207,13 @@ impl Raw {
         }
     }
 
-    /// Subscribes and waits for the SUBACK. Returns its reason codes.
-    pub async fn subscribe(&mut self, packet_id: u16, filters: &[(&str, bool)]) -> Vec<u8> {
+    /// Subscribes and waits for the SUBACK. Returns its return codes.
+    pub async fn subscribe(&mut self, packet_id: u16, filters: &[&str]) -> Vec<u8> {
         self.send(&subscribe(packet_id, filters)).await;
         let (first, body) = self.read_packet().await.expect("SUBACK");
         assert_eq!(first, 0x90);
         assert_eq!(u16::from_be_bytes([body[0], body[1]]), packet_id);
-        body[3..].to_vec()
+        body[2..].to_vec()
     }
 
     /// Reads a PUBLISH and returns topic and payload.
@@ -216,8 +222,7 @@ impl Raw {
         assert_eq!(first & 0xF0, 0x30, "expected PUBLISH, got {first:#x}");
         let tlen = usize::from(u16::from_be_bytes([body[0], body[1]]));
         let topic = String::from_utf8(body[2..2 + tlen].to_vec()).unwrap();
-        let props = usize::from(body[2 + tlen]);
-        (topic, body[3 + tlen + props..].to_vec())
+        (topic, body[2 + tlen..].to_vec())
     }
 
     /// True if nothing arrives within `limit`.
@@ -233,7 +238,7 @@ impl Raw {
 pub struct Client {
     pub client: AsyncClient,
     pub events: mpsc::UnboundedReceiver<Event>,
-    pub connack: rumqttc::v5::mqttbytes::v5::ConnAck,
+    pub connack: rumqttc::ConnAck,
 }
 
 impl Client {
@@ -284,7 +289,7 @@ impl Client {
         }
     }
 
-    pub async fn wait_suback(&mut self) -> Vec<rumqttc::v5::mqttbytes::v5::SubscribeReasonCode> {
+    pub async fn wait_suback(&mut self) -> Vec<rumqttc::SubscribeReasonCode> {
         self.wait_for(|p| match p {
             Packet::SubAck(s) => Some(s.return_codes.clone()),
             _ => None,
@@ -294,10 +299,7 @@ impl Client {
 
     pub async fn next_publish(&mut self) -> (String, Vec<u8>) {
         self.wait_for(|p| match p {
-            Packet::Publish(p) => Some((
-                String::from_utf8(p.topic.to_vec()).unwrap(),
-                p.payload.to_vec(),
-            )),
+            Packet::Publish(p) => Some((p.topic.clone(), p.payload.to_vec())),
             _ => None,
         })
         .await

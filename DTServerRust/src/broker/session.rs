@@ -1,7 +1,7 @@
 //! One task per client connection plus a writer task. Port of `Session`.
 
 use std::net::SocketAddr;
-use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -13,7 +13,7 @@ use tokio::sync::{mpsc, watch, Notify};
 use tokio::time::{sleep_until, timeout, Instant};
 use tracing::{debug, info, warn};
 
-use super::codec::{self, reason, DecodeError, Packet};
+use super::codec::{self, connack, suback, DecodeError, Packet};
 use super::core::Core;
 use super::subscriptions::{AddResult, SessionId};
 use super::topic;
@@ -24,7 +24,8 @@ pub(crate) enum Outgoing {
     Publish(Message),
     /// A control packet (CONNACK, SUBACK, PINGRESP, ...). Counted like publishes in the pending bytes.
     Raw(Bytes),
-    /// Writes the optional final packet, then closes the connection.
+    /// Writes the optional final packet (only a CONNACK refusing the connection, MQTT 3.1.1 has no
+    /// server DISCONNECT), then closes the connection.
     Close(Option<Bytes>),
 }
 
@@ -35,8 +36,6 @@ pub(crate) enum Offer {
     Dropped,
     /// Dropped, and this was the Nth consecutive overflow: the session is told to disconnect.
     DroppedAndKicked,
-    /// Not sent because it exceeds the Maximum Packet Size of the client. Not an overflow.
-    TooLarge,
 }
 
 /// Sending side of a session: the queue towards the writer task with byte accounting.
@@ -46,8 +45,6 @@ pub(crate) struct SessionOut {
     overflows: AtomicUsize,
     max_pending: usize,
     max_overflows: usize,
-    /// Maximum Packet Size announced by the client in CONNECT, 0 if none.
-    client_max_packet: AtomicU32,
     kick: Notify,
     writer_done: Notify,
 }
@@ -64,31 +61,15 @@ impl SessionOut {
             overflows: AtomicUsize::new(0),
             max_pending,
             max_overflows,
-            client_max_packet: AtomicU32::new(0),
             kick: Notify::new(),
             writer_done: Notify::new(),
         });
         (out, rx)
     }
 
-    pub(crate) fn set_client_max_packet(&self, size: u32) {
-        self.client_max_packet.store(size, Ordering::Release);
-    }
-
-    /// Queues a QoS 0 PUBLISH unless the pending bytes (topic + properties + payload) would exceed the limit
-    /// or the packet is larger than the client accepts. Never blocks.
+    /// Queues a QoS 0 PUBLISH unless the pending bytes (topic + payload) would exceed the limit.
+    /// Never blocks.
     pub(crate) fn offer_publish(&self, message: &Message) -> Offer {
-        let client_max = self.client_max_packet.load(Ordering::Acquire);
-        if client_max != 0 {
-            let encoded = codec::publish_encoded_len(
-                message.topic.len(),
-                message.properties.len(),
-                message.payload.len(),
-            );
-            if encoded.is_none_or(|len| len > client_max as usize) {
-                return Offer::TooLarge;
-            }
-        }
         let size = message_size(message);
         let before = self.pending.fetch_add(size, Ordering::AcqRel);
         if before + size > self.max_pending {
@@ -132,7 +113,7 @@ impl SessionOut {
 }
 
 fn message_size(message: &Message) -> usize {
-    message.topic.len() + message.properties.len() + message.payload.len()
+    message.topic.len() + message.payload.len()
 }
 
 async fn writer_task(
@@ -145,12 +126,7 @@ async fn writer_task(
         let result = match msg {
             Outgoing::Publish(message) => {
                 buf.clear();
-                codec::encode_publish(
-                    &mut buf,
-                    &message.topic,
-                    &message.properties,
-                    &message.payload,
-                );
+                codec::encode_publish(&mut buf, &message.topic, &message.payload);
                 let r = wr.write_all(&buf).await;
                 out.pending
                     .fetch_sub(message_size(&message), Ordering::AcqRel);
@@ -176,7 +152,8 @@ async fn writer_task(
     out.writer_done.notify_one();
 }
 
-/// Why the session ended, with an optional last packet for the client.
+/// Why the session ended, with an optional last packet for the client. The connection is always just closed
+/// (MQTT 3.1.1 has no server DISCONNECT); `why` is only for the log.
 struct End {
     why: &'static str,
     goodbye: Option<Bytes>,
@@ -201,10 +178,11 @@ impl End {
         }
     }
 
-    fn disconnect(why: &'static str, reason_code: u8) -> Self {
+    /// Refuses the CONNECT with a CONNACK carrying `return_code`, then closes.
+    fn refused(why: &'static str, return_code: u8) -> Self {
         Self {
             why,
-            goodbye: Some(codec::encode_disconnect(reason_code)),
+            goodbye: Some(codec::encode_connack(return_code)),
             flush: true,
         }
     }
@@ -264,18 +242,24 @@ async fn drive(
     let mut connected = false;
     let connect_deadline =
         Instant::now() + Duration::from_secs(u64::from(limits.connect_timeout_s));
-    // 1.5 x the server keep alive, which is the value announced to the client.
-    let keep_alive = (limits.server_keep_alive_s > 0)
-        .then(|| Duration::from_millis(u64::from(limits.server_keep_alive_s) * 1500));
+    // Keep alive of the client from its CONNECT (3.1.1, 3.1.2.10): the connection is closed after 1.5 times
+    // that interval without any packet; 0 disables the check.
+    let mut keep_alive: Option<Duration> = None;
     let mut deadline = Some(connect_deadline);
 
     loop {
         loop {
             match codec::decode(&mut buf, limits.max_packet_size) {
                 Ok(Some(packet)) => {
-                    if let Some(end) =
-                        handle_packet(packet, core, id, out, &mut connected, client_id)
-                    {
+                    if let Some(end) = handle_packet(
+                        packet,
+                        core,
+                        id,
+                        out,
+                        &mut connected,
+                        client_id,
+                        &mut keep_alive,
+                    ) {
                         return end;
                     }
                     if connected {
@@ -290,7 +274,7 @@ async fn drive(
         tokio::select! {
             biased;
             _ = shutdown.wait_for(|stop| *stop) => {
-                return End::disconnect("server shutting down", reason::SERVER_SHUTTING_DOWN);
+                return End::closed("server shutting down");
             }
             _ = out.kick.notified() => {
                 warn!(session = id, client_id = %client_id, "disconnecting slow client");
@@ -308,7 +292,7 @@ async fn drive(
             },
             _ = sleep_deadline(deadline) => {
                 return if connected {
-                    End::disconnect("keep alive timeout", reason::KEEP_ALIVE_TIMEOUT)
+                    End::closed("keep alive timeout")
                 } else {
                     End::closed("CONNECT timeout")
                 };
@@ -326,14 +310,29 @@ async fn sleep_deadline(deadline: Option<Instant>) {
 
 fn decode_failure(e: DecodeError, connected: bool) -> End {
     debug!(error = %e, "closing connection after invalid packet");
+    // Nothing is sent: in 3.1.1 a protocol violation is answered by closing the network connection.
+    // The one exception is a CONNECT with an unsupported protocol level, which gets CONNACK 0x01
+    // ([MQTT-3.1.2-2]); a wrong protocol name is just closed.
     if !connected {
-        // A server must not send anything but CONNACK before the connection is established.
-        return End::closed("invalid first packet");
+        if e == DecodeError::UnacceptableProtocolLevel {
+            return End::refused(
+                "unacceptable protocol level",
+                connack::UNACCEPTABLE_PROTOCOL_VERSION,
+            );
+        }
+        return End::closed(match e {
+            DecodeError::UnsupportedProtocol => "unsupported protocol",
+            _ => "invalid first packet",
+        });
     }
-    match e.disconnect_reason() {
-        Some(code) => End::disconnect("invalid packet", code),
-        None => End::closed("unsupported protocol"),
-    }
+    End::closed(match e {
+        DecodeError::PacketTooLarge { .. } => "packet too large",
+        DecodeError::Malformed(_) => "malformed packet",
+        DecodeError::QosNotSupported => "QoS above 0 is not supported",
+        DecodeError::UnsupportedProtocol | DecodeError::UnacceptableProtocolLevel => {
+            "unsupported protocol"
+        }
+    })
 }
 
 const QUEUE_FULL: &str = "control packet queue overflow";
@@ -354,22 +353,31 @@ fn handle_packet(
     out: &Arc<SessionOut>,
     connected: &mut bool,
     client_id: &mut String,
+    keep_alive: &mut Option<Duration>,
 ) -> Option<End> {
     let limits = &core.limits;
     if !*connected {
         return match packet {
             Packet::Connect(connect) => {
-                let assigned = connect.client_id.is_empty().then(|| generate_client_id(id));
-                *client_id = assigned.clone().unwrap_or(connect.client_id);
-                info!(session = id, client_id = %client_id, "CONNECT");
+                if connect.client_id.is_empty() {
+                    // 3.1.1, 3.1.3.1: an empty client id is only allowed with clean session = 1, otherwise
+                    // the server answers CONNACK 0x02 (identifier rejected) and closes. With clean session
+                    // the broker makes up an id for its own bookkeeping; the client is not told about it.
+                    if !connect.clean_session {
+                        return Some(End::refused(
+                            "empty client id without clean session",
+                            connack::IDENTIFIER_REJECTED,
+                        ));
+                    }
+                    *client_id = generate_client_id(id);
+                } else {
+                    *client_id = connect.client_id;
+                }
+                info!(session = id, client_id = %client_id, keep_alive = connect.keep_alive, "CONNECT");
                 *connected = true;
-                out.set_client_max_packet(connect.max_packet_size.unwrap_or(0));
-                let connack = codec::encode_connack(
-                    limits.max_packet_size,
-                    limits.server_keep_alive_s,
-                    assigned.as_deref(),
-                );
-                if !out.send_control(connack) {
+                *keep_alive = (connect.keep_alive > 0)
+                    .then(|| Duration::from_millis(u64::from(connect.keep_alive) * 1500));
+                if !out.send_control(codec::encode_connack(connack::ACCEPTED)) {
                     return Some(End::abandoned(QUEUE_FULL));
                 }
                 None
@@ -379,7 +387,7 @@ fn handle_packet(
         };
     }
     match packet {
-        Packet::Connect(_) => Some(End::disconnect("second CONNECT", reason::PROTOCOL_ERROR)),
+        Packet::Connect(_) => Some(End::closed("second CONNECT")),
         Packet::PingReq => {
             if !out.send_control(codec::encode_pingresp()) {
                 return Some(End::abandoned(QUEUE_FULL));
@@ -393,17 +401,13 @@ fn handle_packet(
                 if !topic::within_limits(&entry.filter, limits)
                     || !topic::is_valid_filter(&entry.filter)
                 {
-                    reasons.push(reason::TOPIC_FILTER_INVALID);
+                    reasons.push(suback::FAILURE);
                     continue;
                 }
-                match store.add(
-                    id,
-                    &entry.filter,
-                    entry.no_local,
-                    limits.max_subscriptions_per_session,
-                ) {
-                    AddResult::QuotaExceeded => reasons.push(reason::QUOTA_EXCEEDED),
-                    AddResult::Added | AddResult::Updated => reasons.push(reason::GRANTED_QOS_0),
+                match store.add(id, &entry.filter, limits.max_subscriptions_per_session) {
+                    AddResult::QuotaExceeded => reasons.push(suback::FAILURE),
+                    // QoS 0 is the only level the broker grants, whatever the client asked for
+                    AddResult::Added | AddResult::Updated => reasons.push(suback::GRANTED_QOS_0),
                 }
             }
             drop(store);
@@ -418,33 +422,25 @@ fn handle_packet(
                 store.remove(id, filter);
             }
             drop(store);
-            let ack = codec::encode_unsuback(packet_id, &vec![reason::SUCCESS; filters.len()]);
-            if !out.send_control(ack) {
+            if !out.send_control(codec::encode_unsuback(packet_id)) {
                 return Some(End::abandoned(QUEUE_FULL));
             }
             None
         }
         Packet::Publish(publish) => {
             if !topic::is_valid_topic_name(&publish.topic) {
-                return Some(End::disconnect(
-                    "invalid topic name",
-                    reason::TOPIC_NAME_INVALID,
-                ));
+                return Some(End::closed("invalid topic name"));
             }
             if !topic::within_limits(&publish.topic, limits) {
                 debug!(session = id, "PUBLISH dropped: topic exceeds limits");
                 return None;
             }
             debug!(session = id, topic = %publish.topic, payload_bytes = publish.payload.len(), "PUBLISH");
-            core.dispatch(
-                Message {
-                    origin: Origin::Client,
-                    topic: Arc::from(publish.topic),
-                    payload: publish.payload,
-                    properties: publish.properties,
-                },
-                Some(id),
-            );
+            core.dispatch(Message {
+                origin: Origin::Client,
+                topic: Arc::from(publish.topic),
+                payload: publish.payload,
+            });
             None
         }
         Packet::Disconnect => Some(End::closed("client disconnect")),
@@ -461,7 +457,6 @@ mod tests {
             origin: Origin::Client,
             topic: Arc::from(s),
             payload: Bytes::new(),
-            properties: Bytes::new(),
         }
     }
 
@@ -532,26 +527,5 @@ mod tests {
             queued += 1;
         }
         assert_eq!(queued, 5);
-    }
-
-    #[test]
-    fn publish_larger_than_the_client_maximum_is_not_an_overflow() {
-        let (out, mut rx) = SessionOut::new(1_000_000, 1);
-        out.set_client_max_packet(20);
-        // 1 + 1 + (2 + 1 + 1 + 10) = 16 bytes: fits
-        assert_eq!(
-            out.offer_publish(&msg(Bytes::from(vec![0; 10]))),
-            Offer::Queued
-        );
-        // 1 + 1 + (2 + 1 + 1 + 20) = 26 bytes: too large, and no overflow even with max_overflows = 1
-        assert_eq!(
-            out.offer_publish(&msg(Bytes::from(vec![0; 20]))),
-            Offer::TooLarge
-        );
-        assert_eq!(
-            out.offer_publish(&msg(Bytes::from(vec![0; 10]))),
-            Offer::Queued
-        );
-        assert!(rx.try_recv().is_ok() && rx.try_recv().is_ok() && rx.try_recv().is_err());
     }
 }

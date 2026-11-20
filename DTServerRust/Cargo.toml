@@ -2,7 +2,7 @@
 name = "dt-server"
 version = "2611.1.0"
 edition = "2021"
-description = "Rust port of the Digital Twin Server: embedded MQTT v5 broker and server logic"
+description = "Rust port of the Digital Twin Server: embedded MQTT 3.1.1 broker and server logic"
 publish = false
 
 [lib]

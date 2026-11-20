@@ -169,8 +169,17 @@ namespace DigitalTwin::Model {
         for (const auto& [comp_name, component] : ComponentMap)
             comp->appendComponent(component->instantiate(comp_name));
 
+        // Controllables are copied; a copy needs its own function invocation, bound to the copies.
+        std::map<IVariable*, IVariable*> copies;
         for (auto [_, controllable] : Controllables)
-            comp->appendControllable(controllable->copy());
+        {
+            const auto copy = controllable->copy();
+            copies[controllable] = copy;
+            comp->appendControllable(copy);
+        }
+        for (const auto& [original, copy] : copies)
+            if (const auto invocation = original->getFunctionInvovation())
+                copy->setFunctionInvocation(invocation->rebind(copies, copy));
 
         for (auto [_, measurable] : Measurables)
             comp->appendMeasurable(measurable);
@@ -214,5 +223,6 @@ namespace DigitalTwin::Model {
 			return ComponentMap[domains[index]]->resolveVariable(domains, index + 1);
         if (PortMap.contains(domains[index]))
             return PortMap[domains[index]]->resolveVariable(domains, index + 1);
+        throw DigitalTwinAddressException();
     } 
 }

@@ -31,9 +31,6 @@ pub struct Message {
     pub origin: Origin,
     pub topic: Arc<str>,
     pub payload: Bytes,
-    /// Raw MQTT v5 property bytes of the PUBLISH (without length prefix), e.g. response topic, correlation
-    /// data and user properties. Topic alias and subscription identifier are removed. Empty for hub publishes.
-    pub properties: Bytes,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -174,26 +171,17 @@ impl Hub {
             return Err(HubError::Closed);
         }
         let payload = payload.into();
-        if codec::publish_encoded_len(topic.len(), 0, payload.len())
+        if codec::publish_encoded_len(topic.len(), payload.len())
             .is_none_or(|len| len > self.core.limits.max_packet_size as usize)
         {
             return Err(HubError::PayloadTooLarge);
         }
-        self.core.dispatch(
-            Message {
-                origin: Origin::Server,
-                topic: Arc::from(topic),
-                payload,
-                properties: Bytes::new(),
-            },
-            None,
-        );
+        self.core.dispatch(Message {
+            origin: Origin::Server,
+            topic: Arc::from(topic),
+            payload,
+        });
         Ok(())
-    }
-
-    /// Number of messages not sent to a client because they exceed the Maximum Packet Size the client announced.
-    pub fn oversize_dropped_total(&self) -> u64 {
-        self.core.oversize_dropped.load(Ordering::Relaxed)
     }
 
     /// Total number of messages dropped for slow internal subscribers.

@@ -1,26 +1,28 @@
-//! Minimal MQTT v5 codec for exactly the packets the broker needs (QoS 0 only).
+//! Minimal MQTT 3.1.1 codec (protocol level 4) for exactly the packets the broker needs (QoS 0 only).
 //!
 //! Decoded: CONNECT, PUBLISH (QoS 0), SUBSCRIBE, UNSUBSCRIBE, PINGREQ, DISCONNECT. All other packet types
-//! are reported as [`Packet::Ignored`]. Encoded: CONNACK, PUBLISH (QoS 0), SUBACK, UNSUBACK, PINGRESP,
-//! DISCONNECT. Properties of incoming packets are skipped (bounds checked, not interpreted).
+//! are reported as [`Packet::Ignored`]. Encoded: CONNACK, PUBLISH (QoS 0), SUBACK, UNSUBACK, PINGRESP.
+//! MQTT 3.1.1 has no server-sent DISCONNECT and no properties, so none of that exists here.
+//! Will, user name and password of a CONNECT are not interpreted.
 //!
 //! The size check happens on the fixed header, before the body is buffered.
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use thiserror::Error;
 
-/// Reason codes used by the broker.
-pub mod reason {
-    pub const SUCCESS: u8 = 0x00;
+/// CONNACK return codes (MQTT 3.1.1, 3.2.2.3) used by the broker.
+pub mod connack {
+    pub const ACCEPTED: u8 = 0x00;
+    /// Client identifier is correct UTF-8 but not allowed (here: empty id without clean session).
+    pub const IDENTIFIER_REJECTED: u8 = 0x02;
+    /// The server does not support the protocol level requested by the client.
+    pub const UNACCEPTABLE_PROTOCOL_VERSION: u8 = 0x01;
+}
+
+/// SUBACK return codes (MQTT 3.1.1, 3.9.3).
+pub mod suback {
     pub const GRANTED_QOS_0: u8 = 0x00;
-    pub const MALFORMED_PACKET: u8 = 0x81;
-    pub const PROTOCOL_ERROR: u8 = 0x82;
-    pub const SERVER_SHUTTING_DOWN: u8 = 0x8B;
-    pub const KEEP_ALIVE_TIMEOUT: u8 = 0x8D;
-    pub const TOPIC_FILTER_INVALID: u8 = 0x8F;
-    pub const TOPIC_NAME_INVALID: u8 = 0x90;
-    pub const QUOTA_EXCEEDED: u8 = 0x97;
-    pub const PACKET_TOO_LARGE: u8 = 0x95;
+    pub const FAILURE: u8 = 0x80;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -29,47 +31,33 @@ pub enum DecodeError {
     PacketTooLarge { size: usize, max: usize },
     #[error("malformed packet: {0}")]
     Malformed(&'static str),
-    #[error("unsupported protocol (only MQTT v5 is supported)")]
+    /// Protocol name is not `MQTT` (e.g. MQTT 3.1 `MQIsdp`): the connection is just closed.
+    #[error("unsupported protocol (only MQTT 3.1.1 is supported)")]
     UnsupportedProtocol,
+    /// Protocol name `MQTT` with a level other than 4 (e.g. MQTT 5): CONNACK 0x01, then close
+    /// ([MQTT-3.1.2-2]).
+    #[error("unsupported protocol level (only MQTT 3.1.1, level 4, is supported)")]
+    UnacceptableProtocolLevel,
     #[error("only QoS 0 is supported")]
     QosNotSupported,
-    #[error("topic aliases are not supported (no Topic Alias Maximum announced)")]
-    TopicAlias,
-}
-
-impl DecodeError {
-    /// DISCONNECT reason code to send, `None` if the connection is just closed.
-    pub fn disconnect_reason(&self) -> Option<u8> {
-        match self {
-            DecodeError::PacketTooLarge { .. } => Some(reason::PACKET_TOO_LARGE),
-            DecodeError::Malformed(_) => Some(reason::MALFORMED_PACKET),
-            DecodeError::QosNotSupported | DecodeError::TopicAlias => Some(reason::PROTOCOL_ERROR),
-            DecodeError::UnsupportedProtocol => None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Connect {
     pub client_id: String,
     pub keep_alive: u16,
-    pub clean_start: bool,
-    /// Maximum Packet Size property of the client (0x27), if sent.
-    pub max_packet_size: Option<u32>,
+    pub clean_session: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Publish {
     pub topic: String,
-    /// Raw property bytes (without length prefix) without Topic Alias and Subscription Identifier.
-    pub properties: Bytes,
     pub payload: Bytes,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubscribeEntry {
     pub filter: String,
-    pub no_local: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -86,7 +74,7 @@ pub enum Packet {
     },
     PingReq,
     Disconnect,
-    /// A well formed packet of a type the broker does not act on (PUBACK, AUTH, ...).
+    /// A well formed packet of a type the broker does not act on (PUBACK, ...).
     Ignored(u8),
 }
 
@@ -148,34 +136,32 @@ fn decode_body(first: u8, body: Bytes) -> Result<Packet, DecodeError> {
     match kind {
         CONNECT => decode_connect(&mut r),
         PUBLISH => {
+            // [MQTT-3.3.1-2]: DUP must be 0 for QoS 0
+            if flags & 0b1000 != 0 && (flags >> 1) & 0b11 == 0 {
+                return Err(DecodeError::Malformed("DUP flag on a QoS 0 PUBLISH"));
+            }
             match (flags >> 1) & 0b11 {
                 0 => {}
                 3 => return Err(DecodeError::Malformed("QoS 3")),
                 _ => return Err(DecodeError::QosNotSupported),
             }
             let topic = r.string()?;
-            let properties = forwardable_publish_properties(&r.properties()?)?;
             Ok(Packet::Publish(Publish {
                 topic,
-                properties,
                 payload: r.0,
             }))
         }
         SUBSCRIBE => {
             let packet_id = r.u16()?;
-            r.skip_properties()?;
             let mut entries = Vec::new();
             while r.0.has_remaining() {
                 let filter = r.string()?;
                 let options = r.u8()?;
-                // reserved bits, QoS 3 and Retain Handling 3 are malformed
-                if options & 0xC0 != 0 || options & 0b11 == 0b11 || (options >> 4) & 0b11 == 0b11 {
-                    return Err(DecodeError::Malformed("subscription options"));
+                // 3.1.1: only bits 0-1 (requested QoS) are used, QoS 3 and any of bits 2-7 are malformed
+                if options & 0xFC != 0 || options & 0b11 == 0b11 {
+                    return Err(DecodeError::Malformed("requested QoS byte"));
                 }
-                entries.push(SubscribeEntry {
-                    filter,
-                    no_local: options & 0b100 != 0,
-                });
+                entries.push(SubscribeEntry { filter });
             }
             if entries.is_empty() {
                 return Err(DecodeError::Malformed("SUBSCRIBE without filters"));
@@ -184,7 +170,6 @@ fn decode_body(first: u8, body: Bytes) -> Result<Packet, DecodeError> {
         }
         UNSUBSCRIBE => {
             let packet_id = r.u16()?;
-            r.skip_properties()?;
             let mut filters = Vec::new();
             while r.0.has_remaining() {
                 filters.push(r.string()?);
@@ -195,9 +180,8 @@ fn decode_body(first: u8, body: Bytes) -> Result<Packet, DecodeError> {
             Ok(Packet::Unsubscribe { packet_id, filters })
         }
         PINGREQ => Ok(Packet::PingReq),
-        // A DISCONNECT may consist of the fixed header only (remaining length 0).
         DISCONNECT => Ok(Packet::Disconnect),
-        0 => Err(DecodeError::Malformed("reserved packet type")),
+        0 | 15 => Err(DecodeError::Malformed("reserved packet type")),
         other => Ok(Packet::Ignored(other)),
     }
 }
@@ -207,33 +191,39 @@ fn decode_connect(r: &mut Reader) -> Result<Packet, DecodeError> {
     if name != "MQTT" {
         return Err(DecodeError::UnsupportedProtocol);
     }
-    if r.u8()? != 5 {
-        return Err(DecodeError::UnsupportedProtocol);
+    if r.u8()? != 4 {
+        return Err(DecodeError::UnacceptableProtocolLevel);
     }
     let flags = r.u8()?;
     if flags & 1 != 0 {
         return Err(DecodeError::Malformed("reserved connect flag"));
     }
+    let will_flag = flags & 0b100 != 0;
+    let will_qos = (flags >> 3) & 0b11;
+    let will_retain = flags & 0b10_0000 != 0;
+    // [MQTT-3.1.2-14]: will QoS 3 is invalid; [MQTT-3.1.2-13/-15]: will QoS and will retain must be 0
+    // without will flag; [MQTT-3.1.2-22]: a password needs a user name.
+    if will_qos == 3 {
+        return Err(DecodeError::Malformed("will QoS 3"));
+    }
+    if !will_flag && (will_qos != 0 || will_retain) {
+        return Err(DecodeError::Malformed(
+            "will QoS or will retain without will flag",
+        ));
+    }
+    if flags & 0b1000_0000 == 0 && flags & 0b0100_0000 != 0 {
+        return Err(DecodeError::Malformed(
+            "password flag without user name flag",
+        ));
+    }
     let keep_alive = r.u16()?;
-    let properties = r.properties()?;
-    let mut max_packet_size = None;
-    walk_properties(&properties, |id, value| {
-        if id == 0x27 {
-            let size = u32::from_be_bytes([value[0], value[1], value[2], value[3]]);
-            if size == 0 {
-                return Err(DecodeError::Malformed("maximum packet size 0"));
-            }
-            max_packet_size = Some(size);
-        }
-        Ok(())
-    })?;
     let client_id = r.string()?;
-    // Will, user name and password are not used by the broker (no authentication yet).
+    // Will topic/message, user name and password follow the client id; only their flags are checked above,
+    // the content is not parsed or used (no authentication yet).
     Ok(Packet::Connect(Connect {
         client_id,
         keep_alive,
-        clean_start: flags & 0b10 != 0,
-        max_packet_size,
+        clean_session: flags & 0b10 != 0,
     }))
 }
 
@@ -262,93 +252,6 @@ impl Reader {
         let raw = self.0.split_to(len);
         String::from_utf8(raw.to_vec()).map_err(|_| DecodeError::Malformed("invalid UTF-8"))
     }
-
-    fn varint(&mut self) -> Result<usize, DecodeError> {
-        let mut value = 0usize;
-        for i in 0..4 {
-            let b = self.u8()?;
-            value |= usize::from(b & 0x7F) << (7 * i);
-            if b & 0x80 == 0 {
-                return Ok(value);
-            }
-        }
-        Err(DecodeError::Malformed("variable byte integer"))
-    }
-
-    fn skip_properties(&mut self) -> Result<(), DecodeError> {
-        self.properties().map(|_| ())
-    }
-
-    /// Reads the property section and returns its bytes (without the length prefix).
-    fn properties(&mut self) -> Result<Bytes, DecodeError> {
-        let len = self.varint()?;
-        if self.0.remaining() < len {
-            return Err(DecodeError::Malformed("truncated properties"));
-        }
-        Ok(self.0.split_to(len))
-    }
-}
-
-/// Length of the value of property `id` at the start of `rest`.
-fn property_value_len(id: u8, rest: &[u8]) -> Result<usize, DecodeError> {
-    let bad = DecodeError::Malformed("property");
-    let prefixed = |at: usize| -> Result<usize, DecodeError> {
-        let hdr = rest
-            .get(at..at + 2)
-            .ok_or(DecodeError::Malformed("property"))?;
-        Ok(2 + usize::from(u16::from_be_bytes([hdr[0], hdr[1]])))
-    };
-    match id {
-        0x01 | 0x17 | 0x19 | 0x24 | 0x25 | 0x28 | 0x29 | 0x2A => Ok(1),
-        0x13 | 0x21 | 0x22 | 0x23 => Ok(2),
-        0x02 | 0x11 | 0x18 | 0x27 => Ok(4),
-        0x0B => {
-            let n = rest.iter().take(4).position(|b| b & 0x80 == 0).ok_or(bad)?;
-            Ok(n + 1)
-        }
-        0x03 | 0x08 | 0x09 | 0x12 | 0x15 | 0x16 | 0x1A | 0x1C | 0x1F => prefixed(0),
-        0x26 => {
-            let first = prefixed(0)?;
-            Ok(first + prefixed(first)?)
-        }
-        _ => Err(bad),
-    }
-}
-
-/// Calls `visit(id, value)` for every property; fails on unknown ids and truncated values.
-fn walk_properties(
-    props: &[u8],
-    mut visit: impl FnMut(u8, &[u8]) -> Result<(), DecodeError>,
-) -> Result<(), DecodeError> {
-    let mut pos = 0;
-    while pos < props.len() {
-        let id = props[pos];
-        let len = property_value_len(id, &props[pos + 1..])?;
-        let value = props
-            .get(pos + 1..pos + 1 + len)
-            .ok_or(DecodeError::Malformed("truncated property"))?;
-        visit(id, value)?;
-        pos += 1 + len;
-    }
-    Ok(())
-}
-
-/// Removes Topic Alias (0x23) and Subscription Identifier (0x0B) from the PUBLISH properties. A topic alias
-/// cannot be resolved because the broker announces no Topic Alias Maximum.
-fn forwardable_publish_properties(props: &Bytes) -> Result<Bytes, DecodeError> {
-    let mut out = BytesMut::with_capacity(props.len());
-    let mut pos = 0;
-    walk_properties(props, |id, value| {
-        let end = pos + 1 + value.len();
-        match id {
-            0x23 => return Err(DecodeError::TopicAlias),
-            0x0B => {}
-            _ => out.put_slice(&props[pos..end]),
-        }
-        pos = end;
-        Ok(())
-    })?;
-    Ok(out.freeze())
 }
 
 fn put_varint(out: &mut BytesMut, mut value: usize) {
@@ -370,32 +273,9 @@ fn put_fixed_header(out: &mut BytesMut, first: u8, remaining: usize) {
     put_varint(out, remaining);
 }
 
-/// CONNACK with session_present = false, success and the properties maximum packet size and server keep alive.
-/// `assigned_client_id` is announced as Assigned Client Identifier (0x12) when the client sent an empty id.
-pub fn encode_connack(
-    max_packet_size: u32,
-    server_keep_alive: u16,
-    assigned_client_id: Option<&str>,
-) -> Bytes {
-    let props_len = 8 + assigned_client_id.map_or(0, |id| 3 + id.len());
-    let mut out = BytesMut::with_capacity(16 + props_len);
-    let mut props_len_bytes = BytesMut::new();
-    put_varint(&mut props_len_bytes, props_len);
-    // ack flags + reason code + properties length + properties
-    put_fixed_header(&mut out, 0x20, 2 + props_len_bytes.len() + props_len);
-    out.put_u8(0); // session present = false
-    out.put_u8(reason::SUCCESS);
-    out.put_slice(&props_len_bytes);
-    out.put_u8(0x27); // maximum packet size
-    out.put_u32(max_packet_size);
-    out.put_u8(0x13); // server keep alive
-    out.put_u16(server_keep_alive);
-    if let Some(id) = assigned_client_id {
-        out.put_u8(0x12);
-        out.put_u16(id.len() as u16);
-        out.put_slice(id.as_bytes());
-    }
-    out.freeze()
+/// CONNACK with session_present = false (the broker keeps no session state) and the given return code.
+pub fn encode_connack(return_code: u8) -> Bytes {
+    Bytes::copy_from_slice(&[0x20, 0x02, 0x00, return_code])
 }
 
 fn varint_len(value: usize) -> usize {
@@ -411,57 +291,41 @@ fn varint_len(value: usize) -> usize {
 const MAX_REMAINING_LENGTH: usize = 268_435_455;
 
 /// Size in bytes of an encoded QoS 0 PUBLISH, `None` if it cannot be encoded at all.
-pub fn publish_encoded_len(
-    topic_len: usize,
-    properties_len: usize,
-    payload_len: usize,
-) -> Option<usize> {
-    let remaining = 2usize
-        .checked_add(topic_len)?
-        .checked_add(varint_len(properties_len))?
-        .checked_add(properties_len)?
-        .checked_add(payload_len)?;
+pub fn publish_encoded_len(topic_len: usize, payload_len: usize) -> Option<usize> {
+    // the topic length is a 16 bit field
+    if topic_len > usize::from(u16::MAX) {
+        return None;
+    }
+    let remaining = 2usize.checked_add(topic_len)?.checked_add(payload_len)?;
     (remaining <= MAX_REMAINING_LENGTH).then(|| 1 + varint_len(remaining) + remaining)
 }
 
-/// Appends a QoS 0 PUBLISH to `out`. `properties` are raw property bytes without length prefix.
-/// The caller makes sure the packet fits (see [`publish_encoded_len`]).
-pub fn encode_publish(out: &mut BytesMut, topic: &str, properties: &[u8], payload: &[u8]) {
-    let remaining =
-        2 + topic.len() + varint_len(properties.len()) + properties.len() + payload.len();
+/// Appends a QoS 0 PUBLISH to `out`. The caller makes sure the packet fits (see [`publish_encoded_len`]).
+pub fn encode_publish(out: &mut BytesMut, topic: &str, payload: &[u8]) {
+    let remaining = 2 + topic.len() + payload.len();
     out.reserve(5 + remaining);
     put_fixed_header(out, 0x30, remaining);
     out.put_u16(topic.len() as u16);
     out.put_slice(topic.as_bytes());
-    put_varint(out, properties.len());
-    out.put_slice(properties);
     out.put_slice(payload);
 }
 
-pub fn encode_suback(packet_id: u16, reasons: &[u8]) -> Bytes {
-    let mut out = BytesMut::with_capacity(8 + reasons.len());
-    put_fixed_header(&mut out, 0x90, 2 + 1 + reasons.len());
+/// SUBACK with one return code ([`suback`]) per requested filter.
+pub fn encode_suback(packet_id: u16, return_codes: &[u8]) -> Bytes {
+    let mut out = BytesMut::with_capacity(8 + return_codes.len());
+    put_fixed_header(&mut out, 0x90, 2 + return_codes.len());
     out.put_u16(packet_id);
-    out.put_u8(0);
-    out.put_slice(reasons);
+    out.put_slice(return_codes);
     out.freeze()
 }
 
-pub fn encode_unsuback(packet_id: u16, reasons: &[u8]) -> Bytes {
-    let mut out = BytesMut::with_capacity(8 + reasons.len());
-    put_fixed_header(&mut out, 0xB0, 2 + 1 + reasons.len());
-    out.put_u16(packet_id);
-    out.put_u8(0);
-    out.put_slice(reasons);
-    out.freeze()
+pub fn encode_unsuback(packet_id: u16) -> Bytes {
+    let id = packet_id.to_be_bytes();
+    Bytes::copy_from_slice(&[0xB0, 0x02, id[0], id[1]])
 }
 
 pub fn encode_pingresp() -> Bytes {
     Bytes::from_static(&[0xD0, 0x00])
-}
-
-pub fn encode_disconnect(reason_code: u8) -> Bytes {
-    Bytes::copy_from_slice(&[0xE0, 0x01, reason_code])
 }
 
 #[cfg(test)]
@@ -473,9 +337,8 @@ mod tests {
     }
 
     fn connect_bytes(client_id: &str, keep_alive: u16) -> Vec<u8> {
-        let mut body = vec![0, 4, b'M', b'Q', b'T', b'T', 5, 0b10];
+        let mut body = vec![0, 4, b'M', b'Q', b'T', b'T', 4, 0b10];
         body.extend(keep_alive.to_be_bytes());
-        body.push(0); // properties
         body.extend((client_id.len() as u16).to_be_bytes());
         body.extend(client_id.as_bytes());
         let mut out = vec![0x10, body.len() as u8];
@@ -492,47 +355,126 @@ mod tests {
             Packet::Connect(Connect {
                 client_id: "abc".into(),
                 keep_alive: 30,
-                clean_start: true,
-                max_packet_size: None
+                clean_session: true,
             })
         );
         assert!(b.is_empty());
     }
 
     #[test]
-    fn connect_with_properties_and_empty_client_id() {
-        // properties: session expiry (0x11) 4 bytes
-        let body: Vec<u8> = vec![
-            0, 4, b'M', b'Q', b'T', b'T', 5, 0, 0, 10, 5, 0x11, 0, 0, 0, 1, 0, 0,
-        ];
-        let mut raw = vec![0x10, body.len() as u8];
-        raw.extend(body);
+    fn connect_without_clean_session_and_empty_client_id() {
+        // flags 0 = no clean session; the codec reports it, the session decides what to do with it
+        let raw = [0x10, 12, 0, 4, b'M', b'Q', b'T', b'T', 4, 0, 0, 10, 0, 0];
         let p = decode(&mut buf(&raw), 1024).unwrap().unwrap();
         assert_eq!(
             p,
             Packet::Connect(Connect {
                 client_id: String::new(),
                 keep_alive: 10,
-                clean_start: false,
-                max_packet_size: None
+                clean_session: false,
             })
         );
     }
 
     #[test]
+    fn connect_ignores_will_user_name_and_password() {
+        // flags: user name, password, will flag, clean session; payload: id "a", will topic/message, user, pass
+        let mut body = vec![
+            0,
+            4,
+            b'M',
+            b'Q',
+            b'T',
+            b'T',
+            4,
+            0b1100_0110,
+            0,
+            5,
+            0,
+            1,
+            b'a',
+        ];
+        body.extend([0, 1, b'w', 0, 1, b'm', 0, 1, b'u', 0, 1, b'p']);
+        let mut raw = vec![0x10, body.len() as u8];
+        raw.extend(body);
+        let p = decode(&mut buf(&raw), 1024).unwrap().unwrap();
+        assert!(matches!(
+            p,
+            Packet::Connect(Connect {
+                clean_session: true,
+                ..
+            })
+        ));
+    }
+
+    #[test]
     fn connect_rejects_other_protocols() {
-        // MQTT 3.1.1
-        let raw = [0x10, 12, 0, 4, b'M', b'Q', b'T', b'T', 4, 2, 0, 10, 0, 0];
+        // MQTT 5 (level 5, with a properties byte)
+        let raw = [0x10, 13, 0, 4, b'M', b'Q', b'T', b'T', 5, 2, 0, 10, 0, 0, 0];
+        assert_eq!(
+            decode(&mut buf(&raw), 1024),
+            Err(DecodeError::UnacceptableProtocolLevel)
+        );
+        // MQTT 3.1 (level 3, name "MQIsdp"): wrong name
+        let raw = [
+            0x10, 14, 0, 6, b'M', b'Q', b'I', b's', b'd', b'p', 3, 2, 0, 10, 0, 0,
+        ];
         assert_eq!(
             decode(&mut buf(&raw), 1024),
             Err(DecodeError::UnsupportedProtocol)
         );
         // wrong protocol name
-        let raw = [0x10, 12, 0, 4, b'X', b'Q', b'T', b'T', 5, 2, 0, 10, 0, 0];
+        let raw = [0x10, 12, 0, 4, b'X', b'Q', b'T', b'T', 4, 2, 0, 10, 0, 0];
         assert_eq!(
             decode(&mut buf(&raw), 1024),
             Err(DecodeError::UnsupportedProtocol)
         );
+    }
+
+    #[test]
+    fn connect_invalid_flag_combinations_are_malformed() {
+        let with_flags = |flags: u8| {
+            vec![
+                0x10, 12, 0, 4, b'M', b'Q', b'T', b'T', 4, flags, 0, 10, 0, 0,
+            ]
+        };
+        // will QoS 3 (with will flag), will QoS 1 / will retain without will flag, password without user name
+        for flags in [0b0001_1110u8, 0b0000_1010, 0b0010_0010, 0b0100_0010] {
+            assert!(
+                matches!(
+                    decode(&mut buf(&with_flags(flags)), 1024),
+                    Err(DecodeError::Malformed(_))
+                ),
+                "flags {flags:#010b}"
+            );
+        }
+        // valid: will flag with QoS 1 and retain; user name alone; user name and password
+        for flags in [0b0010_1110u8, 0b1000_0010, 0b1100_0010] {
+            assert!(
+                matches!(
+                    decode(&mut buf(&with_flags(flags)), 1024),
+                    Ok(Some(Packet::Connect(_)))
+                ),
+                "flags {flags:#010b}"
+            );
+        }
+    }
+
+    #[test]
+    fn publish_with_dup_flag_at_qos0_is_malformed() {
+        assert!(matches!(
+            decode(&mut buf(&[0x38, 3, 0, 1, b'a']), 64),
+            Err(DecodeError::Malformed(_))
+        ));
+    }
+
+    #[test]
+    fn connect_reserved_flag_is_malformed() {
+        let raw = [0x10, 12, 0, 4, b'M', b'Q', b'T', b'T', 4, 3, 0, 10, 0, 0];
+        assert!(matches!(
+            decode(&mut buf(&raw), 1024),
+            Err(DecodeError::Malformed(_))
+        ));
     }
 
     #[test]
@@ -556,38 +498,28 @@ mod tests {
     }
 
     #[test]
-    fn disconnect_with_reason_code() {
-        assert_eq!(
-            decode(&mut buf(&[0xE0, 0x01, 0x04]), 16),
-            Ok(Some(Packet::Disconnect))
-        );
-    }
-
-    #[test]
     fn publish_qos0() {
-        // topic "a/b", no properties, payload "hi"
-        let raw = [0x30, 8, 0, 3, b'a', b'/', b'b', 0, b'h', b'i'];
+        // topic "a/b", payload "hi"
+        let raw = [0x30, 7, 0, 3, b'a', b'/', b'b', b'h', b'i'];
         assert_eq!(
             decode(&mut buf(&raw), 1024),
             Ok(Some(Packet::Publish(Publish {
                 topic: "a/b".into(),
-                properties: Bytes::new(),
                 payload: Bytes::from_static(b"hi")
             })))
         );
     }
 
     #[test]
-    fn publish_with_retain_dup_flags_and_properties() {
-        // retain bit set, payload format indicator property (0x01, 1)
-        let raw = [0x31, 9, 0, 1, b'a', 2, 0x01, 1, b'x', b'y', b'z'];
+    fn publish_with_retain_flag() {
+        // retain bit set; the payload starts right after the topic (there are no properties in 3.1.1)
+        let raw = [0x31, 6, 0, 1, b'a', 2, 0x01, 1];
         let p = decode(&mut buf(&raw), 1024).unwrap().unwrap();
         assert_eq!(
             p,
             Packet::Publish(Publish {
                 topic: "a".into(),
-                properties: Bytes::from_static(&[0x01, 1]),
-                payload: Bytes::from_static(b"xyz")
+                payload: Bytes::from_static(&[2, 0x01, 1])
             })
         );
     }
@@ -602,17 +534,13 @@ mod tests {
                 "flags {flags:#x}"
             );
         }
-        assert_eq!(
-            DecodeError::QosNotSupported.disconnect_reason(),
-            Some(reason::PROTOCOL_ERROR)
-        );
     }
 
     #[test]
-    fn subscribe_with_options() {
-        // id 7, no props, "a/#" qos 0 + no_local, "b" qos 1
+    fn subscribe_requested_qos() {
+        // id 7, "a/#" qos 0, "b" qos 1, "c" qos 2
         let raw = [
-            0x82, 13, 0, 7, 0, 0, 3, b'a', b'/', b'#', 0b100, 0, 1, b'b', 1,
+            0x82, 16, 0, 7, 0, 3, b'a', b'/', b'#', 0, 0, 1, b'b', 1, 0, 1, b'c', 2,
         ];
         let p = decode(&mut buf(&raw), 1024).unwrap().unwrap();
         assert_eq!(
@@ -621,13 +549,10 @@ mod tests {
                 packet_id: 7,
                 entries: vec![
                     SubscribeEntry {
-                        filter: "a/#".into(),
-                        no_local: true
+                        filter: "a/#".into()
                     },
-                    SubscribeEntry {
-                        filter: "b".into(),
-                        no_local: false
-                    },
+                    SubscribeEntry { filter: "b".into() },
+                    SubscribeEntry { filter: "c".into() },
                 ]
             }
         );
@@ -636,22 +561,24 @@ mod tests {
     #[test]
     fn subscribe_without_filters_or_with_bad_options_is_malformed() {
         assert!(matches!(
-            decode(&mut buf(&[0x82, 3, 0, 1, 0]), 64),
+            decode(&mut buf(&[0x82, 2, 0, 1]), 64),
             Err(DecodeError::Malformed(_))
         ));
-        assert!(matches!(
-            decode(&mut buf(&[0x82, 7, 0, 1, 0, 0, 1, b'a', 0xC0]), 64),
-            Err(DecodeError::Malformed(_))
-        ));
-        assert!(matches!(
-            decode(&mut buf(&[0x82, 7, 0, 1, 0, 0, 1, b'a', 0x03]), 64),
-            Err(DecodeError::Malformed(_))
-        ));
+        // QoS 3, and every reserved bit 2-7 set
+        for options in [0x03u8, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0xFC] {
+            assert!(
+                matches!(
+                    decode(&mut buf(&[0x82, 6, 0, 1, 0, 1, b'a', options]), 64),
+                    Err(DecodeError::Malformed(_))
+                ),
+                "options {options:#x}"
+            );
+        }
     }
 
     #[test]
     fn unsubscribe() {
-        let raw = [0xA2, 8, 0, 9, 0, 0, 3, b'a', b'/', b'b'];
+        let raw = [0xA2, 7, 0, 9, 0, 3, b'a', b'/', b'b'];
         assert_eq!(
             decode(&mut buf(&raw), 64),
             Ok(Some(Packet::Unsubscribe {
@@ -659,6 +586,10 @@ mod tests {
                 filters: vec!["a/b".into()]
             }))
         );
+        assert!(matches!(
+            decode(&mut buf(&[0xA2, 2, 0, 9]), 64),
+            Err(DecodeError::Malformed(_))
+        ));
     }
 
     #[test]
@@ -692,14 +623,9 @@ mod tests {
             decode(&mut buf(&[0x30, 3, 0, 9, b'a']), 64),
             Err(DecodeError::Malformed(_))
         ));
-        // property length behind the packet
-        assert!(matches!(
-            decode(&mut buf(&[0x30, 4, 0, 1, b'a', 9]), 64),
-            Err(DecodeError::Malformed(_))
-        ));
         // invalid UTF-8 topic
         assert!(matches!(
-            decode(&mut buf(&[0x30, 4, 0, 1, 0xFF, 0]), 64),
+            decode(&mut buf(&[0x30, 3, 0, 1, 0xFF]), 64),
             Err(DecodeError::Malformed(_))
         ));
     }
@@ -710,6 +636,11 @@ mod tests {
             decode(&mut buf(&[0x00, 0]), 64),
             Err(DecodeError::Malformed(_))
         ));
+        // type 15 is reserved in 3.1.1 (AUTH only exists in MQTT 5)
+        assert!(matches!(
+            decode(&mut buf(&[0xF0, 0]), 64),
+            Err(DecodeError::Malformed(_))
+        ));
         assert_eq!(
             decode(&mut buf(&[0x40, 2, 0, 1]), 64),
             Ok(Some(Packet::Ignored(4)))
@@ -718,178 +649,58 @@ mod tests {
 
     #[test]
     fn connack_bytes() {
-        let ack = encode_connack(262_144, 60, None);
         assert_eq!(
-            &ack[..],
-            &[0x20, 0x0B, 0x00, 0x00, 0x08, 0x27, 0x00, 0x04, 0x00, 0x00, 0x13, 0x00, 0x3C]
+            &encode_connack(connack::ACCEPTED)[..],
+            &[0x20, 0x02, 0x00, 0x00]
+        );
+        assert_eq!(
+            &encode_connack(connack::IDENTIFIER_REJECTED)[..],
+            &[0x20, 0x02, 0x00, 0x02]
         );
     }
 
     #[test]
     fn publish_bytes_and_long_remaining_length() {
         let mut out = BytesMut::new();
-        encode_publish(&mut out, "a/b", &[], b"hi");
-        assert_eq!(&out[..], &[0x30, 8, 0, 3, b'a', b'/', b'b', 0, b'h', b'i']);
+        encode_publish(&mut out, "a/b", b"hi");
+        assert_eq!(&out[..], &[0x30, 7, 0, 3, b'a', b'/', b'b', b'h', b'i']);
 
         let payload = vec![7u8; 300];
         let mut out = BytesMut::new();
-        encode_publish(&mut out, "t", &[], &payload);
-        // remaining = 2 + 1 + 1 + 300 = 304 = 0xB0 0x02
-        assert_eq!(&out[..3], &[0x30, 0xB0, 0x02]);
+        encode_publish(&mut out, "t", &payload);
+        // remaining = 2 + 1 + 300 = 303 = 0xAF 0x02
+        assert_eq!(&out[..3], &[0x30, 0xAF, 0x02]);
         let decoded = decode(&mut out, 1024).unwrap().unwrap();
         assert_eq!(
             decoded,
             Packet::Publish(Publish {
                 topic: "t".into(),
-                properties: Bytes::new(),
                 payload: Bytes::from(payload)
             })
         );
     }
 
-    fn props_publish(props: &[u8], topic: &str, payload: &[u8]) -> Vec<u8> {
-        let mut body = (topic.len() as u16).to_be_bytes().to_vec();
-        body.extend(topic.as_bytes());
-        body.push(props.len() as u8);
-        body.extend(props);
-        body.extend(payload);
-        let mut out = vec![0x30, body.len() as u8];
-        out.extend(body);
-        out
-    }
-
-    #[test]
-    fn publish_properties_are_kept_except_alias_and_subscription_id() {
-        // response topic "r", correlation data [1,2], user property k=v, subscription id 5, content type "c"
-        let mut props = vec![
-            0x08, 0, 1, b'r', 0x09, 0, 2, 1, 2, 0x26, 0, 1, b'k', 0, 1, b'v',
-        ];
-        let kept = props.clone();
-        props.extend([0x0B, 5]);
-        props.extend([0x03, 0, 1, b'c']);
-        let mut expected = kept;
-        expected.extend([0x03, 0, 1, b'c']);
-        let raw = props_publish(&props, "t", b"p");
-        let Some(Packet::Publish(p)) = decode(&mut buf(&raw), 1024).unwrap() else {
-            panic!("not a publish")
-        };
-        assert_eq!(&p.properties[..], &expected[..]);
-        assert_eq!(&p.payload[..], b"p");
-    }
-
-    #[test]
-    fn publish_with_topic_alias_is_a_protocol_error() {
-        for topic in ["t", ""] {
-            let raw = props_publish(&[0x23, 0, 1], topic, b"p");
-            assert_eq!(decode(&mut buf(&raw), 1024), Err(DecodeError::TopicAlias));
-        }
-        assert_eq!(
-            DecodeError::TopicAlias.disconnect_reason(),
-            Some(reason::PROTOCOL_ERROR)
-        );
-    }
-
-    #[test]
-    fn publish_with_unknown_or_truncated_property_is_malformed() {
-        for props in [
-            &[0x7F, 0][..],
-            &[0x08, 0, 5, b'r'][..],
-            &[0x26, 0, 1, b'k'][..],
-        ] {
-            let raw = props_publish(props, "t", b"");
-            assert!(matches!(
-                decode(&mut buf(&raw), 1024),
-                Err(DecodeError::Malformed(_))
-            ));
-        }
-    }
-
-    #[test]
-    fn reserved_flags_are_checked() {
-        for raw in [
-            &[0x83u8, 6, 0, 1, 0, 0, 1, b'a', 0][..], // SUBSCRIBE flags 3
-            &[0x80, 6, 0, 1, 0, 0, 1, b'a', 0][..],
-            &[0xA0, 5, 0, 1, 0, 0, 1, b'a'][..],
-            &[0xC1, 0][..],
-            &[0xE1, 0][..],
-            &[0x11, 0][..],
-        ] {
-            assert!(
-                matches!(decode(&mut buf(raw), 64), Err(DecodeError::Malformed(_))),
-                "{raw:x?}"
-            );
-        }
-        // QoS 3 PUBLISH
-        assert!(matches!(
-            decode(&mut buf(&[0x36, 4, 0, 1, b'a', 0]), 64),
-            Err(DecodeError::Malformed(_))
-        ));
-    }
-
-    #[test]
-    fn retain_handling_3_is_malformed() {
-        for options in [0x30u8, 0x20, 0x10] {
-            let raw = [0x82, 7, 0, 1, 0, 0, 1, b'a', options];
-            let r = decode(&mut buf(&raw), 64);
-            if options == 0x30 {
-                assert!(matches!(r, Err(DecodeError::Malformed(_))));
-            } else {
-                assert!(matches!(r, Ok(Some(Packet::Subscribe { .. }))));
-            }
-        }
-    }
-
-    #[test]
-    fn connect_maximum_packet_size_property() {
-        let body: Vec<u8> = vec![
-            0, 4, b'M', b'Q', b'T', b'T', 5, 0, 0, 10, 5, 0x27, 0, 0, 2, 0, 0, 0,
-        ];
-        let mut raw = vec![0x10, body.len() as u8];
-        raw.extend(body);
-        let Some(Packet::Connect(c)) = decode(&mut buf(&raw), 1024).unwrap() else {
-            panic!()
-        };
-        assert_eq!(c.max_packet_size, Some(512));
-        // 0 is not allowed
-        raw[15] = 0;
-        raw[16] = 0;
-        assert!(matches!(
-            decode(&mut buf(&raw), 1024),
-            Err(DecodeError::Malformed(_))
-        ));
-    }
-
-    #[test]
-    fn connack_with_assigned_client_id() {
-        let ack = encode_connack(1, 2, Some("ab"));
-        assert_eq!(
-            &ack[..],
-            &[0x20, 16, 0, 0, 13, 0x27, 0, 0, 0, 1, 0x13, 0, 2, 0x12, 0, 2, b'a', b'b']
-        );
-    }
-
     #[test]
     fn publish_encoded_len_matches_encoder() {
-        for (t, p, l) in [(1usize, 0usize, 0usize), (3, 5, 300), (10, 200, 20_000)] {
+        for (t, l) in [(1usize, 0usize), (3, 300), (10, 20_000)] {
             let mut out = BytesMut::new();
-            encode_publish(&mut out, &"t".repeat(t), &vec![1; p], &vec![2; l]);
-            assert_eq!(publish_encoded_len(t, p, l), Some(out.len()));
+            encode_publish(&mut out, &"t".repeat(t), &vec![2; l]);
+            assert_eq!(publish_encoded_len(t, l), Some(out.len()));
         }
-        assert_eq!(publish_encoded_len(1, 0, 268_435_455), None);
+        assert_eq!(publish_encoded_len(1, 268_435_455), None);
+        // topic length does not fit into the 16 bit length field
+        assert!(publish_encoded_len(65_535, 0).is_some());
+        assert_eq!(publish_encoded_len(65_536, 0), None);
     }
 
     #[test]
     fn small_packets() {
         assert_eq!(
-            &encode_suback(7, &[0x00, 0x97, 0x8F])[..],
-            &[0x90, 6, 0, 7, 0, 0x00, 0x97, 0x8F]
+            &encode_suback(7, &[suback::GRANTED_QOS_0, suback::FAILURE])[..],
+            &[0x90, 4, 0, 7, 0x00, 0x80]
         );
-        assert_eq!(&encode_unsuback(9, &[0x00])[..], &[0xB0, 4, 0, 9, 0, 0]);
+        assert_eq!(&encode_unsuback(9)[..], &[0xB0, 2, 0, 9]);
         assert_eq!(&encode_pingresp()[..], &[0xD0, 0]);
-        assert_eq!(
-            &encode_disconnect(reason::PROTOCOL_ERROR)[..],
-            &[0xE0, 1, 0x82]
-        );
     }
 
     #[test]
@@ -905,8 +716,6 @@ mod tests {
             let mut out = BytesMut::new();
             put_varint(&mut out, value);
             assert_eq!(&out[..], &expected[..], "value {value}");
-            let mut r = Reader(out.freeze());
-            assert_eq!(r.varint(), Ok(value));
         }
     }
 }

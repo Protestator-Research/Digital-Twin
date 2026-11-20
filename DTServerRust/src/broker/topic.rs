@@ -40,7 +40,7 @@ pub fn within_limits(topic: &str, limits: &BrokerLimits) -> bool {
     levels <= limits.max_topic_levels
 }
 
-/// Syntax check for a subscription filter (MQTT 5, 4.7): not empty, `+` and `#` only as a whole
+/// Syntax check for a subscription filter (MQTT 3.1.1, section 4.7): not empty, `+` and `#` only as a whole
 /// level, `#` only as last level.
 pub fn is_valid_filter(filter: &str) -> bool {
     if filter.is_empty() {

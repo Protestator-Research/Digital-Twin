@@ -5,33 +5,28 @@ mod common;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-use bytes::Bytes;
 use dt_server::broker::Broker;
 use dt_server::hub::HubError;
-use rumqttc::v5::mqttbytes::v5::{Packet, PublishProperties};
 use tokio::io::AsyncWriteExt;
 
 use std::time::Duration;
 
 use common::*;
 use dt_server::broker::BrokerLimits;
-use rumqttc::v5::mqttbytes::v5::{Filter, SubscribeReasonCode};
-use rumqttc::v5::mqttbytes::QoS;
+use rumqttc::{ConnectReturnCode, Packet, QoS, SubscribeReasonCode};
 
 const SHORT: Duration = Duration::from_millis(400);
 
 // --- clients written with rumqttc -------------------------------------------------------------
 
 #[tokio::test]
-async fn publish_subscribe_round_trip_and_connack_properties() {
+async fn publish_subscribe_round_trip_and_connack() {
     let broker = start(BrokerLimits::default()).await;
     let mut sub = Client::connect(broker.port(), "sub").await;
     let publisher = Client::connect(broker.port(), "pub").await;
 
-    let props = sub.connack.properties.clone().expect("CONNACK properties");
     assert!(!sub.connack.session_present);
-    assert_eq!(props.max_packet_size, Some(262_144));
-    assert_eq!(props.server_keep_alive, Some(60));
+    assert_eq!(sub.connack.code, ConnectReturnCode::Success);
 
     sub.client
         .subscribe("twin/temperature", QoS::AtMostOnce)
@@ -130,34 +125,21 @@ async fn wildcard_does_not_deliver_non_matching_topics() {
 }
 
 #[tokio::test]
-async fn no_local_is_respected() {
+async fn client_receives_its_own_publish() {
+    // MQTT 3.1.1 has no no-local option: the publisher is a normal subscriber of its own topic
     let broker = start(BrokerLimits::default()).await;
-    let mut a = Client::connect(broker.port(), "a").await;
-    let mut b = Client::connect(broker.port(), "b").await;
-
-    let mut filter = Filter::new("t", QoS::AtMostOnce);
-    filter.nolocal = true;
-    a.client.subscribe_many(vec![filter]).await.unwrap();
-    a.wait_suback().await;
-    b.client.subscribe("t", QoS::AtMostOnce).await.unwrap();
-    b.wait_suback().await;
-
-    a.client
-        .publish("t", QoS::AtMostOnce, false, "from a")
+    let mut client = Client::connect(broker.port(), "self").await;
+    client.client.subscribe("t", QoS::AtMostOnce).await.unwrap();
+    client.wait_suback().await;
+    client
+        .client
+        .publish("t", QoS::AtMostOnce, false, "mine")
         .await
         .unwrap();
-    assert_eq!(b.next_publish().await.1, b"from a".to_vec());
-    assert!(
-        a.no_publish_within(SHORT).await,
-        "no-local subscriber received its own message"
+    assert_eq!(
+        client.next_publish().await,
+        ("t".to_owned(), b"mine".to_vec())
     );
-
-    // the other direction still works
-    b.client
-        .publish("t", QoS::AtMostOnce, false, "from b")
-        .await
-        .unwrap();
-    assert_eq!(a.next_publish().await.1, b"from b".to_vec());
     broker.shutdown().await;
 }
 
@@ -176,7 +158,7 @@ async fn unsubscribe_stops_delivery() {
     sub.next_publish().await;
 
     sub.client.unsubscribe("t").await.unwrap();
-    sub.wait_for(|p| matches!(p, rumqttc::v5::mqttbytes::v5::Packet::UnsubAck(_)).then_some(()))
+    sub.wait_for(|p| matches!(p, Packet::UnsubAck(_)).then_some(()))
         .await;
     publisher
         .client
@@ -278,17 +260,12 @@ async fn slow_internal_subscriber_never_blocks_the_broker() {
 // --- protocol violations and limits (raw sockets) ---------------------------------------------
 
 #[tokio::test]
-async fn qos1_publish_gets_protocol_error_disconnect() {
+async fn qos1_publish_closes_the_connection_without_a_packet() {
     let broker = start(BrokerLimits::default()).await;
     let mut raw = Raw::connected(&addr(&broker), "q1").await;
     raw.send(&publish_qos1("t", b"x")).await;
-    let (first, body) = raw.read_packet().await.expect("DISCONNECT");
-    assert_eq!(first, 0xE0);
-    assert_eq!(body[0], 0x82, "reason code protocol_error");
-    assert!(
-        raw.read_packet().await.is_none(),
-        "connection is closed after DISCONNECT"
-    );
+    // MQTT 3.1.1 has no server DISCONNECT: the connection is just closed
+    assert!(raw.read_until_closed().await.is_none());
     broker.shutdown().await;
 }
 
@@ -348,7 +325,7 @@ async fn trickling_bytes_does_not_extend_the_connect_timeout() {
 #[tokio::test]
 async fn first_packet_not_connect_closes_the_connection() {
     let broker = start(BrokerLimits::default()).await;
-    for bytes in [pingreq(), publish("t", b"x"), subscribe(1, &[("t", false)])] {
+    for bytes in [pingreq(), publish("t", b"x"), subscribe(1, &["t"])] {
         let mut raw = Raw::open(&addr(&broker)).await;
         raw.send(&bytes).await;
         assert!(
@@ -360,22 +337,31 @@ async fn first_packet_not_connect_closes_the_connection() {
 }
 
 #[tokio::test]
-async fn mqtt_311_client_is_refused() {
+async fn mqtt_5_and_3_1_clients_are_refused() {
     let broker = start(BrokerLimits::default()).await;
+    // MQTT 5: protocol level 5 and a properties length byte: CONNACK 0x01, then closed
     let mut raw = Raw::open(&addr(&broker)).await;
-    raw.send(&[0x10, 12, 0, 4, b'M', b'Q', b'T', b'T', 4, 2, 0, 10, 0, 0])
+    raw.send(&[0x10, 13, 0, 4, b'M', b'Q', b'T', b'T', 5, 2, 0, 10, 0, 0, 0])
         .await;
+    let (first, body) = raw.read_packet().await.expect("CONNACK");
+    assert_eq!((first, &body[..]), (0x20, &[0, 0x01][..]));
+    assert!(raw.read_until_closed().await.is_none());
+    // MQTT 3.1: protocol name "MQIsdp", level 3: wrong name, closed without a reply
+    let mut raw = Raw::open(&addr(&broker)).await;
+    raw.send(&[
+        0x10, 14, 0, 6, b'M', b'Q', b'I', b's', b'd', b'p', 3, 2, 0, 10, 0, 0,
+    ])
+    .await;
     assert!(raw.read_until_closed().await.is_none());
     broker.shutdown().await;
 }
 
 #[tokio::test]
-async fn second_connect_is_a_protocol_error() {
+async fn second_connect_closes_the_connection() {
     let broker = start(BrokerLimits::default()).await;
     let mut raw = Raw::connected(&addr(&broker), "twice").await;
     raw.send(&connect("twice")).await;
-    let (first, body) = raw.read_until_closed().await.expect("DISCONNECT");
-    assert_eq!((first, body[0]), (0xE0, 0x82));
+    assert!(raw.read_until_closed().await.is_none());
     broker.shutdown().await;
 }
 
@@ -390,34 +376,23 @@ async fn subscription_quota_and_invalid_filters() {
 
     // third distinct filter exceeds the quota, an update of an existing filter does not count
     assert_eq!(
-        raw.subscribe(1, &[("a", false), ("b", false), ("c", false)])
-            .await,
-        vec![0x00, 0x00, 0x97]
+        raw.subscribe(1, &["a", "b", "c"]).await,
+        vec![0x00, 0x00, 0x80]
     );
-    assert_eq!(raw.subscribe(2, &[("a", true)]).await, vec![0x00]);
-    assert_eq!(raw.subscribe(3, &[("d", false)]).await, vec![0x97]);
+    assert_eq!(raw.subscribe(2, &["a"]).await, vec![0x00]);
+    assert_eq!(raw.subscribe(3, &["d"]).await, vec![0x80]);
 
     // freeing a slot makes room again
     raw.send(&unsubscribe(4, &["b"])).await;
     let (first, body) = raw.read_packet().await.unwrap();
-    assert_eq!((first, &body[..]), (0xB0, &[0, 4, 0, 0][..]));
-    assert_eq!(raw.subscribe(5, &[("d", false)]).await, vec![0x00]);
+    assert_eq!((first, &body[..]), (0xB0, &[0, 4][..]));
+    assert_eq!(raw.subscribe(5, &["d"]).await, vec![0x00]);
 
     // invalid filters
     let long = "x".repeat(513);
     let deep = vec!["l"; 17].join("/");
-    let reasons = raw
-        .subscribe(
-            6,
-            &[
-                (&long, false),
-                (&deep, false),
-                ("a/#/b", false),
-                ("a", false),
-            ],
-        )
-        .await;
-    assert_eq!(reasons, vec![0x8F, 0x8F, 0x8F, 0x00]);
+    let reasons = raw.subscribe(6, &[&long, &deep, "a/#/b", "a"]).await;
+    assert_eq!(reasons, vec![0x80, 0x80, 0x80, 0x00]);
     broker.shutdown().await;
 }
 
@@ -435,10 +410,7 @@ async fn quota_is_reported_to_rumqttc_clients() {
         vec![SubscribeReasonCode::Success(QoS::AtMostOnce)]
     );
     c.client.subscribe("b", QoS::AtMostOnce).await.unwrap();
-    assert_eq!(
-        c.wait_suback().await,
-        vec![SubscribeReasonCode::QuotaExceeded]
-    );
+    assert_eq!(c.wait_suback().await, vec![SubscribeReasonCode::Failure]);
     broker.shutdown().await;
 }
 
@@ -453,19 +425,17 @@ async fn oversize_packet_closes_the_connection() {
     // complete oversize packet
     let mut raw = Raw::connected(&addr(&broker), "big").await;
     raw.send(&publish("t", &vec![b'x'; 2000])).await;
-    let last = raw.read_until_closed().await.expect("DISCONNECT");
-    assert_eq!((last.0, last.1[0]), (0xE0, 0x95), "packet_too_large");
+    assert!(raw.read_until_closed().await.is_none());
 
     // only the header of a huge packet: rejected without waiting for the body
     let mut raw = Raw::connected(&addr(&broker), "huge").await;
     raw.send(&[0x30, 0xFF, 0xFF, 0xFF, 0x7F]).await;
-    let last = raw.read_until_closed().await.expect("DISCONNECT");
-    assert_eq!((last.0, last.1[0]), (0xE0, 0x95));
+    assert!(raw.read_until_closed().await.is_none());
 
     // exactly at the limit is accepted
     let mut ok = Raw::connected(&addr(&broker), "exact").await;
-    // fixed header 3 bytes (two byte remaining length), topic 3, properties length 1 => 7 bytes of overhead
-    let message = publish("t", &vec![b'x'; 1024 - 7]);
+    // fixed header 3 bytes (two byte remaining length), topic length 2 + name 1 => 6 bytes of overhead
+    let message = publish("t", &vec![b'x'; 1024 - 6]);
     assert_eq!(message.len(), 1024);
     ok.send(&message).await;
     ok.send(&pingreq()).await;
@@ -526,22 +496,14 @@ async fn total_connection_limit() {
 }
 
 #[tokio::test]
-async fn keep_alive_is_enforced_with_the_server_keep_alive() {
-    let limits = BrokerLimits {
-        server_keep_alive_s: 1,
-        ..BrokerLimits::default()
-    };
-    let broker = start(limits).await;
+async fn keep_alive_of_the_client_is_enforced() {
+    let broker = start(BrokerLimits::default()).await;
 
-    // announced in CONNACK
+    // CONNACK carries no properties: session present 0, return code 0
     let mut raw = Raw::open(&addr(&broker)).await;
-    raw.send(&connect("ka")).await;
-    let (_, body) = raw.read_packet().await.unwrap();
-    assert_eq!(
-        &body[2..],
-        &[8, 0x27, 0, 4, 0, 0, 0x13, 0, 1],
-        "CONNACK properties"
-    );
+    raw.send(&connect_keep_alive("ka", 1)).await;
+    let (first, body) = raw.read_packet().await.unwrap();
+    assert_eq!((first, &body[..]), (0x20, &[0, 0][..]));
 
     // a client that pings keeps its connection (3 pings over 2.1 s, limit is 1.5 s without traffic)
     for _ in 0..3 {
@@ -549,10 +511,9 @@ async fn keep_alive_is_enforced_with_the_server_keep_alive() {
         raw.send(&pingreq()).await;
         assert_eq!(raw.read_packet().await.unwrap().0, 0xD0);
     }
-    // silence is punished after 1.5 x keep alive
+    // silence is punished after 1.5 x the keep alive of the client, by closing without a packet
     let started = std::time::Instant::now();
-    let last = raw.read_until_closed().await.expect("DISCONNECT");
-    assert_eq!((last.0, last.1[0]), (0xE0, 0x8D));
+    assert!(raw.read_until_closed().await.is_none());
     let elapsed = started.elapsed();
     assert!(
         elapsed >= Duration::from_millis(1300) && elapsed < Duration::from_secs(4),
@@ -562,10 +523,20 @@ async fn keep_alive_is_enforced_with_the_server_keep_alive() {
 }
 
 #[tokio::test]
+async fn keep_alive_zero_disables_the_timeout() {
+    let broker = start(BrokerLimits::default()).await;
+    let mut raw = Raw::connected_keep_alive(&addr(&broker), "quiet", 0).await;
+    assert!(raw.is_silent_for(Duration::from_millis(2500)).await);
+    raw.send(&pingreq()).await;
+    assert_eq!(raw.read_packet().await.unwrap().0, 0xD0);
+    broker.shutdown().await;
+}
+
+#[tokio::test]
 async fn publish_exceeding_topic_limits_is_dropped_without_disconnect() {
     let broker = start(BrokerLimits::default()).await;
     let mut sub = Raw::connected(&addr(&broker), "sub").await;
-    sub.subscribe(1, &[("#", false)]).await;
+    sub.subscribe(1, &["#"]).await;
     let mut raw = Raw::connected(&addr(&broker), "pub").await;
     raw.send(&publish(&vec!["l"; 17].join("/"), b"x")).await;
     raw.send(&publish(&"t".repeat(513), b"x")).await;
@@ -579,12 +550,11 @@ async fn publish_exceeding_topic_limits_is_dropped_without_disconnect() {
 }
 
 #[tokio::test]
-async fn publish_with_wildcard_topic_is_rejected() {
+async fn publish_with_wildcard_topic_closes_the_connection() {
     let broker = start(BrokerLimits::default()).await;
     let mut raw = Raw::connected(&addr(&broker), "w").await;
     raw.send(&publish("a/+", b"x")).await;
-    let last = raw.read_until_closed().await.expect("DISCONNECT");
-    assert_eq!((last.0, last.1[0]), (0xE0, 0x90));
+    assert!(raw.read_until_closed().await.is_none());
     broker.shutdown().await;
 }
 
@@ -601,9 +571,9 @@ async fn slow_client_is_dropped_and_others_are_not_affected() {
 
     // never reads after subscribing
     let mut slow = Raw::connected(&addr(&broker), "slow").await;
-    slow.subscribe(1, &[("big", false)]).await;
+    slow.subscribe(1, &["big"]).await;
     let mut healthy = Raw::connected(&addr(&broker), "healthy").await;
-    healthy.subscribe(1, &[("big", false)]).await;
+    healthy.subscribe(1, &["big"]).await;
 
     let received = Arc::new(AtomicUsize::new(0));
     let counter = Arc::clone(&received);
@@ -645,15 +615,15 @@ async fn slow_client_is_dropped_and_others_are_not_affected() {
 }
 
 #[tokio::test]
-async fn shutdown_disconnects_clients_gracefully() {
+async fn shutdown_closes_client_connections() {
     let broker = start(BrokerLimits::default()).await;
     let mut raw = Raw::connected(&addr(&broker), "x").await;
     let address = addr(&broker);
     let started = std::time::Instant::now();
     broker.shutdown().await;
     assert!(started.elapsed() < Duration::from_secs(3));
-    let last = raw.read_until_closed().await.expect("DISCONNECT");
-    assert_eq!((last.0, last.1[0]), (0xE0, 0x8B), "server shutting down");
+    // no DISCONNECT in MQTT 3.1.1, the connection is just closed
+    assert!(raw.read_until_closed().await.is_none());
     // the listener is gone
     assert!(tokio::net::TcpStream::connect(address).await.is_err());
 }
@@ -668,7 +638,7 @@ async fn abrupt_disconnect_removes_subscriptions_and_releases_the_slot() {
     let hub = broker.hub();
     {
         let mut raw = Raw::connected(&addr(&broker), "gone").await;
-        raw.subscribe(1, &[("t", false), ("u/#", false)]).await;
+        raw.subscribe(1, &["t", "u/#"]).await;
         assert_eq!(broker.subscription_count(), 2);
         assert_eq!(broker.connection_count(), 1);
     } // dropped without DISCONNECT
@@ -676,7 +646,7 @@ async fn abrupt_disconnect_removes_subscriptions_and_releases_the_slot() {
     assert_eq!(broker.subscription_count(), 0);
     // the only slot of this IP is free again
     let mut another = Raw::connected(&addr(&broker), "another").await;
-    another.subscribe(1, &[("t", false)]).await;
+    another.subscribe(1, &["t"]).await;
     hub.publish("t", "y").unwrap();
     assert_eq!(
         another.read_publish().await,
@@ -685,7 +655,7 @@ async fn abrupt_disconnect_removes_subscriptions_and_releases_the_slot() {
     broker.shutdown().await;
 }
 
-// --- bounded memory, hub lifecycle, properties, protocol details -------------------------------
+// --- bounded memory, hub lifecycle, protocol details -------------------------------
 
 #[tokio::test]
 async fn ping_flood_without_reading_drops_the_session() {
@@ -738,76 +708,13 @@ async fn dropping_the_broker_shuts_it_down_like_shutdown() {
     let mut sub = hub.subscribe("#", 4).unwrap();
     let mut raw = Raw::connected(&address, "x").await;
     drop(broker);
-    let last = raw.read_until_closed().await.expect("DISCONNECT");
-    assert_eq!((last.0, last.1[0]), (0xE0, 0x8B));
+    assert!(raw.read_until_closed().await.is_none());
     assert!(tokio::time::timeout(WAIT, sub.recv())
         .await
         .unwrap()
         .is_none());
     assert_eq!(hub.publish("t", "x").unwrap_err(), HubError::Closed);
     assert!(tokio::net::TcpStream::connect(address).await.is_err());
-}
-
-#[tokio::test]
-async fn publish_properties_are_forwarded() {
-    let broker = start(BrokerLimits::default()).await;
-    let mut internal = broker.hub().subscribe("req/#", 4).unwrap();
-    let mut sub = Client::connect(broker.port(), "sub").await;
-    let publisher = Client::connect(broker.port(), "pub").await;
-    sub.client
-        .subscribe("req/#", QoS::AtMostOnce)
-        .await
-        .unwrap();
-    sub.wait_suback().await;
-
-    let props = PublishProperties {
-        response_topic: Some("resp/topic".to_owned()),
-        correlation_data: Some(Bytes::from_static(b"corr-1")),
-        user_properties: vec![("k".to_owned(), "v".to_owned())],
-        content_type: Some("application/json".to_owned()),
-        ..Default::default()
-    };
-    publisher
-        .client
-        .publish_with_properties("req/a", QoS::AtMostOnce, false, "{}", props.clone())
-        .await
-        .unwrap();
-    let got = sub
-        .wait_for(|p| match p {
-            Packet::Publish(p) => Some(p.clone()),
-            _ => None,
-        })
-        .await;
-    let got_props = got.properties.expect("properties are forwarded");
-    assert_eq!(got_props.response_topic, props.response_topic);
-    assert_eq!(got_props.correlation_data, props.correlation_data);
-    assert_eq!(got_props.user_properties, props.user_properties);
-    assert_eq!(got_props.content_type, props.content_type);
-    assert_eq!(&got.payload[..], b"{}");
-
-    // and the hub sees the raw property bytes
-    let msg = tokio::time::timeout(WAIT, internal.recv())
-        .await
-        .unwrap()
-        .unwrap();
-    assert!(!msg.properties.is_empty());
-    assert!(msg.properties.windows(6).any(|w| w == b"corr-1"));
-    broker.shutdown().await;
-}
-
-#[tokio::test]
-async fn topic_alias_is_a_protocol_error() {
-    let broker = start(BrokerLimits::default()).await;
-    for topic in ["t", ""] {
-        let mut raw = Raw::connected(&addr(&broker), "alias").await;
-        let mut body = string_bytes(topic);
-        body.extend([3, 0x23, 0, 1]); // properties: topic alias 1
-        body.extend(b"x");
-        raw.send(&packet(0x30, &body)).await;
-        let last = raw.read_until_closed().await.expect("DISCONNECT");
-        assert_eq!((last.0, last.1[0]), (0xE0, 0x82), "topic {topic:?}");
-    }
-    broker.shutdown().await;
 }
 
 #[tokio::test]
@@ -819,12 +726,12 @@ async fn nothing_but_connack_is_sent_before_the_connection_is_established() {
     assert!(raw.read_until_closed().await.is_none());
     // malformed CONNECT: reserved flag set
     let mut raw = Raw::open(&addr(&broker)).await;
-    raw.send(&connect_raw(0b11, &[], "c", &[])).await;
+    raw.send(&connect_raw(0b11, 30, "c", &[])).await;
     assert!(raw.read_until_closed().await.is_none());
     // malformed CONNECT: truncated client id
     let mut raw = Raw::open(&addr(&broker)).await;
     let mut body = string_bytes("MQTT");
-    body.extend([5, 2, 0, 30, 0, 0, 9, b'a']);
+    body.extend([4, 2, 0, 30, 0, 9, b'a']);
     raw.send(&packet(0x10, &body)).await;
     assert!(raw.read_until_closed().await.is_none());
     // oversize first packet
@@ -844,10 +751,10 @@ async fn nothing_but_connack_is_sent_before_the_connection_is_established() {
 async fn hub_publish_rejects_payloads_that_do_not_fit() {
     let broker = start(BrokerLimits::default()).await;
     let hub = broker.hub();
-    // encoded size = 1 + 3 (remaining length) + 2 + 1 (topic) + 1 (properties length) + payload
-    assert_eq!(hub.publish("t", vec![0u8; 262_144 - 8]), Ok(()));
+    // encoded size = 1 + 3 (remaining length) + 2 + 1 (topic) + payload
+    assert_eq!(hub.publish("t", vec![0u8; 262_144 - 7]), Ok(()));
     assert_eq!(
-        hub.publish("t", vec![0u8; 262_144 - 7]),
+        hub.publish("t", vec![0u8; 262_144 - 6]),
         Err(HubError::PayloadTooLarge)
     );
     assert_eq!(
@@ -858,110 +765,100 @@ async fn hub_publish_rejects_payloads_that_do_not_fit() {
 }
 
 #[tokio::test]
-async fn publishes_larger_than_the_client_maximum_are_dropped_for_that_client() {
+async fn empty_client_id_needs_a_clean_session() {
     let broker = start(BrokerLimits::default()).await;
     let hub = broker.hub();
-    // Maximum Packet Size property (0x27) = 100
-    let connect = connect_raw(0b10, &[0x27, 0, 0, 0, 100], "limited", &[]);
-    let (mut limited, _) = Raw::connected_with(&addr(&broker), &connect).await;
-    limited.subscribe(1, &[("t", false)]).await;
-    let mut unlimited = Raw::connected(&addr(&broker), "unlimited").await;
-    unlimited.subscribe(1, &[("t", false)]).await;
 
-    // more oversize messages than max_consecutive_send_overflows (3): must not count as overflow
-    for _ in 0..5 {
-        hub.publish("t", vec![b'x'; 200]).unwrap();
+    // clean session: accepted, the broker generates an id and does not announce it (CONNACK is 2 bytes)
+    let mut sessions = Vec::new();
+    for i in 0..2u16 {
+        let (mut raw, body) =
+            Raw::connected_with(&addr(&broker), &connect_raw(0b10, 30, "", &[])).await;
+        assert_eq!(body, [0, 0]);
+        raw.subscribe(i, &["t"]).await;
+        sessions.push(raw);
     }
-    hub.publish("t", vec![b'y'; 10]).unwrap();
-    for _ in 0..5 {
-        assert_eq!(unlimited.read_publish().await.1.len(), 200);
-    }
-    assert_eq!(
-        limited.read_publish().await,
-        ("t".to_owned(), vec![b'y'; 10])
-    );
-    assert_eq!(hub.oversize_dropped_total(), 5);
+    // both anonymous sessions are separate sessions
     assert_eq!(broker.connection_count(), 2);
-    broker.shutdown().await;
-}
-
-#[tokio::test]
-async fn empty_client_id_gets_an_assigned_identifier() {
-    let broker = start(BrokerLimits::default()).await;
-    let mut ids = Vec::new();
-    for _ in 0..2 {
-        let (_raw, body) =
-            Raw::connected_with(&addr(&broker), &connect_raw(0b10, &[], "", &[])).await;
-        // ack flags, reason code, property length, 0x27 + u32, 0x13 + u16, then 0x12 + string
-        assert_eq!(body[2] as usize, body.len() - 3);
-        assert_eq!(body[11], 0x12);
-        let len = usize::from(u16::from_be_bytes([body[12], body[13]]));
-        assert!(len > 0);
-        ids.push(body[14..14 + len].to_vec());
+    assert_eq!(broker.subscription_count(), 2);
+    hub.publish("t", "x").unwrap();
+    for raw in &mut sessions {
+        assert_eq!(raw.read_publish().await, ("t".to_owned(), b"x".to_vec()));
     }
-    assert_ne!(ids[0], ids[1]);
-    // an explicit id is not echoed
-    let (_raw, body) = Raw::connected_with(&addr(&broker), &connect("mine")).await;
-    assert_eq!(body.len(), 3 + 8);
+
+    // no clean session: CONNACK 0x02 (identifier rejected), then the broker closes
+    let mut raw = Raw::open(&addr(&broker)).await;
+    raw.send(&connect_raw(0b00, 30, "", &[])).await;
+    let (first, body) = raw.read_packet().await.expect("CONNACK");
+    assert_eq!((first, &body[..]), (0x20, &[0, 0x02][..]));
+    assert!(
+        raw.read_packet().await.is_none(),
+        "closed after the refusal"
+    );
+
+    // an explicit id is fine without clean session (nothing is persisted, session present is 0)
+    let (_raw, body) =
+        Raw::connected_with(&addr(&broker), &connect_raw(0b00, 30, "mine", &[])).await;
+    assert_eq!(body, [0, 0]);
     broker.shutdown().await;
 }
 
 #[tokio::test]
-async fn reserved_flags_and_retain_handling_are_malformed() {
+async fn reserved_flags_and_subscription_options_are_malformed() {
     let broker = start(BrokerLimits::default()).await;
     let cases: Vec<Vec<u8>> = vec![
-        vec![0x80, 6, 0, 1, 0, 0, 1, b'a', 0], // SUBSCRIBE with flags 0
-        vec![0x83, 6, 0, 1, 0, 0, 1, b'a', 0], // SUBSCRIBE with flags 3
-        vec![0xA0, 5, 0, 1, 0, 0, 1, b'a'],    // UNSUBSCRIBE with flags 0
+        vec![0x80, 5, 0, 1, 0, 1, b'a', 0],    // SUBSCRIBE with flags 0
+        vec![0x83, 5, 0, 1, 0, 1, b'a', 0],    // SUBSCRIBE with flags 3
+        vec![0xA0, 4, 0, 1, 0, 1, b'a'],       // UNSUBSCRIBE with flags 0
         vec![0xC1, 0],                         // PINGREQ with flags 1
         vec![0xE1, 0],                         // DISCONNECT with flags 1
-        vec![0x82, 7, 0, 1, 0, 0, 1, b'a', 0x30], // Retain Handling 3
+        vec![0x82, 6, 0, 1, 0, 1, b'a', 3],    // requested QoS 3
+        vec![0x82, 6, 0, 1, 0, 1, b'a', 4],    // reserved bit 2 (MQTT 5 no-local) set
+        vec![0x82, 6, 0, 1, 0, 1, b'a', 0x10], // reserved bit 4 (MQTT 5 retain handling) set
+        vec![0x82, 3, 0, 1, 0],                // properties byte only, no filter
     ];
     for bytes in cases {
         let mut raw = Raw::connected(&addr(&broker), "flags").await;
         raw.send(&bytes).await;
-        let last = raw.read_until_closed().await.expect("DISCONNECT");
-        assert_eq!((last.0, last.1[0]), (0xE0, 0x81), "{bytes:x?}");
+        assert!(raw.read_until_closed().await.is_none(), "{bytes:x?}");
     }
     broker.shutdown().await;
 }
 
 #[tokio::test]
-async fn connect_with_will_credentials_and_properties() {
+async fn connect_with_will_and_credentials() {
     let broker = start(BrokerLimits::default()).await;
-    // flags: user name, password, will retain=0 qos=0, will flag, clean start
+    // flags: user name, password, will retain=0 qos=0, will flag, clean session
     let flags = 0b1100_0110;
-    let props = [
-        0x11, 0, 0, 0, 10, // session expiry
-        0x21, 0, 5, // receive maximum
-        0x26, 0, 1, b'k', 0, 1, b'v', // user property
-    ];
-    let mut tail = vec![0]; // will properties length
-    tail.extend(string_bytes("will/topic"));
-    tail.extend([0, 3, b'b', b'y', b'e']); // will payload
+    let mut tail = string_bytes("will/topic");
+    tail.extend([0, 3, b'b', b'y', b'e']); // will message
     tail.extend(string_bytes("user"));
     tail.extend([0, 2, 0xDE, 0xAD]); // password (binary data)
     let (mut raw, _) =
-        Raw::connected_with(&addr(&broker), &connect_raw(flags, &props, "full", &tail)).await;
+        Raw::connected_with(&addr(&broker), &connect_raw(flags, 30, "full", &tail)).await;
     raw.send(&pingreq()).await;
     assert_eq!(raw.read_packet().await.unwrap().0, 0xD0);
     broker.shutdown().await;
 }
 
 #[tokio::test]
-async fn subscribe_with_subscription_identifier_and_disconnect_with_properties() {
+async fn subscribe_grants_qos_0_and_disconnect_closes() {
     let broker = start(BrokerLimits::default()).await;
     let hub = broker.hub();
-    let mut raw = Raw::connected(&addr(&broker), "subid").await;
-    // SUBSCRIBE id 3, properties: subscription identifier 7, filter "t", options 0
-    raw.send(&packet(0x82, &[0, 3, 2, 0x0B, 7, 0, 1, b't', 0]))
+    let mut raw = Raw::connected(&addr(&broker), "qos").await;
+    // SUBSCRIBE id 3: "t" requested with QoS 1, "u" with QoS 2; both are granted with QoS 0
+    raw.send(&packet(0x82, &[0, 3, 0, 1, b't', 1, 0, 1, b'u', 2]))
         .await;
     let (first, body) = raw.read_packet().await.unwrap();
     assert_eq!((first, &body[..]), (0x90, &[0, 3, 0, 0][..]));
     hub.publish("t", "x").unwrap();
     assert_eq!(raw.read_publish().await, ("t".to_owned(), b"x".to_vec()));
-    // DISCONNECT with reason code and properties (session expiry)
-    raw.send(&packet(0xE0, &[0x00, 5, 0x11, 0, 0, 0, 0])).await;
+    // UNSUBACK is just the packet id
+    raw.send(&unsubscribe(4, &["t", "u"])).await;
+    let (first, body) = raw.read_packet().await.unwrap();
+    assert_eq!((first, &body[..]), (0xB0, &[0, 4][..]));
+    // DISCONNECT from the client
+    raw.send(&[0xE0, 0x00]).await;
     assert!(raw.read_until_closed().await.is_none());
     wait_for_connections(&broker, 0).await;
     assert_eq!(broker.subscription_count(), 0);
@@ -971,12 +868,11 @@ async fn subscribe_with_subscription_identifier_and_disconnect_with_properties()
 #[tokio::test]
 async fn tracker_slot_is_released_after_keep_alive_timeout_and_decode_error() {
     let limits = BrokerLimits {
-        server_keep_alive_s: 1,
         max_connections_per_ip: 2,
         ..BrokerLimits::default()
     };
     let broker = start(limits).await;
-    let mut idle = Raw::connected(&addr(&broker), "idle").await;
+    let mut idle = Raw::connected_keep_alive(&addr(&broker), "idle", 1).await;
     let mut bad = Raw::connected(&addr(&broker), "bad").await;
     bad.send(&publish_qos1("t", b"x")).await;
     bad.read_until_closed().await;
@@ -988,8 +884,7 @@ async fn tracker_slot_is_released_after_keep_alive_timeout_and_decode_error() {
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
     assert_eq!(broker.connection_count(), 1);
-    let last = idle.read_until_closed().await.expect("DISCONNECT");
-    assert_eq!(last.1[0], 0x8D);
+    assert!(idle.read_until_closed().await.is_none());
     wait_for_connections(&broker, 0).await;
     broker.shutdown().await;
 }

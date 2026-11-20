@@ -270,7 +270,6 @@ struct FileLimits {
     max_subscriptions_per_session: Option<StrNum>,
     max_pending_send_bytes: Option<StrNum>,
     connect_timeout_s: Option<StrNum>,
-    server_keep_alive_s: Option<StrNum>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -445,11 +444,6 @@ impl Config {
                     &l.connect_timeout_s,
                     &mut limits.connect_timeout_s,
                 )?;
-                convert(
-                    "run.mqtt.limits.server_keep_alive_s",
-                    &l.server_keep_alive_s,
-                    &mut limits.server_keep_alive_s,
-                )?;
             }
         }
         if let Some(rest) = &run.rest {
@@ -532,7 +526,6 @@ mod tests {
         assert_eq!(l.max_topic_levels, 16);
         assert_eq!(l.max_consecutive_send_overflows, 3);
         assert_eq!(l.connect_timeout_s, 10);
-        assert_eq!(l.server_keep_alive_s, 60);
     }
 
     #[test]
@@ -655,8 +648,7 @@ mod tests {
                     "max_connections_per_ip": 2,
                     "max_subscriptions_per_session": 3,
                     "max_pending_send_bytes": 4096,
-                    "connect_timeout_s": 1,
-                    "server_keep_alive_s": 7
+                    "connect_timeout_s": 1
                 }
             },
             "rest": { "port": "8091", "cert_chain": "rc", "cert_private_key": "rk" },
@@ -689,7 +681,6 @@ mod tests {
         assert_eq!(l.max_subscriptions_per_session, 3);
         assert_eq!(l.max_pending_send_bytes, 4096);
         assert_eq!(l.connect_timeout_s, 1);
-        assert_eq!(l.server_keep_alive_s, 7);
         // not configurable in C++, stay at their defaults
         assert_eq!(l.max_topic_length, 512);
         assert_eq!(c.rest.port, 8091);
@@ -757,10 +748,6 @@ mod tests {
         ));
         assert!(matches!(
             c.apply_json(r#"{"run":{"mqtt":{"port":70000}}}"#),
-            Err(ConfigError::Invalid { .. })
-        ));
-        assert!(matches!(
-            c.apply_json(r#"{"run":{"mqtt":{"limits":{"server_keep_alive_s":70000}}}}"#),
             Err(ConfigError::Invalid { .. })
         ));
     }

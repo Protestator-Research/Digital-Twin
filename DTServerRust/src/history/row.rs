@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::payload::values::{Value, ValuePayload};
+use crate::payload::values::{FunctionParameter, Value, ValuePayload};
 
 /// `value_type` codes of the table.
 pub mod value_type {
@@ -13,6 +13,7 @@ pub mod value_type {
     pub const RATIONAL: i16 = 4;
     pub const COMPLEX: i16 = 5;
     pub const STRING: i16 = 6;
+    pub const FUNCTION: i16 = 7;
 }
 
 /// Integers up to this magnitude are exact in a double.
@@ -85,7 +86,40 @@ pub fn value_columns(value: &Value) -> (i16, Option<f64>, Option<String>, Option
             let json = serde_json::json!({ "imaginary_value": imaginary, "real_value": real });
             (value_type::COMPLEX, None, None, Some(json.to_string()))
         }
+        Value::Function(_) => (
+            value_type::FUNCTION,
+            None,
+            None,
+            Some(value_to_json(value).to_string()),
+        ),
     }
+}
+
+/// The C++ wire fields of a value (without `time_point`); a function becomes the array of its parameters.
+pub fn value_to_json(value: &Value) -> serde_json::Value {
+    match value {
+        Value::Real(x) => serde_json::json!({ "value": x }),
+        Value::Integer(i) => serde_json::json!({ "value": i }),
+        Value::BigInteger { digits, .. } => serde_json::json!({ "value": digits }),
+        Value::Text(text) => serde_json::json!({ "value": text }),
+        Value::Boolean(b) => serde_json::json!({ "value": b }),
+        Value::Rational(r) => serde_json::json!({ "value": r.to_string() }),
+        Value::Complex { real, imaginary } => {
+            serde_json::json!({ "real_value": real, "imaginary_value": imaginary })
+        }
+        Value::Function(parameters) => {
+            serde_json::Value::Array(parameters.iter().map(parameter_to_json).collect())
+        }
+    }
+}
+
+fn parameter_to_json(parameter: &FunctionParameter) -> serde_json::Value {
+    let mut object = serde_json::Map::new();
+    object.insert("name".into(), parameter.name.clone().into());
+    if let serde_json::Value::Object(fields) = value_to_json(&parameter.value) {
+        object.extend(fields);
+    }
+    serde_json::Value::Object(object)
 }
 
 /// The rows of a batch as one vector per column, ready to be bound as arrays of one `UNNEST` statement.
@@ -168,6 +202,34 @@ mod tests {
         let json: serde_json::Value = serde_json::from_str(&json.unwrap()).unwrap();
         assert_eq!(json["real_value"], 1.0);
         assert_eq!(json["imaginary_value"], -2.5);
+    }
+
+    #[test]
+    fn function_columns() {
+        let p = classify(
+            br#"{"time_point":"2026-11-19T10:05:12.350Z","parameters":[
+            {"name":"p","value":2.5},{"name":"z","real_value":1.0,"imaginary_value":0.5},
+            {"name":"r","value":"6/8"},{"name":"b","value":true},{"name":"s","value":"x"},
+            {"name":"big","value":18446744073709551615},{"name":"i","value":-3}]}"#,
+        )
+        .unwrap();
+        let (ty, num, text, json) = value_columns(&p.value);
+        assert_eq!((ty, num, text), (value_type::FUNCTION, None, None));
+        let json: serde_json::Value = serde_json::from_str(&json.unwrap()).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!([
+                {"name":"p","value":2.5},
+                {"name":"z","real_value":1.0,"imaginary_value":0.5},
+                {"name":"r","value":"3/4"},
+                {"name":"b","value":true},
+                {"name":"s","value":"x"},
+                {"name":"big","value":"18446744073709551615"},
+                {"name":"i","value":-3}
+            ])
+        );
+        let (_, _, _, empty) = value_columns(&Value::Function(vec![]));
+        assert_eq!(empty.as_deref(), Some("[]"));
     }
 
     #[test]

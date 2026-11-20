@@ -918,8 +918,7 @@ mod tests {
 
     /// Publishes QoS 0 messages as an MQTT client (rumqttc) and waits until they are sent.
     async fn client_publish(port: u16, messages: &[(&str, String)]) {
-        use rumqttc::v5::mqttbytes::QoS;
-        use rumqttc::v5::{AsyncClient, MqttOptions};
+        use rumqttc::{AsyncClient, MqttOptions, QoS};
         let mut options = MqttOptions::new("history-test", "127.0.0.1", port);
         options.set_keep_alive(Duration::from_secs(30));
         let (client, mut eventloop) = AsyncClient::new(options, 16);

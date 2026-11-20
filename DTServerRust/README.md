@@ -1,7 +1,7 @@
 # dt-server (Rust port of the Digital Twin Server)
 
 Port described in `Markdownfiles/Rust_Server_Portierung_Implementierungsplan.md`: configuration/CLI, embedded
-MQTT v5 broker, in-process hub and payload types (first increment), twin logic with the FFI bridge to the C++
+MQTT 3.1.1 broker, in-process hub and payload types (first increment), twin logic with the FFI bridge to the C++
 libraries (phase 3) and the history in PostgreSQL (phase 5). Not included: REST API, TLS, authentication, removal
 of the C++ server.
 
@@ -281,14 +281,14 @@ that recording is off. `run.history.{retention_days,queue_capacity,batch_size,fl
 | Path | Content |
 |---|---|
 | `src/config.rs` | CLI keys, defaults and JSON file layout, compatible with `DigitalTwinServerInstanceManager` |
-| `src/broker/` | `codec` (MQTT v5 packets), `topic` (matching, limits), `subscriptions` (store), `tracker` (connection limits), `session`, `limits` |
+| `src/broker/` | `codec` (MQTT 3.1.1 packets), `topic` (matching, limits), `subscriptions` (store), `tracker` (connection limits), `session`, `limits` |
 | `src/hub.rs` | in-process hub: `subscribe(filter, capacity)` and `publish(topic, payload)`; messages carry their `Origin` |
 | `src/twin/` | `TwinBackend` trait, twin service (`mod.rs`), `ffi.rs` (feature `ffi`, cxx bridge) |
 | `ffi/`, `build.rs` | C++ facade (`dt_facade.h/.cpp`); `build.rs` compiles it against the C++ build tree (feature `ffi`) and emits the link and run-time settings; `ffi/link_plan.rs` is its pure planning logic (paths, libraries, rpath, DLLs), also included by `tests/link_plan.rs` (runs without the feature, covers all three target systems) |
 | `src/history/` | `partition`, `registry`, `row`, `store` (trait), `pg` (sqlx), `recorder` (ingest, stats), `writer` (batches, maintenance) |
 | `migrations/` | embedded SQL migrations |
 | `src/payload/` | `time` (`time_point`), `twin` (`connectToTwin`, `registerFunction`), `values` (value types and `classify`) |
-| `tests/` | integration tests against the real broker (rumqttc v5 client and a raw socket client) |
+| `tests/` | integration tests against the real broker (rumqttc MQTT 3.1.1 client and a raw socket client) |
 
 ## Decision: MQTT codec (phase 0)
 
@@ -296,63 +296,65 @@ Decision: **own small codec** (`src/broker/codec.rs`, QoS 0 only, about 300 line
 
 Candidates, checked against the crate sources (downloaded and read, not run against Paho or Python clients):
 
-- `mqttbytes` 0.6.0 has a `v5` module and covers the fields we need (CONNACK `max_packet_size` and
-  `server_keep_alive`, subscribe `nolocal`, SUBACK `QuotaExceeded` / `TopicFilterInvalid`, DISCONNECT `ProtocolError`).
+- `mqttbytes` 0.6.0 (originally evaluated for its MQTT 5 module; the 3.1.1 `v4` module has the same structure).
   Rejected because: the last release is from 2021-10 (the repository is `rumqtt`, which moved on to its own internal
-  copy), and `v5::read` returns `Error::PayloadRequired` for every packet with remaining length 0 except
-  PINGREQ/PINGRESP. A DISCONNECT without reason code (remaining length 0) is the normal way for clients to say
-  goodbye in MQTT 5, so it would be treated as an error. `max_size` is checked in the same call that parses the
-  whole packet; our decoder checks the size from the fixed header alone and never buffers an oversize body.
+  copy), and its `read` rejects packets whose payload is required but missing with `Error::PayloadRequired`
+  (checked for the MQTT 5 module). `max_size` is checked in the same call that parses the whole packet; our decoder
+  checks the size from the fixed header alone and never buffers an oversize body. The evaluation was done for MQTT 5
+  and not repeated for 3.1.1.
 - `mqttbytes-ng` is a fork of the above; not evaluated further (small, young, same code base).
 - `ntex-mqtt` 10.x is a full server/client framework with its own service and codec stack (and a Rust 1.97 MSRV).
-  It would take over session handling, which the plan wants to keep under our control (limits, reason codes,
+  It would take over session handling, which the plan wants to keep under our control (limits, return codes,
   later per-topic authorization).
 
 The needed subset is small (QoS 0): decode CONNECT, PUBLISH, SUBSCRIBE, UNSUBSCRIBE, PINGREQ, DISCONNECT, encode
-CONNACK, PUBLISH, SUBACK, UNSUBACK, PINGRESP, DISCONNECT. Properties of incoming packets are skipped with bounds
-checks, not interpreted. The codec is covered by unit tests with hand computed bytes, and by integration tests with
-`rumqttc` (a real, independent MQTT v5 client) and a raw socket client.
-`rumqttc` 0.25 is used as dev-dependency only.
+CONNACK, PUBLISH, SUBACK, UNSUBACK, PINGRESP. MQTT 3.1.1 has no properties and no server DISCONNECT, so there is
+nothing of that to encode or skip. The codec is covered by unit tests with hand computed bytes, and by integration
+tests with `rumqttc` (a real, independent MQTT 3.1.1 client, `rumqttc::{AsyncClient, MqttOptions, ...}`) and a raw
+socket client. `rumqttc` 0.25 is used as dev-dependency only (default features off are enough for plain TCP).
 
 ## Behaviour and deviations from the C++ server
 
-Same as C++: MQTT v5 only, QoS 0 only (QoS > 0 PUBLISH gives DISCONNECT `protocol_error` and close), first packet must
-be CONNECT, CONNECT timeout, CONNACK with `session_present = false`, `maximum_packet_size` and `server_keep_alive`,
-subscription quota (updates never count), topic length/level limits (SUBSCRIBE: `topic_filter_invalid`; PUBLISH:
-dropped silently), `matchFilter` semantics (also `a/#` matches `a`, `#` matches `$SYS/...`), no-local,
-one delivery per session, pending-send limit with drop and disconnect after 3 consecutive overflows (accounting
+MQTT 3.1.1 only (protocol name `MQTT`, level 4; another level, e.g. MQTT 5, gets CONNACK return code 0x01 and is closed [MQTT-3.1.2-2]; another protocol name, e.g. 3.1 `MQIsdp`, is closed without a reply),
+QoS 0 only (a QoS > 0 PUBLISH closes the connection; SUBSCRIBE with QoS 1/2 is granted with QoS 0), first packet must
+be CONNECT, CONNECT timeout, CONNACK with `session_present = 0` and return code 0, subscription quota (updates never
+count; over the quota and invalid filters get SUBACK return code 0x80), topic length/level limits (SUBSCRIBE: 0x80;
+PUBLISH: dropped silently), `matchFilter` semantics (also `a/#` matches `a`, `#` matches `$SYS/...`),
+one delivery per session (the publishing session included, there is no no-local in 3.1.1), pending-send limit with drop and disconnect after 3 consecutive overflows (accounting
 topic + payload bytes, like C++), dual-stack listener with IPv4 fallback, IPv4-mapped IPv6 counted as IPv4, CLI
 matching by substring with first match winning, file values overriding the command line.
 
 Deviations:
 
-- Keep alive: enforced as 1.5 x `server_keep_alive_s` of silence (plan 4.1/5.1), then DISCONNECT 0x8D and close. The
-  C++ code has no explicit timer (it relies on the async_mqtt endpoint). `server_keep_alive_s = 0` disables it.
+- Keep alive: the keep alive of the client from its CONNECT is enforced (3.1.1, 3.1.2.10): after 1.5 x that interval of
+  silence the connection is closed. Keep alive 0 disables it. There is no server-side override any more (MQTT 3.1.1
+  has no Server Keep Alive), so the former limit `server_keep_alive_s` is gone; a configuration file that still
+  contains the key is accepted and the key is ignored.
+- MQTT 3.1.1 has no server DISCONNECT: whenever the broker ends a connection (shutdown, keep alive timeout, protocol
+  error, malformed or oversize packet, second CONNECT, invalid topic name, slow client) it just closes the TCP
+  connection; the reason is only logged. The DISCONNECT of a client is accepted.
+- Empty client identifier: accepted only with clean session = 1 (the broker generates an id for its own bookkeeping
+  and does not announce it). Without clean session the broker answers CONNACK return code 0x02 (identifier rejected)
+  and closes (3.1.1, 3.1.3.1). Sessions are never persisted, so `session_present` is always 0.
 - Control packets (CONNACK, SUBACK, UNSUBACK, PINGRESP) count against `max_pending_send_bytes` like publishes. A client
   that sends requests without reading the answers is disconnected when the limit is exceeded, so the memory of a
   session is bounded. (C++ had no such limit.)
-- PUBLISH properties (response topic, correlation data, user properties, content type, ...) are forwarded to
-  subscribers and to the hub (`Message::properties`, raw bytes); Topic Alias and Subscription Identifier are removed.
-  A PUBLISH with a Topic Alias is a protocol error (no Topic Alias Maximum is announced).
-- The Maximum Packet Size of the client (CONNECT property) is honoured: larger PUBLISHes are not sent to that client,
-  they are counted (`Hub::oversize_dropped_total`) and are not a slow-consumer overflow. `Hub::publish` rejects
-  payloads that do not fit into the broker's maximum packet size.
-- An empty client identifier gets a generated one (Assigned Client Identifier in CONNACK).
+- `max_packet_size` is only enforced for incoming packets (3.1.1 cannot announce it). `Hub::publish` rejects payloads
+  that do not fit into it.
 - Nothing but CONNACK is sent before the connection is established: an invalid first packet (e.g. QoS 1 PUBLISH,
   malformed CONNECT) just closes the connection.
 - Reserved fixed header flags (SUBSCRIBE/UNSUBSCRIBE must be 0x2, CONNECT/PINGREQ/DISCONNECT 0x0), QoS 3 and
-  Retain Handling 3 are malformed packets (DISCONNECT 0x81). Not checked: non-minimal variable byte integers, U+0000
+  any set reserved bit 2-7 of the requested QoS byte of SUBSCRIBE are malformed packets (connection closed). Not checked: non-minimal variable byte integers, U+0000
   in strings.
-- A second CONNECT, and a PUBLISH with an empty topic or a wildcard in the topic, end in DISCONNECT (0x82 / 0x90). C++
-  would only drop or ignore (not verified). Packets of other types (PUBACK, AUTH, ...) are ignored like in C++.
-- A SUBSCRIBE filter that is syntactically invalid (empty, `a/#/b`, `a#`) gets `topic_filter_invalid`. C++ only checks
+- A second CONNECT, and a PUBLISH with an empty topic or a wildcard in the topic, close the connection. C++
+  would only drop or ignore (not verified). Packet type 0 and 15 are reserved in 3.1.1 and malformed; other types the broker does not act on (PUBACK, ...) are ignored like in C++.
+- A SUBSCRIBE filter that is syntactically invalid (empty, `a/#/b`, `a#`) gets return code 0x80. C++ only checks
   the length/level limits and would store a filter that never matches.
-- Oversize packets: the size is checked on the fixed header; the client gets DISCONNECT 0x95 (`packet_too_large`)
-  before the close. C++ just closes.
-- Dropping a `Broker` starts the shutdown (clients get DISCONNECT 0x8B, the hub closes) without waiting;
+- Oversize packets: the size is checked on the fixed header; the connection is closed. C++ just closes.
+- Dropping a `Broker` starts the shutdown (client connections are closed, the hub closes) without waiting;
   `shutdown().await` waits. After either, `HubSubscription::recv()` returns `None` and `Hub::publish` / `subscribe`
   fail with `HubError::Closed`.
-- A connection that does not speak MQTT v5 is closed without a reply.
+- A connection that does not speak MQTT 3.1.1 (level 4) is closed without a reply.
 - The file is applied before the command line ports are validated: an invalid command line port is only an error if
   the file does not provide the value (C++: the file value wins).
 - Arguments are read with `args_os` and converted lossily (no panic on non-UTF-8).
@@ -385,7 +387,7 @@ Payload types:
 ## Hub
 
 `Broker::hub()` returns a cloneable `Hub`. `hub.subscribe(filter, capacity)` gives a bounded receiver of
-`Message { origin, topic, payload, properties }` for every accepted PUBLISH (and for hub publishes). A full channel drops the message and
+`Message { origin, topic, payload }` for every accepted PUBLISH (and for hub publishes). A full channel drops the message and
 counts it (`HubSubscription::dropped()`, `Hub::dropped_total()`); the broker never waits. `hub.publish(topic, payload)`
 delivers to all matching client sessions and all matching internal subscribers (there is no no-local for internal
 code, so a recorder on `#` also sees what the server itself published; such messages have `Origin::Server`, those of
@@ -420,9 +422,11 @@ Phase 3 and 5:
 Broker and payloads (first increment):
 
 - No shared subscriptions: `$share/...` filters are stored like ordinary filters.
-- UNSUBACK always reports success (also for filters the session did not have), like C++.
-- CONNACK does not announce Maximum QoS or Retain Available (QoS > 0 is a protocol error at PUBLISH time; retain
-  flags of PUBLISH are accepted and ignored, nothing is retained).
+- UNSUBACK carries only the packet id in 3.1.1 (no per-filter codes), also for filters the session did not have.
+- QoS > 0 PUBLISH closes the connection (3.1.1 has no way to announce a maximum QoS); the retain flag of a PUBLISH is
+  accepted and ignored, nothing is retained.
 - Floating point formatting: serde_json writes small and large exponents like `1e-7`, nlohmann::json (C++) writes
   `1e-07`. Both parse back to the same value; the bytes differ for such values. Not compared against a C++ build.
-- Will messages, user name and password of CONNECT are parsed past but not used (no authentication yet).
+- Will topic/message, user name and password of CONNECT are not parsed or used (the decoder stops after the client
+  id; no authentication yet). Only the CONNECT flags are validated: will QoS 3, will QoS or will retain without will
+  flag, and password flag without user name flag are malformed. A PUBLISH with DUP = 1 at QoS 0 is malformed.

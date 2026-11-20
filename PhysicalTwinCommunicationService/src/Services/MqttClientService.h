@@ -13,7 +13,6 @@
 #include <coroutine>
 #include <atomic>
 #include <thread>
-#include <future>
 #include <optional>
 
 #include <async_mqtt/all.hpp>
@@ -27,7 +26,8 @@
 #include "../cpp_physical_twin_communication_global.h"
 #include "IMqttClientService.h"
 
-using client_t = async_mqtt::client<async_mqtt::protocol_version::v5,async_mqtt::protocol::mqtt>;
+// MQTT 3.1.1 (protocol level 4). The DT server (DTServerRust) speaks nothing else.
+using client_t = async_mqtt::client<async_mqtt::protocol_version::v3_1_1, async_mqtt::protocol::mqtt>;
 
 namespace DigitalTwin::Communication {
     class CPPPHYSICALTWINCOMMUNICATION_EXPORT MqttClientService : public IMqttClientService {
@@ -57,14 +57,11 @@ namespace DigitalTwin::Communication {
 
         void publish(std::string topic, std::string payload) override;
         void publish(std::string topic, std::string payload, async_mqtt::qos qos);
-        std::future<std::string> request(std::string topic, std::string payload, std::string respTopic);
 
         void subscribe(std::string topic, std::function<void(std::string topic, std::string payload)> callback);
 
     private:
         boost::asio::awaitable<void> run();
-        static std::vector<uint8_t> makeCorrelationData();
-        static std::optional<std::string> extractCorrelationKey(async_mqtt::v5::publish_packet const& packet);
 
         // IoContext has to be declared before Strand and Client, they depend on it.
         boost::asio::io_context IoContext;
@@ -77,14 +74,12 @@ namespace DigitalTwin::Communication {
         boost::asio::strand<boost::asio::any_io_executor> Strand;
 
         std::thread WorkerThread;
-        async_mqtt::client<async_mqtt::protocol_version::v5, async_mqtt::protocol::mqtt> Client;
+        client_t Client;
 
         std::atomic<bool> ClientStarted;
         std::atomic<bool> Connected;
 
         std::unordered_map<std::string, std::function<void(std::string topic, std::string payload)>> Subscriptions;
-        std::unordered_map<std::string, std::promise<std::string>> Pending;
-        bool HasResponseSubscription{false};
 
         std::unordered_map<std::string, std::function<void(std::string topic, std::string payload)>> Callbacks;
     };

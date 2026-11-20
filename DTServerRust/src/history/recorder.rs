@@ -242,7 +242,6 @@ mod tests {
             origin,
             topic: Arc::from(topic),
             payload: Bytes::from(payload.to_owned()),
-            properties: Bytes::new(),
         }
     }
 

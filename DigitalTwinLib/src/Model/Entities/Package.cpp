@@ -85,6 +85,7 @@ namespace DigitalTwin::Model
 			return dynamic_cast<Port*>(PortDefinitions[domains[index]])->resolveVariable(domains, index + 1);
 		if (IndividualInstances.contains(domains[index]))
 			return dynamic_cast<Component*>(IndividualInstances[domains[index]])->resolveVariable(domains, index + 1);
+		throw DigitalTwinAddressException();
 	}
 
 	IVariable* Package::getMeasurable(std::string name)

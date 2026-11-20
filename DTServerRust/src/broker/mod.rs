@@ -1,4 +1,4 @@
-//! MQTT v5 broker (QoS 0 only). Port of `MqttBrokerService`.
+//! MQTT 3.1.1 broker (QoS 0 only). Port of `MqttBrokerService`.
 
 pub mod codec;
 pub(crate) mod core;
@@ -89,7 +89,7 @@ impl Broker {
         let _ = self.shutdown_tx.send(true);
     }
 
-    /// Stops accepting, disconnects all clients (reason code "server shutting down") and waits until
+    /// Stops accepting, closes the connections of all clients (no DISCONNECT, 3.1.1 has none from the server) and waits until
     /// all sessions are gone (at most 5 seconds).
     ///
     /// Afterwards the hub is closed: internal subscriptions end (`recv()` returns `None`) and

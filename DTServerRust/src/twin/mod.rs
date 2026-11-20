@@ -46,7 +46,7 @@ pub use backend::{BackendError, TwinBackend, TwinElement, TwinInfo, UnavailableB
 use crate::config::SysmlConfig;
 use crate::hub::{Hub, HubError, HubSubscription, Message, Origin};
 use crate::payload::twin::{ConnectToTwin, FunctionRegistrationRequest};
-use crate::payload::values::classify;
+use crate::payload::values::{classify, Value, ValuePayload};
 use crate::payload::{CONNECT_TO_TWIN, REGISTER_FUNCTION};
 
 /// Number of parallel downloads (the C++ `DownloadPool` has 4 threads).
@@ -436,7 +436,15 @@ impl Shared {
             }
         }
 
-        let paths: HashSet<String> = info.elements.iter().map(|e| e.path.clone()).collect();
+        // Function topics (payload with `parameters`) are outputs of the twin: a client write there must never
+        // reach backend.update_variable, so they are not forwardable paths. Decided by the shape, not by a successful
+        // classify: a function whose initial payload is invalid (e.g. a NaN parameter) must not become forwardable.
+        let paths: HashSet<String> = info
+            .elements
+            .iter()
+            .filter(|e| !is_function_payload(&e.initial_json))
+            .map(|e| e.path.clone())
+            .collect();
         match self.hub.subscribe(&format!("{}/#", info.name), self.options.subscription_capacity.max(1)) {
             Ok(sub) => {
                 let handle = tokio::spawn(forward_variable_updates(Arc::clone(self), twin, info.name.clone(), paths, sub));
@@ -564,6 +572,14 @@ async fn forward_registrations(
     }
 }
 
+/// True if the payload has the shape of a function payload (a JSON object with `parameters`), valid or not.
+fn is_function_payload(json: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(json)
+        .ok()
+        .and_then(|value| value.as_object().map(|object| object.contains_key("parameters")))
+        .unwrap_or(false)
+}
+
 /// Updates variable of DT in the Backend.
 async fn forward_variable_updates(shared: Arc<Shared>, twin: Uuid, name: String,
                                   paths: HashSet<String>, mut sub: HubSubscription) {
@@ -572,7 +588,11 @@ async fn forward_variable_updates(shared: Arc<Shared>, twin: Uuid, name: String,
         if message.origin == Origin::Server { continue; }          // eigene Initialwerte ignorieren
         let Some(path) = message.topic.strip_prefix(&prefix) else { continue };
         if !paths.contains(path) { continue; }                      // registerFunction, Funktions-Topics usw.
-        if classify(&message.payload).is_err() { continue; }        // ungültige Werte nicht an C++ geben
+        // ungültige Werte und Funktions-Payloads nicht an C++ geben (eine Variable nimmt nur einen einzelnen Wert an)
+        match classify(&message.payload) {
+            Ok(ValuePayload { value: Value::Function(_), .. }) | Err(_) => continue,
+            Ok(_) => {}
+        }
         let Ok(json) = String::from_utf8(message.payload.to_vec()) else { continue };
         let (backend, path) = (Arc::clone(&shared.backend), path.to_owned());
         match tokio::task::spawn_blocking(move || backend.update_variable(twin, &path, &json)).await {
@@ -586,6 +606,16 @@ async fn forward_variable_updates(shared: Arc<Shared>, twin: Uuid, name: String,
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn function_payloads_are_recognized_by_shape() {
+        // valid and invalid (NaN dumped as null) function payloads are both never forwardable
+        assert!(is_function_payload(r#"{"time_point":"2026-11-19T10:00:00Z","parameters":[{"name":"p","value":1.0}]}"#));
+        assert!(is_function_payload(r#"{"time_point":"2026-11-19T10:00:00Z","parameters":[{"name":"p","value":null}]}"#));
+        assert!(!is_function_payload(r#"{"time_point":"2026-11-19T10:00:00Z","value":1.0}"#));
+        assert!(!is_function_payload(""));
+        assert!(!is_function_payload("[]"));
+    }
 
     #[test]
     fn twin_names() {

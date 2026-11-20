@@ -48,15 +48,29 @@ namespace DigitalTwin {
 	namespace Communication
 	{
 		class FunctionRegistrationRequest;
+		class FunctionValueEntity;
 	}
 }
 
 namespace DigitalTwin::Model {
+	/**
+	 * @class DigitalTwinModel
+	 * @author Moritz Herzog
+	 * @version 1.3
+	 * Setup the Digital Twin model for the UI and the MQTT Backend.
+	 * TODO: Split between UI and MQTT needs to be done differently.
+	 */
 	class CPPDIGITALTWINLIB_EXPORT DigitalTwinModel {
 	public:
 		DigitalTwinModel() = delete;
 		explicit DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager* manager);
 		virtual ~DigitalTwinModel();
+
+		/**
+		 * Last topic segment of a variable that has a function attached: the computing client writes the result there.
+		 * `return` is a SysML keyword, so it cannot collide with a variable or function name.
+		 */
+		static constexpr const char* RETURN_TOPIC = "return";
 
 		void generateDigitalTwinBackend();
 
@@ -81,6 +95,11 @@ namespace DigitalTwin::Model {
 		 * Creates the companion ValueEntity for the given variable, initialised with the variable's current value.
 		 */
 		std::shared_ptr<DigitalTwin::Communication::ValueEntity> createValueEntity(IVariable* variable);
+		/**
+		 * Creates the payload entity of a function topic. It holds the input parameters of the function.
+		 * @return nullptr if the function is null, throws std::invalid_argument if parameter names are not unique.
+		 */
+		std::shared_ptr<DigitalTwin::Communication::FunctionValueEntity> createFunctionValueEntity(Function* function);
 
 	private:
 		Component* getComponentWithAddress(std::string address);

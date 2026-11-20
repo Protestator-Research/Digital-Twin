@@ -3,7 +3,8 @@
 /// Limits of the broker. Every value has a default, so missing configuration keys are not an error.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BrokerLimits {
-    /// Maximum size of a received packet in bytes (fixed header included). Announced in CONNACK.
+    /// Maximum size of a received packet in bytes (fixed header included). A larger packet closes the
+    /// connection (MQTT 3.1.1 cannot announce this limit to the client).
     pub max_packet_size: u32,
     /// Maximum number of open connections in total.
     pub max_connections: usize,
@@ -21,8 +22,6 @@ pub struct BrokerLimits {
     pub max_consecutive_send_overflows: usize,
     /// Seconds a new connection may take until it sends CONNECT.
     pub connect_timeout_s: u32,
-    /// Keep alive announced to every client (server keep alive). 0 disables the enforcement.
-    pub server_keep_alive_s: u16,
 }
 
 impl Default for BrokerLimits {
@@ -37,7 +36,6 @@ impl Default for BrokerLimits {
             max_topic_levels: 16,
             max_consecutive_send_overflows: 3,
             connect_timeout_s: 10,
-            server_keep_alive_s: 60,
         }
     }
 }

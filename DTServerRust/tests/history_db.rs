@@ -508,8 +508,7 @@ async fn wait_for_rows(store: &PgStore, expected: i64) {
 }
 
 async fn publish(port: u16, messages: &[(&str, String)]) {
-    use rumqttc::v5::mqttbytes::QoS;
-    use rumqttc::v5::{AsyncClient, MqttOptions};
+    use rumqttc::{AsyncClient, MqttOptions, QoS};
     let (client, mut eventloop) =
         AsyncClient::new(MqttOptions::new("db-test", "127.0.0.1", port), 16);
     let poller = tokio::spawn(async move { while eventloop.poll().await.is_ok() {} });

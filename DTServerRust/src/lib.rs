@@ -1,4 +1,4 @@
-//! Rust port of the Digital Twin Server: configuration, MQTT v5 broker (QoS 0), in-process hub and
+//! Rust port of the Digital Twin Server: configuration, MQTT 3.1.1 broker (QoS 0), in-process hub and
 //! payload types.
 
 pub mod broker;
