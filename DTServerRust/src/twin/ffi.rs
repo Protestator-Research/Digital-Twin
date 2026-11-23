@@ -7,7 +7,9 @@ use std::time::Duration;
 
 use uuid::Uuid;
 
-use super::backend::{BackendError, StoreSettings, StoreStats, TwinBackend, TwinElement, TwinInfo};
+use super::backend::{
+    BackendError, Credentials, StoreSettings, StoreStats, TwinBackend, TwinElement, TwinInfo,
+};
 
 #[cxx::bridge(namespace = "dtrs")]
 mod bridge {
@@ -55,6 +57,8 @@ mod bridge {
         include!("dt_facade.h");
 
         fn facade_login(url: &str, port: u16, username: &str, password: &str) -> CallResult;
+        /// The application key is the bearer token; no request is made, see `ffi/dt_facade.h`.
+        fn facade_login_application_key(url: &str, port: u16, application_key: &str) -> CallResult;
         fn facade_load_twin(project_id: &str, twin_id: &str) -> TwinLoad;
         /// Test/diagnostic support: `getJson()` of one value entity per type, no server needed.
         fn facade_sample_initial_values() -> Vec<TwinElement>;
@@ -104,10 +108,13 @@ fn check(code: i32, message: String) -> Result<(), BackendError> {
         Ok(())
     } else {
         // 2 = not logged in, 6 = HTTP 401 (see ffi/dt_facade.h)
-        let message = if message.is_empty() {
-            format!("backend error (code {code})")
-        } else {
+        let message = if !message.is_empty() {
             message
+        } else if code == 6 {
+            // a session with an application key gives only the detail of the server's answer, often none
+            "the server answered HTTP 401".to_owned()
+        } else {
+            format!("backend error (code {code})")
         };
         if code == 2 || code == 6 {
             Err(BackendError::Unauthorized(message))
@@ -118,14 +125,15 @@ fn check(code: i32, message: String) -> Result<(), BackendError> {
 }
 
 impl TwinBackend for FfiBackend {
-    fn login(
-        &self,
-        url: &str,
-        port: u16,
-        username: &str,
-        password: &str,
-    ) -> Result<(), BackendError> {
-        let r = bridge::facade_login(url, port, username, password);
+    fn login(&self, url: &str, port: u16, credentials: &Credentials) -> Result<(), BackendError> {
+        let r = match credentials {
+            Credentials::Password { username, password } => {
+                bridge::facade_login(url, port, username, password)
+            }
+            Credentials::ApplicationKey(key) => {
+                bridge::facade_login_application_key(url, port, key)
+            }
+        };
         check(r.code, r.message)
     }
 

@@ -15,11 +15,48 @@ cargo fmt
 ```
 
 Environment overrides (beat file and command line): `DT_SYSML_PASSWORD` (Structura password),
-`DT_HISTORY_DATABASE_URL` (history database URL, may contain a password), `DT_API_LISTEN` (address of the REST API)
+`DT_SYSML_APPLICATION_KEY` (Structura application key, see below), `DT_HISTORY_DATABASE_URL` (history database URL,
+may contain a password), `DT_API_LISTEN` (address of the REST API),
 `DT_API_DATABASE_URL` (its database URL, may contain a password) and `DT_API_BEHIND_PROXY` (`true` / `false`; an
 invalid value is a startup error). Empty values are ignored.
 
 Run: `cargo run -- --instance.config config.cfg --instance.mqtt.port 1883` (same keys as the C++ server).
+
+### Session at the SysMLv2 server: user name and password, or an application key
+
+The server's own session at the SysMLv2 (Structura) server, with which it downloads the twins, is set up in one of two
+ways:
+
+| Setting | Meaning |
+|---|---|
+| `sysml.username`, `sysml.password` (default `admin` / `admin`; env `DT_SYSML_PASSWORD`) | A login request is made and the returned token is used. If a download is refused as unauthorized (HTTP 401), the session expired: the server logs in again and retries once. |
+| `sysml.application_key` (command line `--sysml.application_key`, file key `sysml.application_key`, env `DT_SYSML_APPLICATION_KEY`; default empty) | **If it is not empty it is used instead of user name and password.** The key is sent directly as the bearer token (`Authorization: Bearer <key>`) with every request; there is no login request. |
+
+Notes on the application key:
+
+- It is a secret: it is redacted in the log of the configuration (`<redacted>`), never logged and never part of an
+  error message. Prefer the environment variable or the file over the command line (a command line is visible to
+  other users of the machine). Startup logs one line that names the method but not the key.
+- Whitespace around the key (a newline at the end of a file or a variable) is removed. Whatever remains has to consist
+  of visible ASCII characters only (no spaces, no control characters, no non-ASCII text), because it is sent in a header;
+  otherwise the configuration is rejected at startup with an error that names the setting but does not show the key.
+- A key that consists only of whitespace is **not** "no key": from the command line or the file it is a configuration
+  error (otherwise the server would quietly log in with the default user name and password). In the environment
+  variable such a value (for example the newline of an empty mounted secret) is ignored like an empty one, so it does
+  not replace a key from the file or the command line. An explicitly empty value means "no key".
+- **The key is sent with every request, and in plain text unless the connection uses TLS.** The server talks TLS
+  (`https://`) only if `sysml.port` is 443; every other port, 80 included, is plain HTTP. Use port 443, or a network you
+  trust. The server logs a warning at startup if a key is configured and the port is not 443.
+- It only concerns the server's own session at the SysMLv2 server. **MQTT clients are not affected**: they log in with
+  their own user name and password, checked against the SysMLv2 server by `run.mqtt.authentication = "sysml"` (see
+  "Authentication"), whichever way the server's own session is set up.
+- **A wrong key is only noticed at the first twin load.** Setting the key makes no request, so nothing is checked at
+  startup, and this server does not invent a validation request. If the SysMLv2 server answers a download with HTTP 401,
+  the key is wrong, revoked or lacks the rights for the project: the error in the log says that the SysMLv2 server
+  rejected the application key (followed by the server's own error detail, if it sent one; not the advice to log in
+  again that a password session gets). Whatever text the SysMLv2 client library puts into an error, the key itself is
+  replaced there before the message is logged. There is nothing to renew, so the server does **not** log in again and does not retry
+  (unlike with a password, where a 401 means an expired session).
 
 MQTT protocol version of the broker: `--instance.mqtt.protocol_version <value>` or `run.mqtt.protocol_version` in the
 configuration file (the file wins, like for the port). Values:
@@ -204,6 +241,7 @@ Rules and limits:
 | Variable | Used by | Meaning |
 |---|---|---|
 | `DT_SYSML_PASSWORD` | server | Structura password (beats file and command line) |
+| `DT_SYSML_APPLICATION_KEY` | server | Structura application key (beats file and command line); if set it replaces user name and password for the server's own session, see "Session at the SysMLv2 server" |
 | `DT_HISTORY_DATABASE_URL` | server | PostgreSQL URL of the history (beats the file); may contain a password, never logged |
 | `DT_API_LISTEN` | server | listen address of the REST API, e.g. `127.0.0.1:8080` (beats the file); empty = disabled |
 | `DT_API_DATABASE_URL` | server | PostgreSQL URL of the REST API (beats the file, default the history URL); may contain a password, never logged |
@@ -228,6 +266,9 @@ Rules and limits:
 - `cargo test --features ffi`: additionally `tests/ffi_backend.rs`: calls without login, login against a closed
   port and against a server that answers 500 return errors (no abort, no password in the message). The live test
   needs `DT_TEST_SERVER_URL`, `DT_TEST_PROJECT_ID` and `DT_TEST_TWIN_ID` and is skipped otherwise.
+  `tests/ffi_application_key.rs` (own test binary, because the facade has one session per process) uses a fake
+  SysMLv2 server that records requests: after the application key login nothing was sent, the twin load sends
+  `Authorization: Bearer <key>`, and a 401 is the unauthorized error; the password login makes `POST /login`.
 - `tests/api_auth.rs`: the REST API without a database: Basic authentication (same `Authenticator` and throttle as
   MQTT, with a stub), routing, JSON errors and the parameter validation that happens before any query.
 - PostgreSQL tests (`tests/api_db.rs`): run only when `DT_TEST_DATABASE_URL` is set, e.g.
@@ -264,7 +305,9 @@ Rules and limits:
 - at shutdown the loaded twins are released (at most 5 s).
 
 Login: done in the background at startup and retried before every download until it works. A failed login (or the
-missing backend) is logged and the server keeps running. The C++ server lets the exception end `runInstance`;
+missing backend) is logged and the server keeps running. With an application key the "login" only hands the key to
+the backend (no request), and a download refused with HTTP 401 is reported as a rejected key without a new login or
+retry (see "Session at the SysMLv2 server"). The C++ server lets the exception end `runInstance`;
 that would make a binary without `ffi`, or a Structura that starts later than the server, unusable.
 
 The facade returns, per variable, the path and its initial value as JSON (`DigitalTwinModel::getElementValueEntities`,

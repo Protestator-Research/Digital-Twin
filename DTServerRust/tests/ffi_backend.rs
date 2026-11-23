@@ -12,8 +12,15 @@ use std::thread;
 use std::time::Duration;
 
 use dt_server::twin::ffi::FfiBackend;
-use dt_server::twin::{BackendError, StoreSettings, TwinBackend};
+use dt_server::twin::{BackendError, Credentials, StoreSettings, TwinBackend};
 use uuid::Uuid;
+
+fn password(username: &str, password: &str) -> Credentials {
+    Credentials::Password {
+        username: username.into(),
+        password: password.into(),
+    }
+}
 
 fn message(e: BackendError) -> String {
     match e {
@@ -50,7 +57,7 @@ fn login_to_an_unreachable_server_is_an_error_not_an_abort() {
     };
     let backend = FfiBackend::new();
     let err = backend
-        .login("127.0.0.1", port, "user", "secret-password")
+        .login("127.0.0.1", port, &password("user", "secret-password"))
         .expect_err("connection refused");
     let text = message(err);
     assert!(!text.is_empty());
@@ -74,7 +81,7 @@ fn http_error_of_the_server_is_an_error() {
     });
     let backend = FfiBackend::new();
     let err = backend
-        .login("127.0.0.1", port, "user", "secret-password")
+        .login("127.0.0.1", port, &password("user", "secret-password"))
         .expect_err("HTTP 500");
     assert!(!message(err).contains("secret-password"));
 }
@@ -88,6 +95,20 @@ fn answer_500(mut stream: TcpStream) {
         "HTTP/1.1 500 Internal Server Error\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
         body.len()
     );
+}
+
+#[test]
+fn unusable_application_keys_are_rejected_without_echoing_them() {
+    let backend = FfiBackend::new();
+    for bad in ["", "secret key", "secret\r\nX-Injected: 1", "secr\u{e9}t"] {
+        let err = backend
+            .login("127.0.0.1", 1, &Credentials::ApplicationKey(bad.into()))
+            .expect_err("rejected");
+        assert!(
+            !message(err).contains("secr"),
+            "the message echoes the key: {bad:?}"
+        );
+    }
 }
 
 /// Opt-in: against a real Structura server.
@@ -109,7 +130,9 @@ fn live_load_twin_against_structura() {
     let (host, port) = split_url(&url);
 
     let backend = FfiBackend::new();
-    backend.login(&host, port, &user, &password).expect("login");
+    backend
+        .login(&host, port, &self::password(&user, &password))
+        .expect("login");
     let project: Uuid = project.parse().expect("DT_TEST_PROJECT_ID is a uuid");
     let twin: Uuid = twin.parse().expect("DT_TEST_TWIN_ID is a uuid");
     let info = backend.load_twin(project, twin).expect("load twin");

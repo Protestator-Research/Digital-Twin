@@ -190,6 +190,19 @@ namespace BACKEND_COMMUNICATION {
         bool setUserForLoginInBackend(std::string username, std::string password);
 
         /**
+         * Uses an application key of the SysMLv2 server instead of a user login. The server accepts the key directly
+         * as the bearer token: every later request is sent with "Authorization: Bearer <key>". No request is made
+         * here, so nothing is checked: a wrong, revoked or unauthorized key is only noticed by the first request,
+         * which fails with HTTP 401 (SysMLv2::API::EXCEPTIONS::HTTPException). There is nothing to renew then. It
+         * replaces a token of an earlier login of this object.
+         * @param applicationKey The application key. It must not be empty and may only contain visible ASCII
+         *        characters (no spaces, no control characters), because it is sent in a header.
+         * @throws std::invalid_argument if the key is empty or contains characters that cannot be sent in a header.
+         *         The message never contains the key.
+         */
+        void setApplicationKey(std::string applicationKey);
+
+        /**
          * Creates a digital twin in the given project.
          * @param digitalTwin The twin request.
          * @param projectId UUID ("@id") of the project.

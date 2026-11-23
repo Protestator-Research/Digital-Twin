@@ -8,7 +8,54 @@ use std::time::Duration;
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::config::HistoryConfig;
+use crate::config::{HistoryConfig, SysmlConfig};
+
+/// How the server's own session at the SysMLv2 server is established.
+#[derive(Clone, PartialEq, Eq)]
+pub enum Credentials {
+    /// User name and password: a login request is made and the returned token is used. A refused session (HTTP 401)
+    /// means the token expired; logging in again helps.
+    Password { username: String, password: String },
+    /// An application key, used directly as the bearer token. No request is made, so a wrong key is only noticed by
+    /// the first request. A refused session (HTTP 401) means the key is wrong, revoked or lacks rights; there is
+    /// nothing to renew.
+    ApplicationKey(String),
+}
+
+impl fmt::Debug for Credentials {
+    /// Never shows the password or the key.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Credentials::Password { username, .. } => f
+                .debug_struct("Password")
+                .field("username", username)
+                .field("password", &"<redacted>")
+                .finish(),
+            Credentials::ApplicationKey(_) => f
+                .debug_tuple("ApplicationKey")
+                .field(&"<redacted>")
+                .finish(),
+        }
+    }
+}
+
+impl Credentials {
+    /// What the configuration says: the application key if there is one, else user name and password.
+    pub fn from_config(sysml: &SysmlConfig) -> Self {
+        if sysml.application_key.is_empty() {
+            Credentials::Password {
+                username: sysml.username.clone(),
+                password: sysml.password.clone(),
+            }
+        } else {
+            Credentials::ApplicationKey(sysml.application_key.clone())
+        }
+    }
+
+    pub fn is_application_key(&self) -> bool {
+        matches!(self, Credentials::ApplicationKey(_))
+    }
+}
 
 /// A variable of a twin with the value it is published with after the load.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -118,14 +165,10 @@ pub enum BackendError {
 /// What the twin logic needs from the model library. Implementations must be callable from several
 /// threads (up to the size of the download pool at the same time).
 pub trait TwinBackend: Send + Sync + 'static {
-    /// Logs in to the Structura server. The password must never be logged.
-    fn login(
-        &self,
-        url: &str,
-        port: u16,
-        username: &str,
-        password: &str,
-    ) -> Result<(), BackendError>;
+    /// Sets up the session at the Structura server and replaces the current one. With a password a login request is
+    /// made; with an application key nothing is sent (see [`Credentials`]). The password and the key must never be
+    /// logged or be part of an error.
+    fn login(&self, url: &str, port: u16, credentials: &Credentials) -> Result<(), BackendError>;
 
     /// Downloads and parses the model of a twin and keeps it for [`TwinBackend::register_function`].
     /// Loading a twin that is already loaded replaces the old model.
@@ -167,7 +210,7 @@ pub trait TwinBackend: Send + Sync + 'static {
 pub struct UnavailableBackend;
 
 impl TwinBackend for UnavailableBackend {
-    fn login(&self, _: &str, _: u16, _: &str, _: &str) -> Result<(), BackendError> {
+    fn login(&self, _: &str, _: u16, _: &Credentials) -> Result<(), BackendError> {
         Err(BackendError::NotAvailable)
     }
 
@@ -207,7 +250,13 @@ mod tests {
     #[test]
     fn unavailable_backend_fails_everything() {
         let b = UnavailableBackend;
-        assert_eq!(b.login("h", 1, "u", "p"), Err(BackendError::NotAvailable));
+        let password = Credentials::Password {
+            username: "u".into(),
+            password: "p".into(),
+        };
+        assert_eq!(b.login("h", 1, &password), Err(BackendError::NotAvailable));
+        let key = Credentials::ApplicationKey("k".into());
+        assert_eq!(b.login("h", 1, &key), Err(BackendError::NotAvailable));
         assert_eq!(
             b.load_twin(Uuid::nil(), Uuid::nil()),
             Err(BackendError::NotAvailable)
@@ -250,5 +299,50 @@ mod tests {
         config.database_url = "postgres://user:hunter2@db/history".into();
         let shown = format!("{:?}", StoreSettings::from(&config));
         assert!(!shown.contains("hunter2") && shown.contains("<redacted>"));
+    }
+
+    #[test]
+    fn credentials_follow_the_configuration_and_never_show_secrets() {
+        let mut sysml = crate::config::Config::from_args(Vec::<String>::new())
+            .unwrap()
+            .sysml;
+        sysml.username = "bob".into();
+        sysml.password = "hunter2".into();
+        sysml.application_key = String::new();
+        let c = Credentials::from_config(&sysml);
+        assert_eq!(
+            c,
+            Credentials::Password {
+                username: "bob".into(),
+                password: "hunter2".into()
+            }
+        );
+        assert!(!c.is_application_key());
+        // the key replaces user name and password
+        sysml.application_key = "sysml_ak_topsecret".into();
+        let c = Credentials::from_config(&sysml);
+        assert_eq!(c, Credentials::ApplicationKey("sysml_ak_topsecret".into()));
+        assert!(c.is_application_key());
+        for shown in [
+            format!("{c:?}"),
+            format!(
+                "{:?}",
+                Credentials::from_config(
+                    &crate::config::Config::from_args(Vec::<String>::new())
+                        .unwrap()
+                        .sysml
+                )
+            ),
+        ] {
+            assert!(
+                !shown.contains("topsecret") && !shown.contains("hunter2"),
+                "{shown}"
+            );
+        }
+        let password = Credentials::Password {
+            username: "bob".into(),
+            password: "hunter2".into(),
+        };
+        assert!(!format!("{password:?}").contains("hunter2"));
     }
 }

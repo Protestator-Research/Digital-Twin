@@ -43,7 +43,8 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 pub use backend::{
-    BackendError, StoreSettings, StoreStats, TwinBackend, TwinElement, TwinInfo, UnavailableBackend,
+    BackendError, Credentials, StoreSettings, StoreStats, TwinBackend, TwinElement, TwinInfo,
+    UnavailableBackend,
 };
 
 use crate::config::SysmlConfig;
@@ -111,8 +112,10 @@ pub struct TwinStats {
     pub failed: AtomicU64,
     /// Twins loaded and published.
     pub loaded: AtomicU64,
-    /// Logins repeated because a download was refused as unauthorized.
+    /// Logins repeated because a download was refused as unauthorized (never with an application key).
     pub relogins: AtomicU64,
+    /// Downloads refused as unauthorized with an application key configured: the key is not accepted.
+    pub key_rejected: AtomicU64,
     /// Messages seen on the `<TwinName>/registerFunction` topics (including the server's own request).
     pub registration_messages: AtomicU64,
     /// Registrations handed to the backend.
@@ -159,6 +162,8 @@ struct Shared {
     hub: Hub,
     backend: Arc<dyn TwinBackend>,
     sysml: SysmlConfig,
+    /// How the session at the SysMLv2 server is established, from `sysml`.
+    credentials: Credentials,
     options: TwinOptions,
     stats: Arc<TwinStats>,
     in_flight: Mutex<HashSet<Uuid>>,
@@ -213,6 +218,7 @@ impl TwinService {
         let shared = Arc::new(Shared {
             hub,
             backend,
+            credentials: Credentials::from_config(&sysml),
             sysml,
             pool: Semaphore::new(options.pool_size.max(1)),
             options,
@@ -374,8 +380,9 @@ impl Shared {
         }
         let backend = Arc::clone(&self.backend);
         let sysml = self.sysml.clone();
+        let credentials = self.credentials.clone();
         let result = tokio::task::spawn_blocking(move || {
-            backend.login(&sysml.url, sysml.port, &sysml.username, &sysml.password)
+            backend.login(&sysml.url, sysml.port, &credentials)
         })
         .await
         .unwrap_or_else(|e| Err(BackendError::Failed(format!("login task failed: {e}"))));
@@ -396,9 +403,15 @@ impl Shared {
             })
     }
 
-    /// Loads the twin; if the backend refuses the session (expired token) logs in again and tries once more.
+    /// Loads the twin. With a password, a refused session (expired token) logs in again and tries once more. With an
+    /// application key there is nothing to renew: the server rejected the key itself, so the error says that and
+    /// nothing is retried.
     async fn load_with_relogin(&self, request: ConnectToTwin) -> Result<TwinInfo, BackendError> {
         match self.load_once(request).await {
+            Err(BackendError::Unauthorized(reason)) if self.credentials.is_application_key() => {
+                TwinStats::bump(&self.stats.key_rejected);
+                Err(application_key_rejected(&reason))
+            }
             Err(BackendError::Unauthorized(reason)) => {
                 warn!(twin = %request.twin_id, "the session at the backend was refused ({reason}), logging in again");
                 TwinStats::bump(&self.stats.relogins);
@@ -626,6 +639,15 @@ impl Shared {
     }
 }
 
+/// The error for a download that the SysMLv2 server refused with HTTP 401 although an application key is configured.
+/// `reason` is the text of the backend; the key itself is never part of it.
+fn application_key_rejected(reason: &str) -> BackendError {
+    BackendError::Unauthorized(format!(
+        "the SysMLv2 server rejected the application key: it is wrong, revoked or lacks the rights for this project \
+         (HTTP 401; check sysml.application_key / DT_SYSML_APPLICATION_KEY). Detail: {reason}"
+    ))
+}
+
 /// The next message of a forwarder. After the service was asked to stop, the messages that are already queued are
 /// still returned; `None` ends the forwarder (queue empty, or the hub is closed).
 async fn next_message(
@@ -768,6 +790,23 @@ mod tests {
         ));
         assert!(!is_function_payload(""));
         assert!(!is_function_payload("[]"));
+    }
+
+    #[test]
+    fn a_rejected_application_key_is_named_in_the_error() {
+        let BackendError::Unauthorized(text) = application_key_rejected("Unauthorized") else {
+            panic!("not the unauthorized error");
+        };
+        assert!(text.contains("rejected the application key"), "{text}");
+        assert!(
+            text.contains("HTTP 401") && text.contains("Detail: Unauthorized"),
+            "{text}"
+        );
+        // never the advice for an expired session
+        assert!(
+            !text.contains("log in again") && !text.contains("expired"),
+            "{text}"
+        );
     }
 
     #[test]

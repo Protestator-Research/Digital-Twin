@@ -156,6 +156,17 @@ namespace BACKEND_COMMUNICATION {
         return true;
     }
 
+    void CommunicationService::setApplicationKey(std::string applicationKey) {
+        if(applicationKey.empty())
+            throw std::invalid_argument("The application key is empty");
+        for(const unsigned char c : applicationKey) {
+            // visible ASCII only: no control characters (CR/LF would split the header), no spaces, no 8 bit text
+            if(c <= 0x20 || c >= 0x7F)
+                throw std::invalid_argument("The application key contains characters that cannot be sent in a header");
+        }
+        BarrierString = std::move(applicationKey);
+    }
+
     std::shared_ptr<SysMLv2::REST::DigitalTwin> CommunicationService::postDigitalTwin(std::shared_ptr<SysMLv2::REST::TwinRequest> digitalTwin,
 	    boost::uuids::uuid projectId)
     {

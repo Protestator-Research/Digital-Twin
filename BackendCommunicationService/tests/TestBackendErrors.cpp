@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 
 #include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 #include <sysmlv2/rest/entities/Commit.h>
 #include <sysmlv2/rest/entities/Project.h>
 #include <sysmlv2/service/online/ConnectionError.h>
@@ -23,6 +26,39 @@ TEST(TwinRequest, WithCommitSerializes) {
     SysMLv2::REST::TwinRequest request("twin", commit);
     auto json = request.serializeToJson();
     EXPECT_NE(json.find("\"twin\""), std::string::npos);
+}
+
+TEST(ApplicationKey, IsAcceptedWithoutContactingTheServer) {
+    // nothing listens on this address: setting the key must not make a request (it would throw ConnectionError)
+    CommunicationService service("http://127.0.0.1", 1, "");
+    EXPECT_NO_THROW(service.setApplicationKey("sysml_ak_0123456789abcdef"));
+    EXPECT_NO_THROW(service.setApplicationKey("replaced-by-another-key"));
+}
+
+TEST(ApplicationKey, UnusableKeysAreRejectedWithoutEchoingThem) {
+    CommunicationService service("http://127.0.0.1", 1, "");
+    // each key with a fragment of its own that must not appear in the message ("" for the empty key, which has none)
+    const std::vector<std::pair<std::string, std::string>> cases = {
+        {"", ""},
+        {"alpha key", "alpha"},
+        {"bravo\nkey", "bravo"},
+        {"charlie\r\nX-Injected: 1", "charlie"},
+        {"delta\tkey", "delta"},
+        {"echo\x7f", "echo"},
+        {"foxtr\xc3\xa9t", "foxtr"},
+        {"golf\xc3\xa9", "golf"},
+    };
+    for(const auto& [key, fragment] : cases) {
+        try {
+            service.setApplicationKey(key);
+            FAIL() << "accepted: " << fragment;
+        } catch(const std::invalid_argument& ex) {
+            const std::string message = ex.what();
+            EXPECT_FALSE(message.empty());
+            if(!fragment.empty())
+                EXPECT_EQ(message.find(fragment), std::string::npos) << message;
+        }
+    }
 }
 
 TEST(DescribeBackendError, BadRequestContainsTheServerMessage) {

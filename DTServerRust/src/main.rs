@@ -109,6 +109,23 @@ async fn run() -> std::process::ExitCode {
     };
 
     let backend = backend();
+    if config.sysml.application_key.is_empty() {
+        info!("the session at the SysMLv2 server uses user name and password");
+    } else {
+        // the key itself is never logged
+        info!(
+            "the session at the SysMLv2 server uses the application key (sysml.application_key) instead of user name \
+             and password; no login request is made, so a wrong key is only noticed at the first twin load"
+        );
+        // the transport is decided by the port: https only for 443, plain http for every other port
+        if config.sysml.port != 443 {
+            warn!(
+                port = config.sysml.port,
+                "the application key is sent with EVERY request to the SysMLv2 server, and this connection is plain \
+                 HTTP (only port 443 uses TLS): use port 443 or a trusted network"
+            );
+        }
+    }
 
     // The history store lives in the backend (the C++ core). It is configured before the twin logic starts: a
     // twin loaded earlier would not be recorded.

@@ -26,10 +26,12 @@ pub enum Argument {
     InstanceMqttCertChain,
     InstanceMqttCertPrivateKey,
     InstanceConfig,
+    /// Not in the C++ server: an application key instead of user name and password.
+    SysmlApplicationKey,
 }
 
 impl Argument {
-    pub const ALL: [Argument; 10] = [
+    pub const ALL: [Argument; 11] = [
         Argument::SysmlUrl,
         Argument::SysmlPort,
         Argument::SysmlUsername,
@@ -40,6 +42,7 @@ impl Argument {
         Argument::InstanceMqttCertChain,
         Argument::InstanceMqttCertPrivateKey,
         Argument::InstanceConfig,
+        Argument::SysmlApplicationKey,
     ];
 
     /// The key as it appears on the command line (`Arguments` in C++).
@@ -55,6 +58,7 @@ impl Argument {
             Argument::InstanceMqttCertChain => "instance.mqtt.cert_chain",
             Argument::InstanceMqttCertPrivateKey => "instance.mqtt.cert_private_key",
             Argument::InstanceConfig => "instance.config",
+            Argument::SysmlApplicationKey => "sysml.application_key",
         }
     }
 
@@ -69,7 +73,8 @@ impl Argument {
             Argument::InstanceMqttAuthentication => "sysml",
             Argument::InstanceMqttCertChain
             | Argument::InstanceMqttCertPrivateKey
-            | Argument::InstanceConfig => "",
+            | Argument::InstanceConfig
+            | Argument::SysmlApplicationKey => "",
         }
     }
 }
@@ -119,6 +124,21 @@ pub struct SysmlConfig {
     pub port: u16,
     pub username: String,
     pub password: String,
+    /// Application key of the SysMLv2 server (`sysml.application_key`, env `DT_SYSML_APPLICATION_KEY`). If it is
+    /// not empty it is used INSTEAD of `username` and `password` for the server's own session (the MQTT client
+    /// logins are not affected). A secret: never logged. [`Config::validate`] removes surrounding whitespace and
+    /// rejects what cannot be sent in a header.
+    pub application_key: String,
+}
+
+/// Checks an application key (already trimmed): visible ASCII only, so that it can be sent as the bearer token in
+/// a header. The message never contains the key.
+fn check_application_key(key: &str) -> Result<(), &'static str> {
+    if key.bytes().all(|b| (0x21..=0x7E).contains(&b)) {
+        Ok(())
+    } else {
+        Err("contains characters that cannot be sent in an HTTP header (only visible ASCII characters are allowed, no spaces or control characters)")
+    }
 }
 
 impl fmt::Debug for SysmlConfig {
@@ -128,6 +148,14 @@ impl fmt::Debug for SysmlConfig {
             .field("port", &self.port)
             .field("username", &self.username)
             .field("password", &"<redacted>")
+            .field(
+                "application_key",
+                &if self.application_key.is_empty() {
+                    ""
+                } else {
+                    "<redacted>"
+                },
+            )
             .finish()
     }
 }
@@ -321,6 +349,7 @@ struct FileSysml {
     port: Option<StrNum>,
     username: Option<String>,
     password: Option<String>,
+    application_key: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -459,6 +488,7 @@ impl Config {
                 port: sysml_port,
                 username: get(Argument::SysmlUsername),
                 password: get(Argument::SysmlPassword),
+                application_key: get(Argument::SysmlApplicationKey),
             },
             mqtt: MqttConfig {
                 port: mqtt_port,
@@ -495,20 +525,38 @@ impl Config {
     }
 
     /// Fails if a command line value is still invalid after the file was applied.
-    pub fn validate(self) -> Result<Config, ConfigError> {
-        match self.deferred.first() {
-            Some(d) => Err(invalid(d.cli_key, d.message.clone())),
-            None => Ok(self),
+    pub fn validate(mut self) -> Result<Config, ConfigError> {
+        if let Some(d) = self.deferred.first() {
+            return Err(invalid(d.cli_key, d.message.clone()));
         }
+        // Whitespace around the key is almost always an accident (a trailing newline in a file or a variable) and
+        // is removed; whitespace inside is an error.
+        // A key that is given but is only whitespace is a mistake, not "no key": the server would silently use the
+        // user name and password instead. An explicitly empty value is "no key".
+        if !self.sysml.application_key.is_empty() && self.sysml.application_key.trim().is_empty() {
+            return Err(invalid(
+                "sysml.application_key",
+                "is only whitespace (leave it empty for no application key)".to_owned(),
+            ));
+        }
+        self.sysml.application_key = self.sysml.application_key.trim().to_owned();
+        check_application_key(&self.sysml.application_key)
+            .map_err(|why| invalid("sysml.application_key", why.to_owned()))?;
+        Ok(self)
     }
 
     /// Environment overrides, they beat the file and the command line:
-    /// `DT_SYSML_PASSWORD`, `DT_HISTORY_DATABASE_URL`, `DT_API_LISTEN`, `DT_API_DATABASE_URL` and
+    /// `DT_SYSML_PASSWORD`, `DT_SYSML_APPLICATION_KEY`, `DT_HISTORY_DATABASE_URL`, `DT_API_LISTEN`, `DT_API_DATABASE_URL` and
     /// `DT_API_BEHIND_PROXY`. Empty values are ignored; an invalid boolean is reported by [`Config::validate`].
     pub fn apply_env(&mut self, get: impl Fn(&str) -> Option<String>) {
         let non_empty = |name: &str| get(name).filter(|v| !v.is_empty());
         if let Some(v) = non_empty("DT_SYSML_PASSWORD") {
             self.sysml.password = v;
+        }
+        // An empty mounted secret may be a newline or a space: that is "not set" as well, and must not replace a
+        // key from the file or the command line.
+        if let Some(v) = non_empty("DT_SYSML_APPLICATION_KEY").filter(|v| !v.trim().is_empty()) {
+            self.sysml.application_key = v;
         }
         if let Some(v) = non_empty("DT_HISTORY_DATABASE_URL") {
             self.history.database_url = v;
@@ -573,6 +621,7 @@ impl Config {
             }
             set_string(&sysml.username, &mut self.sysml.username);
             set_string(&sysml.password, &mut self.sysml.password);
+            set_string(&sysml.application_key, &mut self.sysml.application_key);
         }
         let Some(run) = &file.run else {
             return Ok(());
@@ -777,6 +826,104 @@ mod tests {
         assert_eq!(c.api.listen, "");
         assert_eq!(c.api.database_url, "");
         assert!(!c.api.behind_proxy);
+    }
+
+    #[test]
+    fn the_application_key_comes_from_command_line_file_and_environment() {
+        // default: none, the user name and password are used
+        assert_eq!(config(&[]).sysml.application_key, "");
+        // command line
+        let c = config(&["--sysml.application_key", "key-from-cli"]);
+        assert_eq!(c.sysml.application_key, "key-from-cli");
+        // the file beats the command line, like the other sysml keys
+        let mut c = config(&["--sysml.application_key", "key-from-cli"]);
+        c.apply_json(r#"{"sysml":{"application_key":"key-from-file"}}"#)
+            .unwrap();
+        assert_eq!(c.sysml.application_key, "key-from-file");
+        // a file without the key keeps the command line value
+        c.apply_json(r#"{"sysml":{"url":"x"}}"#).unwrap();
+        assert_eq!(c.sysml.application_key, "key-from-file");
+        // the environment beats both, empty is ignored
+        c.apply_env(|name| (name == "DT_SYSML_APPLICATION_KEY").then(|| "key-from-env".to_owned()));
+        assert_eq!(c.sysml.application_key, "key-from-env");
+        c.apply_env(|name| (name == "DT_SYSML_APPLICATION_KEY").then(String::new));
+        assert_eq!(c.sysml.application_key, "key-from-env");
+        // the user name and password are untouched (they are simply not used when a key is set)
+        assert_eq!(c.sysml.username, "admin");
+        assert_eq!(c.validate().unwrap().sysml.application_key, "key-from-env");
+    }
+
+    #[test]
+    fn the_application_key_is_trimmed_and_checked_without_echoing_it() {
+        let valid = |key: &str| {
+            let mut c = config(&[]);
+            c.sysml.application_key = key.to_owned();
+            c.validate()
+        };
+        // surrounding whitespace (a newline from a file) is removed
+        assert_eq!(valid("  abc123\n").unwrap().sysml.application_key, "abc123");
+        // only whitespace is an error (not "no key"), empty is no key
+        assert!(valid(" \t\n").is_err());
+        assert_eq!(valid("").unwrap().sysml.application_key, "");
+        assert_eq!(
+            valid("sysml_ak_0123.456-789~_+/=")
+                .unwrap()
+                .sysml
+                .application_key,
+            "sysml_ak_0123.456-789~_+/="
+        );
+        for bad in [
+            "secret key",
+            "secret\nkey",
+            "secret\r\nX-Injected: 1",
+            "secret\tkey",
+            "secret\u{7f}",
+            "secr\u{e9}t",
+            "secret\0",
+        ] {
+            let err = valid(bad).expect_err(bad);
+            let shown = format!("{err} {err:?}");
+            assert!(shown.contains("sysml.application_key"), "{shown}");
+            assert!(!shown.contains("secr"), "the key is echoed: {shown}");
+        }
+    }
+
+    #[test]
+    fn a_whitespace_only_key_never_falls_back_to_user_name_and_password() {
+        // command line
+        let from_cli =
+            Config::from_cli_map(&parse_cli(args(&["--sysml.application_key", "  "]))).validate();
+        let err = from_cli.expect_err("whitespace only");
+        assert!(format!("{err}").contains("sysml.application_key"), "{err}");
+        // file
+        let mut c = config(&[]);
+        c.apply_json(r#"{"sysml":{"application_key":"\n "}}"#)
+            .unwrap();
+        let err = c.validate().expect_err("whitespace only");
+        assert!(format!("{err}").contains("sysml.application_key"), "{err}");
+        // explicitly empty (here in the file over a command line key) means no key
+        let mut c = config(&["--sysml.application_key", "from-cli"]);
+        c.apply_json(r#"{"sysml":{"application_key":""}}"#).unwrap();
+        assert_eq!(c.validate().unwrap().sysml.application_key, "");
+        // environment: a blank value is ignored like an empty one, it does not replace a key from elsewhere
+        for blank in [" ", "\n", " \t\r\n"] {
+            let mut c = config(&["--sysml.application_key", "from-cli"]);
+            c.apply_env(|name| (name == "DT_SYSML_APPLICATION_KEY").then(|| blank.to_owned()));
+            assert_eq!(c.validate().unwrap().sysml.application_key, "from-cli");
+        }
+    }
+
+    #[test]
+    fn the_application_key_is_redacted_in_debug_output() {
+        let mut c = config(&[]);
+        c.sysml.application_key = "sysml_ak_topsecret".to_owned();
+        let shown = format!("{c:?} {:?}", c.sysml);
+        assert!(!shown.contains("topsecret"), "{shown}");
+        assert!(shown.contains("application_key"));
+        // an empty key is not shown as redacted (only the password is)
+        let shown = format!("{:?}", config(&[]).sysml);
+        assert_eq!(shown.matches("<redacted>").count(), 1, "{shown}");
+        assert_eq!(format!("{:?}", c.sysml).matches("<redacted>").count(), 2);
     }
 
     #[test]

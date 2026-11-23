@@ -14,8 +14,8 @@ use dt_server::config::SysmlConfig;
 use dt_server::payload::twin::{ConnectToTwin, FunctionRegistrationRequest};
 use dt_server::payload::values::{classify, IntegerValue, Value};
 use dt_server::twin::{
-    BackendError, StoreSettings, StoreStats, TwinBackend, TwinElement, TwinInfo, TwinOptions,
-    TwinService, UnavailableBackend,
+    BackendError, Credentials, StoreSettings, StoreStats, TwinBackend, TwinElement, TwinInfo,
+    TwinOptions, TwinService, UnavailableBackend,
 };
 use rumqttc::QoS;
 use uuid::Uuid;
@@ -29,6 +29,8 @@ fn twin_id(n: u128) -> Uuid {
 #[derive(Default)]
 struct FakeState {
     login_calls: usize,
+    /// What the twin service logged in with, in order.
+    logins: Vec<Credentials>,
     login_failures_left: usize,
     loads: Vec<(Uuid, Uuid)>,
     registered: Vec<(Uuid, String)>,
@@ -47,6 +49,8 @@ struct FakeBackend {
     failing: Mutex<HashSet<Uuid>>,
     /// The next load of these twins is refused as unauthorized (expired session).
     unauthorized_once: Mutex<HashSet<Uuid>>,
+    /// Every load of these twins is refused as unauthorized (a rejected application key).
+    unauthorized_always: Mutex<HashSet<Uuid>>,
     /// While set, `load_twin` blocks until a unit is sent.
     gate: Mutex<Option<std_mpsc::Receiver<()>>>,
     /// The next `update_variable` call takes this long (once).
@@ -103,9 +107,10 @@ impl FakeBackend {
 }
 
 impl TwinBackend for FakeBackend {
-    fn login(&self, _: &str, _: u16, _: &str, _: &str) -> Result<(), BackendError> {
+    fn login(&self, _: &str, _: u16, credentials: &Credentials) -> Result<(), BackendError> {
         let mut s = self.state.lock().unwrap();
         s.login_calls += 1;
+        s.logins.push(credentials.clone());
         if s.login_failures_left > 0 {
             s.login_failures_left -= 1;
             return Err(BackendError::Failed("login refused".into()));
@@ -125,6 +130,9 @@ impl TwinBackend for FakeBackend {
             }
             std::thread::sleep(*self.load_delay.lock().unwrap());
             if self.unauthorized_once.lock().unwrap().remove(&twin_id) {
+                return Err(BackendError::Unauthorized("HTTP 401".into()));
+            }
+            if self.unauthorized_always.lock().unwrap().contains(&twin_id) {
                 return Err(BackendError::Unauthorized("HTTP 401".into()));
             }
             if self.failing.lock().unwrap().contains(&twin_id) {
@@ -243,8 +251,16 @@ struct Fixture {
 }
 
 async fn fixture(backend: Arc<dyn TwinBackend>, options: TwinOptions) -> Fixture {
+    fixture_with(backend, options, sysml()).await
+}
+
+async fn fixture_with(
+    backend: Arc<dyn TwinBackend>,
+    options: TwinOptions,
+    sysml: SysmlConfig,
+) -> Fixture {
     let broker = start(BrokerLimits::default()).await;
-    let service = TwinService::start(broker.hub(), backend, sysml(), options).unwrap();
+    let service = TwinService::start(broker.hub(), backend, sysml, options).unwrap();
     Fixture { broker, service }
 }
 
@@ -924,6 +940,93 @@ async fn an_expired_session_is_refreshed_once_and_the_download_retried() {
     assert_eq!(f.service.stats().relogins.load(Ordering::Relaxed), 1);
     assert_eq!(f.service.stats().failed.load(Ordering::Relaxed), 0);
 
+    f.broker.shutdown().await;
+    f.service.shutdown().await;
+}
+
+#[tokio::test]
+async fn user_name_and_password_are_used_without_an_application_key() {
+    let backend = FakeBackend::with_twin(twin_id(1), "Pump", &["x"]);
+    let mut config = sysml();
+    config.username = "bob".into();
+    config.password = "hunter2".into();
+    config.application_key = String::new();
+    let f = fixture_with(backend.clone(), TwinOptions::default(), config).await;
+    wait_until("startup login", || {
+        backend.state.lock().unwrap().login_calls == 1
+    })
+    .await;
+    assert_eq!(
+        backend.state.lock().unwrap().logins,
+        vec![Credentials::Password {
+            username: "bob".into(),
+            password: "hunter2".into()
+        }]
+    );
+    f.broker.shutdown().await;
+    f.service.shutdown().await;
+}
+
+#[tokio::test]
+async fn the_application_key_is_used_instead_of_user_name_and_password() {
+    let backend = FakeBackend::with_twin(twin_id(1), "Pump", &["x"]);
+    let mut config = sysml();
+    config.application_key = "sysml_ak_test".into();
+    let f = fixture_with(backend.clone(), TwinOptions::default(), config).await;
+    wait_until("startup login", || {
+        backend.state.lock().unwrap().login_calls == 1
+    })
+    .await;
+    assert_eq!(
+        backend.state.lock().unwrap().logins,
+        vec![Credentials::ApplicationKey("sysml_ak_test".into())]
+    );
+    // the twin loads with it
+    let requester = Client::connect(f.broker.port(), "requester").await;
+    publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+    wait_until("loaded", || {
+        f.service.stats().loaded.load(Ordering::Relaxed) == 1
+    })
+    .await;
+    assert_eq!(backend.state.lock().unwrap().login_calls, 1);
+    f.broker.shutdown().await;
+    f.service.shutdown().await;
+}
+
+/// With an application key a refused session means the key is rejected: logging in again would change nothing, so
+/// there is no second login and no second load.
+#[tokio::test]
+async fn a_rejected_application_key_is_not_retried() {
+    let backend = FakeBackend::with_twin(twin_id(1), "Pump", &["x"]);
+    backend
+        .unauthorized_always
+        .lock()
+        .unwrap()
+        .insert(twin_id(1));
+    let mut config = sysml();
+    config.application_key = "sysml_ak_wrong".into();
+    let f = fixture_with(backend.clone(), TwinOptions::default(), config).await;
+    wait_until("startup login", || {
+        backend.state.lock().unwrap().login_calls == 1
+    })
+    .await;
+    let requester = Client::connect(f.broker.port(), "requester").await;
+    for attempt in 1..=2u64 {
+        publish(&requester, "connectToTwin", connect_request(twin_id(1))).await;
+        wait_until("failed", || {
+            f.service.stats().failed.load(Ordering::Relaxed) == attempt
+        })
+        .await;
+    }
+    assert_eq!(
+        backend.state.lock().unwrap().login_calls,
+        1,
+        "no login after the refusal"
+    );
+    assert_eq!(backend.loads().len(), 2, "one load per request, no retry");
+    assert_eq!(f.service.stats().relogins.load(Ordering::Relaxed), 0);
+    assert_eq!(f.service.stats().key_rejected.load(Ordering::Relaxed), 2);
+    assert_eq!(f.service.stats().loaded.load(Ordering::Relaxed), 0);
     f.broker.shutdown().await;
     f.service.shutdown().await;
 }

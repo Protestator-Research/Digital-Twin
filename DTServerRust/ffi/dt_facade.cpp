@@ -2,6 +2,7 @@
 
 #include "dt-server/src/twin/ffi.rs.h"
 
+#include <algorithm>
 #include <chrono>
 #include <condition_variable>
 #include <exception>
@@ -60,6 +61,8 @@ namespace dtrs {
             std::unique_ptr<BACKEND_COMMUNICATION::CommunicationService> Communication;
             NoopMqttClient Mqtt;
             std::unique_ptr<DigitalTwin::DigitalTwinManager> Manager;
+            // The session was created with an application key (the key is in State::ApplicationKeys).
+            bool UsesApplicationKey = false;
         };
 
         struct ModelEntry {
@@ -102,6 +105,11 @@ namespace dtrs {
         struct State {
             std::mutex Mutex;
             std::shared_ptr<Session> Current;
+            // Every application key that was ever used for a session, for removing it from error messages. The
+            // sessions are shared with the models (a model keeps its session alive), so a message can come from an
+            // older session than the current one; a key is never removed. Guarded by KeysMutex, a leaf lock.
+            std::mutex KeysMutex;
+            std::vector<std::string> ApplicationKeys;
             std::map<boost::uuids::uuid, std::shared_ptr<ModelEntry>> Models;
             // One mutex per twin id that serialises the retire-register-swap section of facade_load_twin. Entries
             // are never removed (a few bytes per twin). Guarded by Mutex; the mutexes themselves are not.
@@ -124,9 +132,37 @@ namespace dtrs {
         // would be a race. The operating system reclaims the memory.
         State& state = *new State;
 
-        std::string describe(const std::exception& e) {
+        // Defence in depth: the text of a library exception for an HTTP status that describeBackendError does not
+        // know is what() of the library, whose content is not under our control. A configured application key is
+        // replaced in every message that crosses the bridge.
+        std::string redactApplicationKeys(std::string message) {
+            std::vector<std::string> keys;
+            {
+                std::lock_guard lock(state.KeysMutex);
+                keys = state.ApplicationKeys;
+            }
+            for (const auto& key : keys) {
+                if (key.empty())
+                    continue;
+                for (std::size_t at = message.find(key); at != std::string::npos; at = message.find(key, at)) {
+                    message.replace(at, key.size(), "<application key>");
+                    at += std::string("<application key>").size();
+                }
+            }
+            return message;
+        }
+
+        // keySession: the failing request was made with an application key. Then an HTTP 401 means the server
+        // rejected the key, and the advice of describeBackendError ("Your session has expired ... log in again") is
+        // wrong: only the detail of the server's own answer, if there is one, is kept (the caller adds the rest).
+        std::string describe(const std::exception& e, bool keySession = false) {
             try {
-                return BACKEND_COMMUNICATION::CommunicationService::describeBackendError(e);
+                if (keySession) {
+                    if (auto http = dynamic_cast<const SysMLv2::API::EXCEPTIONS::HTTPException*>(&e))
+                        if (http->httpErrorCode() == 401)
+                            return redactApplicationKeys(http->serverErrorCode());
+                }
+                return redactApplicationKeys(BACKEND_COMMUNICATION::CommunicationService::describeBackendError(e));
             } catch (...) {
                 return "backend error";
             }
@@ -345,12 +381,18 @@ namespace dtrs {
         }
     }  // namespace
 
-    CallResult facade_login(rust::Str url, uint16_t port, rust::Str username, rust::Str password) noexcept {
-        return guarded([&]() -> CallResult {
+    namespace {
+        // The session objects of both login methods are built the same way: only the way the communication
+        // service gets its bearer token differs.
+        std::shared_ptr<Session> newSession(rust::Str url, uint16_t port) {
             auto session = std::make_shared<Session>();
             session->Communication = std::make_unique<BACKEND_COMMUNICATION::CommunicationService>(
                 std::string(url), static_cast<unsigned int>(port), "");
-            session->Communication->setUserForLoginInBackend(std::string(username), std::string(password));
+            return session;
+        }
+
+        // Adds the manager and replaces the current session (the old one is destroyed outside the lock).
+        void installSession(std::shared_ptr<Session> session) {
             session->Manager = std::make_unique<DigitalTwin::DigitalTwinManager>(
                 session->Communication.get(), &session->Mqtt, false);
             std::shared_ptr<Session> previous;
@@ -359,6 +401,32 @@ namespace dtrs {
                 previous = std::move(state.Current);
                 state.Current = std::move(session);
             }
+        }
+    }  // namespace
+
+    CallResult facade_login(rust::Str url, uint16_t port, rust::Str username, rust::Str password) noexcept {
+        return guarded([&]() -> CallResult {
+            auto session = newSession(url, port);
+            session->Communication->setUserForLoginInBackend(std::string(username), std::string(password));
+            installSession(std::move(session));
+            return result(CODE_OK, "");
+        });
+    }
+
+    CallResult facade_login_application_key(rust::Str url, uint16_t port, rust::Str application_key) noexcept {
+        return guarded([&]() -> CallResult {
+            auto session = newSession(url, port);
+            // no request: the key is the bearer token; the exception text of a bad key never contains it
+            session->Communication->setApplicationKey(std::string(application_key));
+            session->UsesApplicationKey = true;
+            {
+                std::lock_guard lock(state.KeysMutex);
+                const std::string key(application_key);
+                if (std::find(state.ApplicationKeys.begin(), state.ApplicationKeys.end(), key) ==
+                    state.ApplicationKeys.end())
+                    state.ApplicationKeys.push_back(key);
+            }
+            installSession(std::move(session));
             return result(CODE_OK, "");
         });
     }
@@ -370,6 +438,7 @@ namespace dtrs {
             out.message = rust::String::lossy(message);
             return std::move(out);
         };
+        bool keySession = false;
         try {
             const auto projectId = parseUuid(project_id);
             const auto twinId = parseUuid(twin_id);
@@ -381,6 +450,7 @@ namespace dtrs {
             }
             if (!session)
                 return fail(CODE_NOT_LOGGED_IN, "not logged in to the backend");
+            keySession = session->UsesApplicationKey;
 
             // The server has no endpoint for a single twin: list the twins of the project and pick one, like
             // DigitalTwinManager::downloadDigitalTwin.
@@ -511,7 +581,7 @@ namespace dtrs {
             out.code = CODE_OK;
             return std::move(out);
         } catch (const std::exception& e) {
-            return fail(codeFor(e), describe(e));
+            return fail(codeFor(e), describe(e, keySession));
         } catch (...) {
             return fail(CODE_UNKNOWN_ERROR, "unknown C++ exception");
         }

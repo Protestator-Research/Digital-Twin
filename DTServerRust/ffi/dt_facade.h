@@ -34,6 +34,13 @@ namespace dtrs {
     // Logs in to the Structura server and replaces the session used by load_twin.
     CallResult facade_login(rust::Str url, uint16_t port, rust::Str username, rust::Str password) noexcept;
 
+    // Uses an application key of the SysMLv2 server as the session, instead of a login: the key is the bearer token
+    // of every later request ("Authorization: Bearer <key>"). No request is made, so nothing is checked here; a wrong,
+    // revoked or unauthorized key is reported by the first load_twin as CODE_UNAUTHORIZED (HTTP 401), and there is no
+    // point in trying again. Replaces the current session like facade_login. The key is never logged and is not part
+    // of any message; an empty key or one with characters that cannot be sent in a header is CODE_INVALID_ARGUMENT.
+    CallResult facade_login_application_key(rust::Str url, uint16_t port, rust::Str application_key) noexcept;
+
     // Downloads the twin and builds its model, as DigitalTwinManager::downloadDigitalTwin does, but without
     // generateMQTTInterface (the Rust side publishes the interface). The model is kept for register_function.
     // With a store: the twin and its commit are registered, for a commit that was loaded before the last stored
