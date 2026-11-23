@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Digital Twin history API</title>
+  <!-- Swagger UI: swagger-ui-dist 5.17.14, vendored in swagger-ui/ (see swagger-ui/VERSION). No external requests.
+       All references are relative: the page is served at /docs/. -->
+  <link rel="stylesheet" href="swagger-ui/swagger-ui.css">
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="swagger-ui/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = function () {
+      window.ui = SwaggerUIBundle({
+        url: 'openapi.yaml',
+        dom_id: '#swagger-ui',
+        validatorUrl: null
+      });
+    };
+  </script>
+</body>
+</html>

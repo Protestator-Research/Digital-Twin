@@ -1,0 +1,682 @@
+openapi: 3.1.0
+info:
+  title: Digital Twin history API
+  version: 2611.1.0
+  summary: Read-only REST API over the history database of the Digital Twin server.
+  description: |
+    Read-only access to the history that the C++ core writes into PostgreSQL (`DigitalTwinStore`): projects, twins,
+    the loaded versions (commits) of a twin, the model tree of a version, the complete state of a twin at a point in
+    time and the time series of a single variable.
+
+    The API never writes. Every response of the data routes is JSON; errors are `{"error": "..."}` with a fitting status. Messages never
+    contain SQL, driver errors or the database URL.
+
+    **Conventions**
+
+    - Ids (`project_id`, `twin_id`, `commit`) are UUIDs.
+    - Times are RFC 3339 and are answered in UTC (`2026-01-10T10:05:00Z`, fractional seconds only when present). In a
+      query string write the `+` of an offset as `%2B` (`2026-01-10T11:00:00%2B01:00`). A bare `+` is decoded as a
+      space by the query string parser; the server tolerates a space in front of the offset digits and reads it as
+      the `+`, but clients should send `%2B`.
+    - On `elements`, `state` and `series`, unknown query parameters and repeated query parameters are rejected with
+      `400`, so a misspelled parameter is an error and not a silently unfiltered answer. `projects`, `twins` and
+      `versions` take no query parameters and ignore a query string.
+    - Only `GET` (and `HEAD`) is allowed; every other method is answered with `405`. With authentication on, a
+      request without valid credentials gets `401` before it can get `405`.
+
+    **State and checkpoints.** The history is a stream of changes plus periodic checkpoints (complete copies of all
+    variables). The state at a time `at` is the newest checkpoint at or before `at` (ties: the later one) plus the
+    changes of the same version after it, up to and including `at`. Without `commit` the newest checkpoint of any
+    version of the twin counts, so `at` in the time commit B ran gives B even if commit A was loaded again later.
+    With `commit` only the checkpoints of that commit count. If there is no checkpoint at or before `at` (the twin
+    was loaded later, or the data was removed by the retention) the answer is `404`, not an empty state.
+
+    **Paging of a series.** A series is ordered by `(received_at, change_no, element, source)`, which is total.
+    `more` tells whether there are more rows than `limit`; then `next` is an opaque cursor. Pass it unchanged as
+    `after` together with the same other parameters to get the following page without skipping or repeating a row.
+    Do not use `from` for paging.
+servers:
+  - url: /
+    description: The server that serves this document.
+tags:
+  - name: Projects
+    description: Projects and the twins that belong to them.
+  - name: Twins
+    description: Loaded versions (commits) of a twin and the model tree of one of them.
+  - name: History
+    description: The values of a twin over time.
+security:
+  - basicAuth: []
+  - {}
+paths:
+  /projects:
+    get:
+      tags: [Projects]
+      operationId: listProjects
+      summary: List the projects
+      description: All projects that have a twin in the history database.
+      responses:
+        "200":
+          description: The projects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /projects/{project_id}/twins:
+    get:
+      tags: [Projects]
+      operationId: listTwins
+      summary: List the twins of a project
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: The twins of the project.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Twin"
+        "400":
+          description: "`project_id` is not a valid UUID."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: "No such project (message: `unknown project`)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /twins/{twin_id}/versions:
+    get:
+      tags: [Twins]
+      operationId: listVersions
+      summary: List the loaded versions of a twin
+      description: The commits that were loaded for the twin, newest first (by `last_loaded`).
+      parameters:
+        - $ref: "#/components/parameters/TwinId"
+      responses:
+        "200":
+          description: The loaded commits, newest first.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Version"
+        "400":
+          description: "`twin_id` is not a valid UUID."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: "No such twin (message: `unknown twin`)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /twins/{twin_id}/elements:
+    get:
+      tags: [Twins]
+      operationId: listElements
+      summary: The model tree of one commit
+      description: |
+        The model tree of one commit as a flat list; `parent_no` links an element to its parent. Default commit: the
+        one with the latest `last_loaded`, i.e. the one loaded last (a reload of an older commit makes it the default
+        again).
+      parameters:
+        - $ref: "#/components/parameters/TwinId"
+        - $ref: "#/components/parameters/Commit"
+      responses:
+        "200":
+          description: The elements of the commit.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Elements"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: |
+            One of the messages `unknown twin`, `the twin has no such commit` (`commit` given) or
+            `the twin has no loaded version yet` (no `commit` given).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /twins/{twin_id}/state:
+    get:
+      tags: [History]
+      operationId: getState
+      summary: The complete state of a twin at a time
+      description: |
+        The newest checkpoint at or before `at` decides the version and the base; the state is that checkpoint plus
+        the changes of the same version after it up to `at` (inclusive). `commit` and `checkpoint_at` of the answer
+        say which version and which checkpoint were used; version, checkpoint and values come from one statement.
+
+        `path` restricts the answer to that element and everything below it (a whole path level: `Motor` does not
+        match `Motors`).
+      parameters:
+        - $ref: "#/components/parameters/TwinId"
+        - name: at
+          in: query
+          required: false
+          description: The time the state is for, RFC 3339. Default is the current time of the server.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-01-10T10:07:00Z"
+        - $ref: "#/components/parameters/Commit"
+        - name: path
+          in: query
+          required: false
+          description: |
+            Subtree filter: the element with this path and everything below it. A trailing `/` is trimmed; an empty
+            value means no filter (the whole tree). A NUL character is rejected with `400`. Not the same as the
+            `path` of the series, which is an exact variable path.
+          schema:
+            type: string
+          example: Motor
+      responses:
+        "200":
+          description: The state at the requested time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/State"
+              example:
+                twin_id: 00000000-0000-0000-0000-000000000020
+                commit: 00000000-0000-0000-0000-000000000031
+                at: "2026-01-10T10:07:00Z"
+                checkpoint_at: "2026-01-10T10:00:00Z"
+                variables:
+                  - path: Motor/enabled
+                    kind: controllable
+                    value_type: boolean
+                    value: false
+                    received_at: "2026-01-10T10:00:00Z"
+                    ts: "2026-01-10T10:00:00Z"
+                    source: checkpoint
+                  - path: Motor/speed
+                    kind: measurable
+                    value_type: real
+                    value: 2.5
+                    received_at: "2026-01-10T10:05:00Z"
+                    ts: "2026-01-10T10:04:59Z"
+                    source: client
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: |
+            One of the messages `unknown twin`, `the twin has no such commit` (`commit` given),
+            `the twin has no loaded version yet`, or
+            `no state is stored for this time: there is no checkpoint at or before it`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /twins/{twin_id}/series:
+    get:
+      tags: [History]
+      operationId: getSeries
+      summary: The time series of one variable
+      description: |
+        The rows of the variable with exactly this `path`, ordered by `received_at` ascending (`from` and `to` bound
+        it, both inclusive). Without `commit` it spans all versions of the twin and joins them by path; every point
+        says which `commit` it is from and carries its `change_no`. Checkpoint rows are part of the series (`source`
+        is `checkpoint`); filter them out if only changes matter.
+
+        Rows are ordered by `(received_at, change_no, element, source)`, which is total, so rows that arrived in the
+        same instant have a fixed order. To page, pass `next` of the answer as `after`, with the same other
+        parameters.
+      parameters:
+        - $ref: "#/components/parameters/TwinId"
+        - name: path
+          in: query
+          required: true
+          description: |
+            Exact path of the variable, for example `Motor/speed`. A trailing `/` is trimmed; an empty value is
+            `400`. A NUL character is rejected with `400`.
+          schema:
+            type: string
+          example: Motor/speed
+        - name: from
+          in: query
+          required: false
+          description: Earliest `received_at` (inclusive), RFC 3339. Must not be later than `to`.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-01-10T10:00:00Z"
+        - name: to
+          in: query
+          required: false
+          description: Latest `received_at` (inclusive), RFC 3339.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-01-10T11:00:00Z"
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of points of the page. Anything outside 1 to 10000 is `400`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1000
+        - $ref: "#/components/parameters/Commit"
+        - name: after
+          in: query
+          required: false
+          description: |
+            Opaque cursor: the `next` of the previous page, passed unchanged. A value that is not such a cursor is
+            `400`.
+          schema:
+            type: string
+          example: "2026-01-10T10:05:00Z,2001,12,1"
+      responses:
+        "200":
+          description: A page of the series.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Series"
+              example:
+                twin_id: 00000000-0000-0000-0000-000000000020
+                path: Motor/speed
+                limit: 2
+                more: true
+                next: "2026-01-10T10:05:00Z,2001,12,1"
+                points:
+                  - commit: 00000000-0000-0000-0000-000000000031
+                    received_at: "2026-01-10T10:00:00Z"
+                    change_no: 2000
+                    ts: "2026-01-10T10:00:00Z"
+                    source: checkpoint
+                    value_type: real
+                    value: 1.0
+                  - commit: 00000000-0000-0000-0000-000000000031
+                    received_at: "2026-01-10T10:05:00Z"
+                    change_no: 2001
+                    ts: "2026-01-10T10:04:59Z"
+                    source: client
+                    value_type: real
+                    value: 2.5
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: |
+            One of the messages `unknown twin`, `the twin has no such commit` (`commit` given) or
+            `the twin has no variable with this path`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowed"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: |
+        HTTP Basic credentials, checked exactly like the CONNECT of an MQTT client (same SysML login and cache).
+        They are only enforced when MQTT authentication is enabled (`run.mqtt.authentication = "sysml"`); otherwise
+        the API is open and needs no credentials. This documentation page and this specification are behind the
+        same check. Basic authentication sends the password with every request and the server has no TLS: bind the
+        API to localhost or put it behind a reverse proxy that terminates TLS.
+  parameters:
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      description: Id of the project.
+      schema:
+        type: string
+        format: uuid
+    TwinId:
+      name: twin_id
+      in: path
+      required: true
+      description: Id of the twin.
+      schema:
+        type: string
+        format: uuid
+    Commit:
+      name: commit
+      in: query
+      required: false
+      description: |
+        Restrict the request to this commit (version) of the twin. Without it the commit loaded last is used, or for
+        the state and the series the rules described there. An unknown commit is `404`.
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: |
+        A path id is not a UUID, a query parameter is unknown, repeated, missing (`path` of the series) or has an
+        invalid value (time, UUID, limit, cursor, `from` later than `to`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: 'unknown parameter "form" (expected: path, from, to, limit, commit, after)'
+    Unauthorized:
+      description: |
+        Only when authentication is on: the credentials are missing or wrong, or the user name or client address has
+        too many failed logins and is blocked for a while (the check is not even made).
+      headers:
+        WWW-Authenticate:
+          description: The challenge, `Basic realm="dt-history", charset="UTF-8"`.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "authentication required: user name or password missing or wrong"
+    MethodNotAllowed:
+      description: The API is read-only; only `GET` is allowed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "the API is read-only: only GET is allowed"
+    InternalError:
+      description: An unexpected database error. The details are only in the server log.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: internal error
+    Unavailable:
+      description: |
+        The history database is not available (down, shutting down, no free connection), a query hit the statement
+        timeout (15 s; narrow it down with `path`, `from`, `to`, `limit`), or, only when authentication is on, the
+        authentication service cannot decide or too many checks of one address are pending.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: the history database is not available
+  schemas:
+    Error:
+      type: object
+      description: The body of every error response.
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: A short message for people.
+    Kind:
+      type: string
+      description: |
+        The kind of a model element. `unknown` is a code this version of the API does not know (a newer schema).
+      enum: [package, component, port, measurable, controllable, attribute, unknown]
+    ValueType:
+      type: [string, "null"]
+      description: |
+        The type of the value of a variable; `null` for elements that are not variables. `unknown` is a code this
+        version of the API does not know (a newer schema).
+      enum: [real, integer, boolean, rational, complex, string, unknown, null]
+    Source:
+      type: string
+      description: |
+        Where a row comes from: `client` (set by a client), `derived` (changed by the model because of a client
+        update) or `checkpoint` (taken over from the checkpoint). `unknown` is a code this version of the API does
+        not know.
+      enum: [client, derived, checkpoint, unknown]
+    Value:
+      description: |
+        The value of a variable, decoded by its `value_type`:
+
+        - `real`: a number; NaN and infinity, which JSON cannot hold, become `null`.
+        - `integer`: a number, or the string of digits when the magnitude exceeds 2^53 and was stored as text.
+        - `boolean`: `true` or `false`.
+        - `rational`: the string `"n/d"`, for example `"3/4"`.
+        - `complex`: the stored object, for example `{"imaginaryValue": 2.0, "realValue": 1.0}`.
+        - `string`: a string.
+
+        If the stored columns do not fit the type (or the type is `unknown` or `null`) the first value present is
+        given, in the order object, text, number. No value at all is `null`.
+      type: [number, string, boolean, object, array, "null"]
+    Project:
+      type: object
+      required: [project_id, name, first_seen]
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: [string, "null"]
+          description: The name of the project, if known.
+        first_seen:
+          type: string
+          format: date-time
+          description: When the project first appeared in the history.
+    Twin:
+      type: object
+      required: [twin_id, name, first_seen, last_seen]
+      properties:
+        twin_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        first_seen:
+          type: string
+          format: date-time
+        last_seen:
+          type: string
+          format: date-time
+    Version:
+      type: object
+      required: [commit, first_loaded, last_loaded]
+      properties:
+        commit:
+          type: string
+          format: uuid
+        first_loaded:
+          type: string
+          format: date-time
+        last_loaded:
+          type: string
+          format: date-time
+          description: A reload of an old commit sets this again.
+    Element:
+      type: object
+      required: [element_no, parent_no, kind, name, path, value_type]
+      properties:
+        element_no:
+          type: integer
+          format: int32
+          description: Number of the element within its version.
+        parent_no:
+          type: [integer, "null"]
+          format: int32
+          description: '`element_no` of the parent; `null` for a root.'
+        kind:
+          $ref: "#/components/schemas/Kind"
+        name:
+          type: string
+        path:
+          type: string
+          description: Path of the element, the names from the root joined by `/`.
+        value_type:
+          $ref: "#/components/schemas/ValueType"
+    Elements:
+      type: object
+      required: [twin_id, commit, elements]
+      properties:
+        twin_id:
+          type: string
+          format: uuid
+        commit:
+          type: string
+          format: uuid
+          description: The commit the tree is of (the one asked for, or the one loaded last).
+        elements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Element"
+    StateEntry:
+      type: object
+      required: [path, kind, value_type, value, received_at, ts, source]
+      properties:
+        path:
+          type: string
+          description: Exact path of the variable.
+        kind:
+          $ref: "#/components/schemas/Kind"
+        value_type:
+          $ref: "#/components/schemas/ValueType"
+        value:
+          $ref: "#/components/schemas/Value"
+        received_at:
+          type: string
+          format: date-time
+          description: When the broker accepted the update.
+        ts:
+          type: string
+          format: date-time
+          description: The `time_point` of the client's payload.
+        source:
+          $ref: "#/components/schemas/Source"
+    State:
+      type: object
+      required: [twin_id, commit, at, checkpoint_at, variables]
+      properties:
+        twin_id:
+          type: string
+          format: uuid
+        commit:
+          type: string
+          format: uuid
+          description: The version the state is of.
+        at:
+          type: string
+          format: date-time
+          description: The time the state is for.
+        checkpoint_at:
+          type: string
+          format: date-time
+          description: The checkpoint the state was built from.
+        variables:
+          type: array
+          items:
+            $ref: "#/components/schemas/StateEntry"
+    Point:
+      type: object
+      required: [commit, received_at, change_no, ts, source, value_type, value]
+      properties:
+        commit:
+          type: string
+          format: uuid
+          description: The version the row is from.
+        received_at:
+          type: string
+          format: date-time
+          description: When the broker accepted the update.
+        change_no:
+          type: integer
+          format: int64
+          description: |
+            Number of the update that wrote the row; with `received_at` it orders rows that arrived in the same
+            instant.
+        ts:
+          type: string
+          format: date-time
+          description: The `time_point` of the client's payload.
+        source:
+          $ref: "#/components/schemas/Source"
+        value_type:
+          $ref: "#/components/schemas/ValueType"
+        value:
+          $ref: "#/components/schemas/Value"
+    Series:
+      type: object
+      required: [twin_id, path, limit, more, next, points]
+      properties:
+        twin_id:
+          type: string
+          format: uuid
+        path:
+          type: string
+          description: The path asked for (trailing `/` trimmed).
+        limit:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 10000
+          description: The limit that applied (the default 1000 if none was given).
+        more:
+          type: boolean
+          description: More rows than `limit` exist in the requested range; continue with `next`.
+        next:
+          type: [string, "null"]
+          description: |
+            With `more`: pass it as `after` to get the next page, without skipping or repeating rows. Otherwise
+            `null`. Treat it as opaque.
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/Point"

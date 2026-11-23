@@ -8,8 +8,11 @@
 //!   are only logged.
 //! - With MQTT authentication enabled the routes need HTTP Basic credentials (see [`auth`]); otherwise they are
 //!   open and the API has to be bound to localhost or put behind a reverse proxy.
+//! - The API documents itself: `/docs/` is a Swagger UI page and `/openapi.yaml` the OpenAPI document, both embedded
+//!   in the binary (see [`docs`]) and behind the same authentication as the data routes.
 
 pub mod auth;
+pub mod docs;
 pub mod model;
 pub mod sql;
 
@@ -203,6 +206,7 @@ pub fn router(pool: PgPool, auth: Option<BasicAuth>) -> Router {
         .route("/twins/{twin_id}/elements", get(list_elements))
         .route("/twins/{twin_id}/state", get(get_state))
         .route("/twins/{twin_id}/series", get(get_series))
+        .merge(docs::routes())
         .fallback(|| async { ApiError::not_found("no such route") })
         .method_not_allowed_fallback(|| async {
             (

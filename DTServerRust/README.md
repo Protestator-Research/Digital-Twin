@@ -510,6 +510,14 @@ integer a number (or a string of digits when the magnitude exceeds 2^53 and was 
 `false`, rational the string `"n/d"`, complex the stored object (`{"imaginaryValue": 2.0, "realValue": 1.0}`), string
 a string.
 
+The API documents itself: `/docs/` is a Swagger UI page for it (`/docs` redirects there, temporarily) and
+`/openapi.yaml` is the OpenAPI 3.1 document, also at `/docs/openapi.yaml`. Both are embedded in the binary, the UI
+assets are vendored (`swagger-ui-dist`, version in `docs/api/swagger-ui/VERSION`), so the page makes no external
+request. They are behind the same authentication as the data routes: with MQTT authentication enabled they need Basic
+credentials too. The files live in `docs/api/` and are served by `src/api/docs.rs`; keep `docs/api/openapi.yaml` in
+step with the routes (tests check that every documented path is a route of the router and that the documented paths
+are the expected six).
+
 ## Layout
 
 | Path | Content |
@@ -520,7 +528,8 @@ a string.
 | `src/hub.rs` | in-process hub: `subscribe(filter, capacity)` and `publish(topic, payload)`; messages carry their `Origin` |
 | `src/twin/` | `TwinBackend` trait, twin service (`mod.rs`), `ffi.rs` (feature `ffi`, cxx bridge) |
 | `ffi/`, `build.rs` | C++ facade (`dt_facade.h/.cpp`); `build.rs` compiles it against the C++ build tree (feature `ffi`) and emits the link and run-time settings; `ffi/link_plan.rs` is its pure planning logic (paths, libraries, rpath, DLLs), also included by `tests/link_plan.rs` (runs without the feature, covers all three target systems) |
-| `src/api/` | read-only REST API: `mod.rs` (routes, errors, server), `model.rs` (words, value decoding, parameters), `sql.rs` (the statements), `auth.rs` (HTTP Basic with the MQTT authenticator) |
+| `src/api/` | read-only REST API: `mod.rs` (routes, errors, server), `model.rs` (words, value decoding, parameters), `sql.rs` (the statements), `auth.rs` (HTTP Basic with the MQTT authenticator), `docs.rs` (serves `docs/api/`) |
+| `docs/api/` | OpenAPI document of the REST API (`openapi.yaml`), the page `index.html` and the vendored Swagger UI (`swagger-ui/`), embedded by `src/api/docs.rs` |
 | `src/payload/` | `time` (`time_point`), `twin` (`connectToTwin`, `registerFunction`), `values` (value types and `classify`) |
 | `tests/` | integration tests against the real broker (rumqttc MQTT 3.1.1 and MQTT 5 clients and a raw socket client; MQTT 5 and the protocol modes in `mqtt5_integration.rs`) |
 

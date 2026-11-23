@@ -472,3 +472,173 @@ async fn pending_checks_are_limited_per_address_and_only_while_verifying() {
     );
     slow.abort();
 }
+
+/// Like `call`, but the body is returned as it is (the documentation is not JSON).
+async fn raw(
+    router: &Router,
+    uri: &str,
+    authorization: Option<&str>,
+) -> (StatusCode, axum::http::HeaderMap, Vec<u8>) {
+    let mut request = Request::builder().method(Method::GET).uri(uri);
+    if let Some(value) = authorization {
+        request = request.header(header::AUTHORIZATION, value);
+    }
+    let response = router
+        .clone()
+        .oneshot(request.body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    let (parts, body) = response.into_parts();
+    let bytes = body.collect().await.unwrap().to_bytes();
+    (parts.status, parts.headers, bytes.to_vec())
+}
+
+/// The documentation routes and the content type and a mark of the body of each.
+const DOCS: [(&str, &str, &str); 5] = [
+    ("/docs/", "text/html; charset=utf-8", "swagger"),
+    (
+        "/docs/swagger-ui/swagger-ui.css",
+        "text/css; charset=utf-8",
+        ".swagger-ui",
+    ),
+    (
+        "/docs/swagger-ui/swagger-ui-bundle.js",
+        "text/javascript; charset=utf-8",
+        "SwaggerUIBundle",
+    ),
+    ("/openapi.yaml", "application/yaml", "openapi: 3.1"),
+    ("/docs/openapi.yaml", "application/yaml", "openapi: 3.1"),
+];
+
+#[tokio::test]
+async fn the_documentation_is_served() {
+    let router = open_router();
+    for (uri, content_type, mark) in DOCS {
+        let (status, headers, body) = raw(&router, uri, None).await;
+        assert_eq!(status, StatusCode::OK, "{uri}");
+        assert_eq!(headers[header::CONTENT_TYPE], content_type, "{uri}");
+        let body = String::from_utf8(body).unwrap();
+        assert!(body.contains(mark), "{uri}");
+    }
+    // the page is the one for the relative references, the spec is the same at both addresses
+    let (_, _, page) = raw(&router, "/docs/", None).await;
+    let page = String::from_utf8(page).unwrap();
+    assert!(page.contains("swagger-ui/swagger-ui-bundle.js") && page.contains("openapi.yaml"));
+    assert!(
+        !page.contains("http://") && !page.contains("https://"),
+        "no external request"
+    );
+    let (_, _, a) = raw(&router, "/openapi.yaml", None).await;
+    let (_, _, b) = raw(&router, "/docs/openapi.yaml", None).await;
+    assert!(String::from_utf8(a.clone())
+        .unwrap()
+        .starts_with("openapi: 3.1"));
+    assert_eq!(a, b);
+    // /docs leads to /docs/, where the relative references work
+    let (status, headers, _) = raw(&router, "/docs", None).await;
+    assert_eq!(status, StatusCode::TEMPORARY_REDIRECT);
+    assert_eq!(headers[header::LOCATION], "docs/");
+    // the default validator of the bundle would be an external request
+    assert!(page.contains("validatorUrl: null"));
+    // still read-only, and unknown files below /docs are the usual JSON 404
+    let (status, _, json) = call(&router, Method::POST, "/docs/", None).await;
+    assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
+    assert!(json["error"].is_string());
+    let (status, _) = get(&router, "/docs/nothing").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn the_documentation_needs_credentials_when_authentication_is_on() {
+    let router = protected_router(Arc::new(Stub::default()));
+    let good = basic("admin", "pw");
+    for (uri, content_type, _) in DOCS
+        .iter()
+        .map(|d| (d.0, d.1, d.2))
+        .chain([("/docs", "", "")])
+    {
+        let (status, headers, _) = raw(&router, uri, None).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED, "{uri}");
+        assert!(headers.contains_key(header::WWW_AUTHENTICATE), "{uri}");
+        let (status, headers, _) = raw(&router, uri, Some(&good)).await;
+        if content_type.is_empty() {
+            assert!(status.is_redirection(), "{uri}");
+        } else {
+            assert_eq!(status, StatusCode::OK, "{uri}");
+            assert_eq!(headers[header::CONTENT_TYPE], content_type, "{uri}");
+        }
+    }
+}
+
+/// The OpenAPI document describes the routes of the API: all of them, and no others.
+#[test]
+fn the_openapi_document_matches_the_routes() {
+    // the routes registered in `router()`
+    let routes = [
+        "/projects",
+        "/projects/{project_id}/twins",
+        "/twins/{twin_id}/versions",
+        "/twins/{twin_id}/elements",
+        "/twins/{twin_id}/state",
+        "/twins/{twin_id}/series",
+    ];
+    let spec = dt_server::api::docs::OPENAPI_YAML;
+    assert!(spec.starts_with("openapi: 3.1"));
+    // the keys of `paths:` are the lines with two spaces of indent that start with a slash
+    let documented: Vec<&str> = spec
+        .lines()
+        .filter(|line| line.starts_with("  /"))
+        .map(|line| line.trim().trim_end_matches(':'))
+        .collect();
+    for route in routes {
+        assert!(documented.contains(&route), "{route} is not documented");
+    }
+    assert_eq!(documented.len(), routes.len(), "{documented:?}");
+    for path in &documented {
+        assert!(
+            path.starts_with("/projects") || path.starts_with("/twins"),
+            "{path}"
+        );
+    }
+}
+
+/// Every documented path is a route of the router: with a nil id it is not "no such route" (it reaches the
+/// database, which is unreachable here, and answers 503).
+#[tokio::test]
+async fn every_documented_path_is_a_route() {
+    let router = open_router();
+    let documented: Vec<&str> = dt_server::api::docs::OPENAPI_YAML
+        .lines()
+        .filter(|line| line.starts_with("  /"))
+        .map(|line| line.trim().trim_end_matches(':'))
+        .collect();
+    assert!(!documented.is_empty());
+    let mut tasks = Vec::new();
+    for path in documented {
+        let mut uri = String::new();
+        let mut rest = path;
+        while let Some(start) = rest.find('{') {
+            let end = rest.find('}').expect("closing brace");
+            uri.push_str(&rest[..start]);
+            uri.push_str("00000000-0000-0000-0000-000000000000");
+            rest = &rest[end + 1..];
+        }
+        uri.push_str(rest);
+        if uri.ends_with("/series") {
+            uri.push_str("?path=a");
+        }
+        let router = router.clone();
+        tasks.push(tokio::spawn(async move {
+            let (status, _, json) = call(&router, Method::GET, &uri, None).await;
+            (uri, status, json)
+        }));
+    }
+    for task in tasks {
+        let (uri, status, json) = task.await.unwrap();
+        assert!(
+            !(status == StatusCode::NOT_FOUND && json["error"] == "no such route"),
+            "{uri} is documented but not a route"
+        );
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{uri}");
+    }
+}
