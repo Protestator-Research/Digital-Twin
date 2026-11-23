@@ -1,7 +1,7 @@
 # dt-server (Rust port of the Digital Twin Server)
 
 Port described in `Markdownfiles/Rust_Server_Portierung_Implementierungsplan.md`: configuration/CLI, embedded
-MQTT broker (3.1.1 and 5, selectable), in-process hub and payload types (first increment), twin logic with the FFI bridge to the C++
+MQTT broker (3.1.1 and 5, selectable; QoS 0, 1 and 2; resumable sessions that can be kept in PostgreSQL), in-process hub and payload types (first increment), twin logic with the FFI bridge to the C++
 libraries (phase 3), and a read-only REST API over the history database. The history itself is written by the
 C++ core (feature `ffi`), see "History and REST API". Not included: TLS, removal of the C++ server. MQTT clients log in with their SysML credentials, see "Authentication".
 
@@ -16,7 +16,8 @@ cargo fmt
 
 Environment overrides (beat file and command line): `DT_SYSML_PASSWORD` (Structura password),
 `DT_SYSML_APPLICATION_KEY` (Structura application key, see below), `DT_HISTORY_DATABASE_URL` (history database URL,
-may contain a password), `DT_API_LISTEN` (address of the REST API),
+may contain a password), `DT_MQTT_SESSION_DATABASE_URL` (database of the MQTT sessions, may contain a password, see
+"Session persistence (PostgreSQL)"), `DT_API_LISTEN` (address of the REST API),
 `DT_API_DATABASE_URL` (its database URL, may contain a password) and `DT_API_BEHIND_PROXY` (`true` / `false`; an
 invalid value is a startup error). Empty values are ignored.
 
@@ -114,7 +115,8 @@ and again.
 Notes: the broker has no TLS yet, so **passwords travel in clear text over MQTT**. Physical twin devices and test
 tools (`mosquitto_pub`, ...) now need SysML credentials in their CONNECT as well, or the broker has to run with
 `authentication: "none"`. The SysML credentials of the broker itself (`sysml.username` / `sysml.password`) are not
-related to the login of the clients.
+related to the login of the clients. With authentication a session (see "QoS and sessions") belongs to the user name
+that created it.
 Log level via `RUST_LOG` (default `info`). Output goes to `target/` (ignored by `.gitignore`).
 
 ## Features, build and run
@@ -243,6 +245,7 @@ Rules and limits:
 | `DT_SYSML_PASSWORD` | server | Structura password (beats file and command line) |
 | `DT_SYSML_APPLICATION_KEY` | server | Structura application key (beats file and command line); if set it replaces user name and password for the server's own session, see "Session at the SysMLv2 server" |
 | `DT_HISTORY_DATABASE_URL` | server | PostgreSQL URL of the history (beats the file); may contain a password, never logged |
+| `DT_MQTT_SESSION_DATABASE_URL` | server | PostgreSQL URL of the MQTT sessions (beats the file; not set: sessions only in memory, there is no fallback to the history URL); may contain a password, never logged |
 | `DT_API_LISTEN` | server | listen address of the REST API, e.g. `127.0.0.1:8080` (beats the file); empty = disabled |
 | `DT_API_DATABASE_URL` | server | PostgreSQL URL of the REST API (beats the file, default the history URL); may contain a password, never logged |
 | `DT_API_BEHIND_PROXY` | server | `true` / `false`: take the client address of the API from the last `X-Forwarded-For` entry (beats the file) |
@@ -261,6 +264,23 @@ Rules and limits:
 - `cargo test`: unit tests plus the integration tests. `tests/twin_integration.rs` drives the whole twin flow
   (`connectToTwin` -> interface topics -> `registerFunction` forwarding, duplicate request, backend error,
   malformed payload, login retry, bounded pool, shutdown) over a real broker with a fake `TwinBackend`.
+- `tests/qos_integration.rs`: QoS 1 and 2 in both directions (raw clients pin the bytes, rumqttc in both versions),
+  delivery QoS, redelivery with DUP, offline queues, take-over, session expiry and quota, the owner of a session,
+  Receive Maximum, Maximum Packet Size, limits, shutdown with open handshakes. The unit tests of `src/broker/` include
+  whole connections against a test store that holds its barriers (`broker::session::tests`): they pin when CONNACK,
+  SUBACK, UNSUBACK and the acknowledgements of a connection wait for the database, the order in which they leave,
+  the stop of the read loop and a take-over during CONNECT.
+- MQTT session database (needs PostgreSQL, see below): `tests/session_db.rs` (the whole broker: restart, expiry, clean
+  sessions) and `src/broker/persist/db_tests.rs` (every operation of the store, group commit, bad rows, the lock of
+  the schema). Run only when `DT_TEST_DATABASE_URL` is set, e.g.
+  `DT_TEST_DATABASE_URL=postgres://user:pw@localhost/postgres cargo test --test session_db` and
+  `DT_TEST_DATABASE_URL=... cargo test --lib db_tests` (or plain `cargo test` with the variable set). The user needs
+  the right to create schemas. Every test creates its own schema `dt_test_<uuid>`, the broker (or the store) creates the
+  tables in it from `sql/0001_mqtt_session.sql`, and the schema is dropped afterwards (also after a panic). Without the
+  variable each test prints `SKIPPED ...` and passes, so **the database code paths are only tested when the variable is
+  set**. These tests were written on a machine without PostgreSQL and have not been run against one yet; the
+  statements are only checked for syntax (below). The tests of `session_db.rs` that need no database (unreachable or
+  invalid URL) always run.
 - `cargo test --test link_plan`: the link planning of `build.rs` for linux, macos and windows with synthetic
   CMake caches and Conan graphs (no C++ tree needed).
 - `cargo test --features ffi`: additionally `tests/ffi_backend.rs`: calls without login, login against a closed
@@ -277,8 +297,9 @@ Rules and limits:
   `DigitalTwinStore/sql/0001_schema.sql` into it, uses it as `search_path`, and drops it afterwards (also after a
   panic); nothing else is touched. They write a small twin with two commits, a checkpoint and later changes and call
   the routes through the axum router. Without the variable each test prints `SKIPPED ...` and passes.
-- `cargo test --features sql-syntax-check`: checks the syntax of the schema file and of every SQL statement of the
-  REST API with PostgreSQL's own parser (`pg_query`, libpg_query, no server). Off by default because the build of
+- `cargo test --features sql-syntax-check`: checks the syntax of the schema files and of every SQL statement of the
+  REST API and of the session store (`cargo test --lib --features sql-syntax-check schema_and` for the latter) with
+  PostgreSQL's own parser (`pg_query`, libpg_query, no server). Off by default because the build of
   `pg_query` needs libclang.
 
 ## Twin logic (`src/twin/`)
@@ -524,7 +545,8 @@ are the expected six).
 |---|---|
 | `src/auth/` | MQTT login: `Authenticator` trait, `SysmlAuthenticator` (`POST /login`, cache, concurrency limit) |
 | `src/config.rs` | CLI keys, defaults and JSON file layout, compatible with `DigitalTwinServerInstanceManager` |
-| `src/broker/` | `codec` (MQTT 3.1.1 and 5 packets), `protocol` (protocol versions and the configurable mode), `topic` (matching, limits), `subscriptions` (store), `tracker` (connection limits), `session` (includes the login check of the CONNECT), `limits` |
+| `src/broker/` | `codec` (MQTT 3.1.1 and 5 packets), `protocol` (protocol versions, QoS and the configurable mode), `topic` (matching, limits), `subscriptions` (store, with the granted QoS), `tracker` (connection limits), `session` (one connection: reader, writer, the login check of the CONNECT, ordered and deferred acknowledgements), `client` (one client session: queue of QoS 1/2 messages, handshakes, packet identifiers), `core` (registry of the sessions, delivery, take-over, expiry), `persist` (interface and PostgreSQL implementation of the session store), `limits` |
+| `sql/` | `0001_mqtt_session.sql`: the tables of the MQTT sessions (applied by the broker if they are missing, see "Session persistence (PostgreSQL)") |
 | `src/hub.rs` | in-process hub: `subscribe(filter, capacity)` and `publish(topic, payload)`; messages carry their `Origin` |
 | `src/twin/` | `TwinBackend` trait, twin service (`mod.rs`), `ffi.rs` (feature `ffi`, cxx bridge) |
 | `ffi/`, `build.rs` | C++ facade (`dt_facade.h/.cpp`); `build.rs` compiles it against the C++ build tree (feature `ffi`) and emits the link and run-time settings; `ffi/link_plan.rs` is its pure planning logic (paths, libraries, rpath, DLLs), also included by `tests/link_plan.rs` (runs without the feature, covers all three target systems) |
@@ -535,7 +557,7 @@ are the expected six).
 
 ## Decision: MQTT codec (phase 0)
 
-Decision: **own small codec** (`src/broker/codec.rs`, QoS 0 only, MQTT 3.1.1 and 5, plus tests), no codec crate.
+Decision: **own small codec** (`src/broker/codec.rs`, QoS 0 to 2, MQTT 3.1.1 and 5, plus tests), no codec crate.
 
 Candidates, checked against the crate sources (downloaded and read, not run against Paho or Python clients):
 
@@ -550,9 +572,11 @@ Candidates, checked against the crate sources (downloaded and read, not run agai
   It would take over session handling, which the plan wants to keep under our control (limits, return codes,
   later per-topic authorization).
 
-The needed subset is small (QoS 0): decode CONNECT, PUBLISH, SUBSCRIBE, UNSUBSCRIBE, PINGREQ, DISCONNECT, encode
-CONNACK, PUBLISH, SUBACK, UNSUBACK, PINGRESP. MQTT 5 adds property blocks (incoming ones are length-checked and
-skipped, outgoing ones are empty except in CONNACK), reason codes in SUBACK/UNSUBACK and the server DISCONNECT; the
+The needed subset is small: decode CONNECT, PUBLISH (any QoS, packet identifier, DUP), PUBACK, PUBREC, PUBREL, PUBCOMP,
+SUBSCRIBE, UNSUBSCRIBE, PINGREQ, DISCONNECT, encode CONNACK, PUBLISH, PUBACK, PUBREC, PUBREL, PUBCOMP, SUBACK, UNSUBACK,
+PINGRESP. MQTT 5 adds property blocks (incoming ones are length-checked and skipped except the few the broker acts on,
+see "MQTT 5"; outgoing ones are empty except in CONNACK), reason codes in the acknowledgements, SUBACK/UNSUBACK and the
+server DISCONNECT; the
 codec functions take the protocol version that the CONNECT of the connection negotiated. The codec is covered by unit
 tests with hand computed bytes, and by integration tests with `rumqttc` (a real, independent client with a 3.1.1 API,
 `rumqttc::{AsyncClient, MqttOptions, ...}`, and an MQTT 5 API, `rumqttc::v5`) and a raw socket client. `rumqttc` 0.25
@@ -564,12 +588,13 @@ MQTT 3.1.1 (protocol name `MQTT`, level 4) and MQTT 5 (level 5), selected by `ru
 3.1.1 only). A level that is neither 4 nor 5 gets CONNACK return code 0x01 and is closed [MQTT-3.1.2-2]; a level that
 is valid but not enabled gets the refusal CONNACK of its own version (0x01 for 3.1.1, 0x84 for MQTT 5); another
 protocol name, e.g. 3.1 `MQIsdp`, is closed without a reply,
-QoS 0 only (a QoS > 0 PUBLISH closes the connection; SUBSCRIBE with QoS 1/2 is granted with QoS 0), first packet must
-be CONNECT, CONNECT timeout, CONNACK with `session_present = 0` and return code 0, subscription quota (updates never
+QoS 0, 1 and 2 in both directions and resumable sessions (see "QoS and sessions"; SUBSCRIBE is granted with the QoS
+it asks for), first packet must be CONNECT, CONNECT timeout, CONNACK with `session_present` (set when a session is
+resumed) and return code 0, subscription quota (updates never
 count; over the quota and invalid filters get SUBACK return code 0x80), topic length/level limits (SUBSCRIBE: 0x80;
-PUBLISH: dropped silently), `matchFilter` semantics (also `a/#` matches `a`, `#` matches `$SYS/...`),
+PUBLISH: a QoS 0 PUBLISH is dropped silently; QoS 1 and 2 are acknowledged and not delivered, see "QoS and sessions": MQTT 3.1.1 plain PUBACK / PUBREC (the identifier of a QoS 2 PUBLISH is remembered until its PUBREL), MQTT 5 reason 0x97 and, for QoS 2, no state), `matchFilter` semantics (also `a/#` matches `a`, `#` matches `$SYS/...`),
 one delivery per session (the publishing session included, unless an MQTT 5 subscription uses No Local), pending-send limit with drop and disconnect after 3 consecutive overflows (accounting
-topic + payload bytes, like C++), dual-stack listener with IPv4 fallback, IPv4-mapped IPv6 counted as IPv4, CLI
+topic + payload bytes, like C++; for QoS 0 and control packets: QoS 1 and 2 messages have their own queue limits, see "QoS and sessions"), dual-stack listener with IPv4 fallback, IPv4-mapped IPv6 counted as IPv4, CLI
 matching by substring with first match winning, file values overriding the command line.
 
 Deviations:
@@ -585,20 +610,23 @@ Deviations:
 - Empty client identifier: in 3.1.1 accepted only with clean session = 1 (the broker generates an id for its own
   bookkeeping and does not announce it). Without clean session the broker answers CONNACK return code 0x02 (identifier
   rejected) and closes (3.1.1, 3.1.3.1). In MQTT 5 an empty id is always accepted and the generated one is returned in
-  the CONNACK property Assigned Client Identifier. Sessions are never persisted, so `session_present` is always 0.
+  the CONNACK property Assigned Client Identifier (a client that asks for a Session Expiry Interval can resume that
+  session with it). A client identifier longer than 1024 bytes is refused (see "QoS and sessions").
 - Control packets (CONNACK, SUBACK, UNSUBACK, PINGRESP) count against `max_pending_send_bytes` like publishes. A client
   that sends requests without reading the answers is disconnected when the limit is exceeded, so the memory of a
   session is bounded. (C++ had no such limit.)
-- `max_packet_size` is only enforced for incoming packets. MQTT 5 clients are told the limit in the CONNACK (Maximum
-  Packet Size); 3.1.1 cannot announce it. `Hub::publish` rejects payloads that do not fit into it (counted with the
-  MQTT 5 encoding if MQTT 5 is enabled, which is one byte larger).
-- Nothing but CONNACK is sent before the connection is established: an invalid first packet (e.g. QoS 1 PUBLISH,
+- `max_packet_size` is enforced for incoming packets. MQTT 5 clients are told the limit in the CONNACK (Maximum
+  Packet Size); 3.1.1 cannot announce it. The Maximum Packet Size an MQTT 5 client announces in its CONNECT is applied
+  to what is sent to it: a larger PUBLISH is not sent to that client, whatever its QoS. `Hub::publish` rejects payloads that do not fit into it (counted with the
+  MQTT 5 encoding if MQTT 5 is enabled, which is one byte larger, and with the 2-byte packet identifier of the QoS 1
+  delivery).
+- Nothing but CONNACK is sent before the connection is established: an invalid first packet (e.g. a PUBLISH,
   malformed CONNECT) just closes the connection.
 - Reserved fixed header flags (SUBSCRIBE/UNSUBSCRIBE must be 0x2, CONNECT/PINGREQ/DISCONNECT 0x0), QoS 3 and
-  any set reserved bit 2-7 of the requested QoS byte of SUBSCRIBE are malformed packets (connection closed). Not checked: non-minimal variable byte integers, U+0000
-  in strings.
+  any set reserved bit 2-7 of the requested QoS byte of SUBSCRIBE are malformed packets (connection closed). Not checked: non-minimal variable byte integers. A U+0000
+  in a string is a malformed packet (MQTT-1.5.4-2; the PostgreSQL session store could not hold it either).
 - A second CONNECT, and a PUBLISH with an empty topic or a wildcard in the topic, close the connection. C++
-  would only drop or ignore (not verified). Packet type 0 and 15 are reserved in 3.1.1 and malformed; other types the broker does not act on (PUBACK, ...) are ignored like in C++.
+  would only drop or ignore (not verified). Packet type 0 and 15 are reserved in 3.1.1 and malformed; other types the broker does not act on (CONNACK, SUBACK, UNSUBACK, PINGRESP) are ignored like in C++.
 - A SUBSCRIBE filter that is syntactically invalid (empty, `a/#/b`, `a#`) gets return code 0x80 (MQTT 5: 0x8F). C++ only checks
   the length/level limits and would store a filter that never matches.
 - Oversize packets: the size is checked on the fixed header; the connection is closed. C++ just closes.
@@ -635,12 +663,172 @@ Payload types:
   facade path (the facade handles no values), but the C++ libraries (`IntegerVariable`, `RationalVariable`,
   `RationalValueEntity` with `std::stol`) would truncate or reject values beyond 32 bits there.
 
+## QoS and sessions
+
+QoS 0, 1 and 2 work in both directions in MQTT 3.1.1 and MQTT 5. One connection is `src/broker/session.rs`, the state
+of one client identifier `src/broker/client.rs`, the registry of the sessions `src/broker/core.rs`.
+
+### QoS
+
+- **Delivery QoS** is the lower of the QoS of the PUBLISH and the QoS granted to the subscription. A SUBSCRIBE is
+  granted as requested (SUBACK 0x00, 0x01, 0x02); there is no downgrade and no Maximum QoS (MQTT 5 CONNACK does not
+  announce one, so it is 2). A session with several matching subscriptions gets the message once, at the highest QoS
+  of them (a subscription with No Local does not count for the session's own messages). The server's own publishes
+  (`Hub::publish`) are made at QoS 1 and are only queued for sessions that have a connection (see "Known remaining
+  deviations and limits").
+- **From a client** (it publishes): QoS 1 is answered with PUBACK, QoS 2 with PUBREC, then PUBREL gets PUBCOMP. The
+  message is delivered when the PUBLISH arrives. The packet identifier of a QoS 2 PUBLISH is remembered until its PUBREL,
+  so a repeated PUBLISH with the same identifier is only acknowledged again, never delivered twice. A PUBREL for an
+  unknown identifier gets PUBCOMP (MQTT 5: reason 0x92). MQTT 5: more QoS 2 PUBLISH packets waiting for their PUBREL
+  than the Receive Maximum announced in the CONNACK (`run.mqtt.limits.receive_maximum`, default 100) are answered with
+  DISCONNECT 0x93; MQTT 3.1.1 has no such limit. A PUBLISH with a topic beyond the topic limits is acknowledged and not
+  delivered (MQTT 5: reason 0x97).
+- **To a client** (it subscribed): QoS 1 and 2 messages are queued in the session (also while the client is offline, except the server's own publishes) in
+  order, each with a packet identifier of its own (1 to 65535, counting upwards and skipping identifiers that are still
+  in use, never 0). The broker sends them as long as fewer than the client's **Receive Maximum** (MQTT 5 CONNECT
+  property; 65535 in 3.1.1) are unacknowledged; each acknowledgement lets the next one out. QoS 1 ends with PUBACK. QoS 2:
+  PUBREC is answered with PUBREL, PUBCOMP ends it. An MQTT 5 PUBREC with a reason code of 0x80 or more ends the flow
+  without PUBREL; a PUBREC for an unknown identifier gets a PUBREL (MQTT 5: 0x92); a PUBACK or PUBCOMP for an unknown
+  identifier is ignored.
+- **No retransmission on a live connection.** A PUBLISH or PUBREL is never repeated while the connection stays up. After
+  a reconnect that resumes the session the broker first sends the PUBREL of every QoS 2 message whose PUBREC had arrived,
+  then every PUBLISH that was not acknowledged with DUP = 1 (same packet identifier), then the rest of the queue with
+  DUP = 0. What was in flight on the old connection counts against the Receive Maximum of the new one.
+- A message larger than the Maximum Packet Size an MQTT 5 client announced in its CONNECT is not sent to that client
+  (QoS 0, 1 and 2; a queued QoS 1/2 entry is dropped at the moment it would be sent).
+- Acknowledgements (PUBACK, PUBREC, PUBREL, PUBCOMP) of one connection leave in the order of the packets that caused
+  them (MQTT-4.6.0-2 to 4), also when one of them has to wait for the session database.
+- **Queue limits per session** (QoS 1 and 2): `max_queued_messages` entries (default 1000, 1 to 65535: every entry owns a
+  packet identifier) and `max_pending_send_bytes` bytes of topic and payload (default 4 MiB, like for QoS 0 but counted
+  separately); messages in flight count. A message that does not fit is **dropped for that session**, counted and logged
+  at debug level; the publisher still gets its acknowledgement and the subscriber is **not** disconnected. (QoS 0 keeps
+  its rule: drop, and disconnect after 3 consecutive overflows. QoS 0 messages are not kept for an offline session.)
+
+### Sessions
+
+- The session is keyed by the **client identifier**. It holds the subscriptions (with granted QoS and No Local), the
+  queue of QoS 1/2 messages with the state of their handshakes, and the QoS 2 identifiers received from the client that
+  wait for their PUBREL. It lives in memory; with a session database it is also stored (see below).
+- **Clean session** (3.1.1) / **Clean Start** (MQTT 5) = 1: an existing session of that client identifier is destroyed
+  and the client starts with an empty one (`session_present` 0).
+- **Session expiry.** MQTT 3.1.1: clean session 1 ends the session with the connection; clean session 0 keeps it for
+  `run.mqtt.limits.session_expiry_max_s` (default 86400, i.e. 24 hours) after the connection ended. MQTT 5: the Session
+  Expiry Interval of the CONNECT (absent = 0 = ends with the connection), capped at `session_expiry_max_s`; if the broker
+  uses another value than the client asked for it announces it in the CONNACK (property 0x11). The DISCONNECT may
+  carry a new interval (capped); raising it from 0 is a protocol error (DISCONNECT 0x82, the session ends with the
+  connection). A session that ends with its connection is never resumed. A sweeper removes expired offline sessions once
+  a second; an expired session is not resumed even before the sweeper ran. `session_expiry_max_s = 0` makes every session
+  end with its connection.
+- **`session_present`** is 1 when the client did not ask for a clean start and a persistent session of its identifier
+  existed and has not expired. Subscriptions, queued messages and QoS 2 state are then continued.
+- **Take-over.** A CONNECT with the client identifier of a session that has a live connection takes the session over:
+  the old connection is closed (MQTT 5: DISCONNECT 0x8E, MQTT 3.1.1: just closed), and the new one resumes the session or,
+  with a clean start, replaces it. **This is a behaviour change: two connections with the same client identifier no longer
+  coexist** (before sessions existed they did). Compatibility: the C++ `DTClient` connects with an empty client identifier since this
+  change (the client service then makes up a unique one; it connects with a clean session); older `DTClient` builds with
+  the fixed identifier `digital-twin-client` still disconnect each other in a reconnect loop when two instances run
+  against one broker. What the old connection sends afterwards is ignored; the same holds when
+  the take-over arrives while the first connection is still in its CONNECT waiting for the session database.
+- **Owner.** With authentication (`run.mqtt.authentication = "sysml"`) a session belongs to the user name that created
+  it: a CONNECT with the identifier of a live or offline session of another user is refused (CONNACK 0x02 / 0x85, resume
+  and clean start alike) and destroys nothing; only an expired session is replaced whoever asks. **Without authentication
+  the user name is not checked**: any peer can take over, resume or destroy any session by its client identifier.
+- **Quota.** `run.mqtt.limits.max_persistent_sessions` (default 1000) limits the sessions that outlive their connection
+  (expiry above 0), online and offline together. A CONNECT that would create one more is refused (3.1.1 CONNACK 0x03,
+  MQTT 5 0x97); resuming a session needs no extra room, and replacing a persistent one takes its place; replacing a session that ends with its connection by a persistent one counts against the quota. **Without authentication any peer can fill the quota**
+  with sessions of its choice. Worst case with the defaults: 1000 sessions of up to 4 MiB of queued topics and payloads
+  each, about 4 GiB of memory (and the same in the database; a payload is stored once per receiving session) plus the
+  bookkeeping of up to 1000 messages per session. Lower `max_persistent_sessions`, `max_pending_send_bytes` or
+  `max_queued_messages`, or keep authentication on, where that is not acceptable.
+- **Limits of the identity.** A client identifier or user name longer than 1024 bytes is refused (client identifier:
+  CONNACK 0x02 / 0x85, user name: 0x04 / 0x86) before the authentication backend is asked. A U+0000 in any string of a
+  packet is malformed.
+
+| Key (`run.mqtt.limits.`) | Default | Range | Meaning |
+|---|---|---|---|
+| `receive_maximum` | 100 | 1 to 65535 | announced to MQTT 5 clients: QoS 2 PUBLISH packets that may wait for their PUBREL (also bounds the acknowledgements held back for the database, see below) |
+| `max_queued_messages` | 1000 | 1 to 65535 | QoS 1/2 messages queued or in flight per session |
+| `session_expiry_max_s` | 86400 | 0 to 4294967295 | longest time an offline session is kept; 0 = no session outlives its connection |
+| `max_persistent_sessions` | 1000 | 0 and up | sessions with expiry above 0, online or offline; 0 = none |
+
+## Session persistence (PostgreSQL)
+
+Without a database the sessions live in memory: they survive reconnects of the clients but not a restart of the server.
+With one, the sessions that outlive their connection are mirrored in PostgreSQL and come back after a restart.
+
+- **Configuration.** `run.mqtt.session_database_url` (environment `DT_MQTT_SESSION_DATABASE_URL`, which beats the
+  file; there is no command line key). May contain a password, never logged. Persistence is on only when it is set; there is **no
+  fallback to the history database** (a deployment that only sets the history URL keeps its sessions in memory). If it is
+  empty the sessions are memory only and the server warns about that at start, naming the key and the variable. If
+  `session_expiry_max_s` is 0 persistence is off (the server logs that at info level and does not open the store).
+- **Schema.** `sql/0001_mqtt_session.sql` (embedded in the binary): `mqtt_session` (one row per session: id, unique client
+  identifier, user name, protocol level, expiry, disconnect time), `mqtt_subscription`, `mqtt_outbound` (the queue: sequence,
+  packet identifier unique per session, QoS, PUBREC received, origin, topic, payload, arrival time) and `mqtt_inbound_qos2`
+  (identifiers waiting for their PUBREL); the last three reference the session with `ON DELETE CASCADE`. Table names are
+  unqualified, so the tables are in the first schema of the `search_path` of the database role. The broker creates them
+  at start **only if one of the four is missing** (`CREATE TABLE IF NOT EXISTS`, in one transaction, serialized by an
+  advisory lock). A role that may only read and write needs `SELECT`, `INSERT`, `UPDATE` and `DELETE` on the four tables and
+  no DDL right, provided someone applied `sql/0001_mqtt_session.sql` before; without the tables and without the right
+  to create them the start fails with a message that says so. The tables are separate from the history schema of the C++
+  core and may live in the same database.
+- **Which sessions are stored.** Those with an expiry above 0 (every 3.1.1 session with clean session 0, every MQTT 5
+  session with a Session Expiry Interval): while a client is connected the row has no disconnect time. Sessions that end
+  with their connection are never written. A session whose expiry becomes 0 (new CONNECT, DISCONNECT) is deleted; one that
+  becomes persistent is written with its full state. A stored payload is a copy per receiving session.
+- **What is committed before which packet leaves.** Changes are queued and applied by one writer in transactions of up to
+  500 changes (group commit); a barrier submitted after them runs once they are committed, in submission order. The packet
+  that promises durable state waits for such a barrier: the **CONNACK** (the session row was created or updated), **SUBACK** and
+  **UNSUBACK** (a stored subscription changed), the **PUBACK** or **PUBREC** to a publisher (the message was queued for at
+  least one stored session; a PUBREC also waits for the stored identifier), the **PUBREL** the broker sends after the
+  subscriber's PUBREC (the stored entry is marked), and the **PUBCOMP** answering a PUBREL (the identifier is removed).
+  Acknowledgements that need nothing durable still leave in order behind waiting ones. **Write-behind** (queued, no wait):
+  the removal of an acknowledged message, disconnect times, deletion of sessions, expiry, and the messages of
+  `Hub::publish` (the server's own publishes, only queued for connected sessions): after a crash a server message of the
+  last commit window may be missing. QoS 0 and sessions that end with their connection never touch the database.
+- **Start.** The store connects and prepares within 10 seconds, otherwise the broker does not start (the error never contains
+  the URL or the password). Sessions whose expiry has passed (disconnect time plus the expiry, capped at
+  `session_expiry_max_s`) are deleted; sessions that were still marked connected (the previous run was stopped or
+  killed) get the start time as disconnect time and expire from then on; all others are loaded as offline sessions with
+  their subscriptions, queues and QoS 2 identifiers. Rows that cannot be understood are skipped with a warning. When the
+  client comes back, every message that was not acknowledged is sent again with DUP = 1 and the PUBREL of every QoS 2
+  message past its PUBREC first.
+- **Availability at start.** A configured session database must be reachable at start,
+  otherwise the server does not start (unlike the history store, which only logs and retries). It needs the four tables or,
+  once, the right to create them; the role needs `USAGE` on the schema, and a missing or unusable schema is reported as a
+  generic refusal with its SQLSTATE (e.g. 3F000, 42501). `run.mqtt.limits.session_expiry_max_s = 0` turns persistence off
+  without opening the store (no connection, no tables).
+- **Loaded sessions are not cut back.** Sessions loaded at start keep their queues and are counted as they are, even if
+  `max_persistent_sessions` or `max_queued_messages` were lowered since; only the expiry is capped at the current
+  `session_expiry_max_s`.
+- **One broker per schema.** The store holds a session-level advisory lock for as long as it lives (a connection of its own,
+  checked every 30 seconds); a second broker on the same schema does not start ("another broker uses this MQTT session
+  database"). If the lock connection is lost the server logs a warning and runs on.
+- **When the database fails later.** The writer retries a change that fails with a connection, privilege, missing table or
+  similar error with backoff (200 ms doubling to 5 s) for as long as it lasts, and logs the stall (repeated every minute).
+  Meanwhile everything that waits for a barrier waits: CONNACK of a persistent session (until the CONNECT timeout, then
+  the connection is closed), SUBACK, and the acknowledgements of QoS 1/2 PUBLISH packets that were queued for stored
+  sessions. A connection stops reading when more than `2 x receive_maximum + 16` of its acknowledgements wait (216 with
+  the defaults), so a pipelining client cannot pile them up; shutdown and a take-over still end such a connection. QoS 0
+  and clean sessions continue. A change the database refuses because of its data (SQLSTATE class 22, 23 or 54, e.g. a
+  value it cannot store) is skipped and logged once the batch was split into single changes. A statement running longer than 30
+  seconds is cancelled and retried.
+- **Backlog cap.** The queue between the broker and the writer is bounded: from 100,000 queued changes, or 64 MiB of topics
+  and payloads of queued messages, new `Enqueue` changes are **dropped** (a warning says so once per episode, an `info`
+  line when the database caught up). No other change is ever dropped, and barriers neither. The consequence: a QoS 1/2
+  message that was acknowledged to its publisher can be missing in the stored copy, so an offline or reconnecting session
+  loses it if the broker restarts before the database is back, and a QoS 2 flow that was already past PUBREC can be left
+  half open at the client (it waits for a PUBLISH or PUBREL that the restarted broker does not know). The message is
+  still delivered from memory as long as the broker runs.
+- **Shutdown.** `Broker::shutdown` waits up to 5 seconds for the sessions to end, then up to 5 seconds for the writer to
+  store what is queued (a warning says if something is lost), then closes the connections to the database and releases
+  the lock. Dropping a `Broker` without `shutdown` does not wait: queued changes are lost.
+
 ## Hub
 
 `Broker::hub()` returns a cloneable `Hub`. `hub.subscribe(filter, capacity)` gives a bounded receiver of
 `Message { origin, topic, payload, received_at_ms }` for every accepted PUBLISH (and for hub publishes). A full channel drops the message and
 counts it (`HubSubscription::dropped()`, `Hub::dropped_total()`); the broker never waits. `hub.publish(topic, payload)`
-delivers to all matching client sessions and all matching internal subscribers (there is no no-local for internal
+delivers to all matching client sessions (at QoS 1, lowered to the QoS of the subscription; a session whose client is not connected does not get it) and all matching internal subscribers (there is no no-local for internal
 code, so a subscriber on `#` also sees what the server itself published; such messages have `Origin::Server`, those of
 MQTT clients `Origin::Client`). `received_at_ms` is the time the broker accepted the message (Unix milliseconds, UTC),
 stamped before any queueing; it follows the system clock and is not monotonic.
@@ -676,8 +864,29 @@ Broker and payloads (first increment):
   reason code 0x9E (and Shared Subscription Available = 0 in the CONNACK).
 - UNSUBACK carries only the packet id in 3.1.1 (no per-filter codes), also for filters the session did not have. In
   MQTT 5 it has one reason code per filter: 0x00, or 0x11 (no subscription existed).
-- QoS > 0 PUBLISH closes the connection (3.1.1 has no way to announce a maximum QoS); the retain flag of a PUBLISH is
-  accepted and ignored, nothing is retained.
+- No retained messages: the retain flag of a PUBLISH is accepted and ignored. No will: the will of a CONNECT is
+  validated and skipped. No topic aliases (not offered; a PUBLISH with an empty topic closes the connection). The
+  properties of an MQTT 5 PUBLISH (message expiry, content type, user properties, correlation data, response topic, ...)
+  are not forwarded to subscribers.
+- Exactly-once holds across reconnects of the clients (a repeated PUBLISH is recognised, a resumed QoS 2 flow continues
+  with the PUBREL). It does **not** hold across a crash of the broker inside the commit window: a QoS 2 message whose
+  PUBREC from the subscriber had arrived but was not yet committed is sent again after the restart, and a client that does
+  not recognise the repeat delivers it twice; a QoS 1 message whose PUBACK had arrived but whose removal was not yet
+  committed is sent again as well (allowed for QoS 1). Messages dropped from the write queue (see "Session persistence
+  (PostgreSQL)") are lost for a restart.
+- Without authentication any peer can create persistent sessions up to the quota and take over or destroy sessions of
+  others (see "QoS and sessions" for the worst-case memory with the defaults).
+- The database code paths (`src/broker/persist.rs`, `tests/session_db.rs`) are only tested when `DT_TEST_DATABASE_URL`
+  is set, and have not been run against a real PostgreSQL yet (see "Tests").
+- The server's own publishes (initial values, registration requests, `Origin::Server`) at QoS 1 or 2 are queued for a
+  session only while it has a connection (one that is still waiting for its CONNACK included: the message is sent at its
+  start). For an offline session they are skipped: not queued, not stored, not counted as a drop, no warning. Server messages queued or in
+  flight when the client disconnects stay in the queue and are redelivered on resume like any other entry. There are no
+  retained messages, so a client that was away does not see what the server published meanwhile. Publishes of MQTT
+  clients are queued for offline sessions.
+- A connected QoS 1/2 subscriber that never acknowledges stops receiving once its queue is full (the drops are counted
+  and logged as a warning once per episode, then at debug level).
+- Redelivery after a reconnect only; there is no timer that resends a PUBLISH on a live connection (MQTT-4.4).
 - Floating point formatting: serde_json writes small and large exponents like `1e-7`, nlohmann::json (C++) writes
   `1e-07`. Both parse back to the same value; the bytes differ for such values. Not compared against a C++ build.
 - The will (properties, topic, message) of CONNECT is validated for length and skipped; user name and password are
@@ -686,31 +895,39 @@ Broker and payloads (first increment):
 
 ## MQTT 5
 
-Enabled with `run.mqtt.protocol_version` = `"5"` or `"both"`. Scope: the same as for 3.1.1 (QoS 0 publish/subscribe,
-no sessions, no retained messages, login by user name and password only, see "Authentication"), plus the parts of MQTT 5 that a QoS 0 broker needs. Verified with
+Enabled with `run.mqtt.protocol_version` = `"5"` or `"both"`. Scope: the same as for 3.1.1 (QoS 0 to 2, sessions, no retained messages, no will, login by user name and
+password only, see "Authentication"), plus the parts of MQTT 5 the broker needs for that. Verified with
 unit tests, hand written packets and `rumqttc::v5`; not verified against other client libraries (Paho and others).
 
-- CONNECT properties are length-checked and skipped (session expiry, receive maximum, maximum packet size, topic alias
-  maximum, user properties, ...). In particular the **client's Maximum Packet Size is not applied**: the broker does not
-  drop publishes that exceed it. Will properties are not parsed (the will itself is not used either).
-- CONNACK announces: Maximum QoS 0, Retain Available 0, Subscription Identifiers Available 0, Shared Subscription Available 0, Maximum Packet Size (the limit
-  `max_packet_size`) and, for an empty client id, the Assigned Client Identifier. Topic aliases are not offered (no Topic
+- CONNECT properties are length-checked; the **Session Expiry Interval, Receive Maximum and Maximum Packet Size** are
+  applied (see "QoS and sessions"), the others (topic alias maximum, user properties, ...) are skipped. Will properties
+  are not parsed (the will itself is not used either).
+- CONNACK announces: Receive Maximum (`run.mqtt.limits.receive_maximum`), Retain Available 0, Subscription Identifiers
+  Available 0, Shared Subscription Available 0, Maximum Packet Size (the limit `max_packet_size`), the Session Expiry
+  Interval when the broker uses another one than the client asked for and, for an empty client id, the Assigned Client
+  Identifier. Maximum QoS is not sent (absent means 2). Topic aliases are not offered (no Topic
   Alias Maximum): a client must not use them, a PUBLISH with an empty topic closes the connection.
-- Incoming PUBLISH, SUBSCRIBE, UNSUBSCRIBE and DISCONNECT properties are skipped; outgoing PUBLISH, SUBACK and UNSUBACK
-  have empty properties. Retain As Published and Retain Handling of a subscription are accepted and have no effect
-  (nothing is retained). **No Local is honoured**: a session does not receive its own publishes through a subscription
-  that has it. A QoS above 0 in a subscription is granted as QoS 0.
+- Incoming PUBLISH, SUBSCRIBE and UNSUBSCRIBE properties are skipped (of a DISCONNECT only the Session Expiry
+  Interval is used); outgoing PUBLISH, SUBACK, UNSUBACK and acknowledgements have empty properties. Retain As Published
+  and Retain Handling of a subscription are accepted and have no effect (nothing is retained). **No Local is honoured**:
+  a session does not receive its own publishes through a subscription that has it (also at QoS 1 and 2, and it is stored
+  with the session). The requested QoS of a subscription is granted.
 - Retain flag: although Retain Available is announced as 0, a PUBLISH with the retain flag is not an error; it is
   accepted and the flag is ignored (as for 3.1.1). The specification asks for DISCONNECT 0x9A here.
-- SUBACK reason codes: 0x00 (granted QoS 0), 0x8F (topic filter invalid or beyond the topic limits), 0x97 (quota
+- SUBACK reason codes: 0x00, 0x01, 0x02 (granted QoS), 0x8F (topic filter invalid or beyond the topic limits), 0x97 (quota
   exceeded), 0x9E (shared subscriptions not supported). Subscription options with QoS 3, Retain Handling 3 or reserved
   bits 6-7 set are malformed packets.
 - DISCONNECT sent by the broker (MQTT 5 clients only, after the queued messages): 0x8B server shutting down, 0x8D keep
   alive timeout, 0x81 malformed packet, 0x82 protocol error (second CONNECT), 0x90 topic name invalid, 0x95 packet too
-  large, 0x9B QoS not supported (QoS 1/2 PUBLISH). A client that is dropped because it is too slow, or whose connection
+  large, 0x8E session taken over (also sent when the session is destroyed under the connection), 0x93 receive maximum
+  exceeded. A client that is dropped because it is too slow, or whose connection
   fails, gets nothing. DISCONNECT of a client with a reason code and properties is accepted. The AUTH packet (type 15)
   is a protocol error, DISCONNECT 0x82 (no enhanced authentication).
 - PUBLISH properties of a client (user properties, content type, message expiry, ...) are skipped and **not forwarded** to
-  subscribers, and the RETAIN flag (=1) of a PUBLISH is accepted and ignored: nothing is retained.
+  subscribers, and the RETAIN flag (=1) of a PUBLISH is accepted and ignored: nothing is retained. Acknowledgements
+  carry a reason code only where one is needed: 0x92 (packet identifier not found) and 0x97 (quota exceeded, a topic
+  beyond the limits).
+- CONNACK refusals: 0x84 (version not enabled), 0x85 (client identifier too long, or the identifier belongs to another
+  user), 0x86 (bad user name or password), 0x88 (server unavailable: the authentication backend cannot decide, or the session store refuses because it is shutting down and drops the barrier a CONNACK waits for; with the database merely down the writer retries, the client gets no CONNACK and is closed at the CONNECT timeout), 0x97 (too many persistent sessions).
 - `run.mqtt.limits.max_packet_size` must be at least 64 (it is announced as Maximum Packet Size, and 0 is invalid).
 - Keep alive, connect timeout, limits and the in-process hub work as for 3.1.1. Server Keep Alive is not used.

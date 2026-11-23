@@ -163,7 +163,7 @@ impl fmt::Debug for SysmlConfig {
 /// Smallest accepted `run.mqtt.limits.max_packet_size` in bytes.
 pub const MIN_MAX_PACKET_SIZE: u32 = 64;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct MqttConfig {
     pub port: u16,
     /// MQTT versions the broker accepts (`run.mqtt.protocol_version`: "3.1.1", "5" or "both").
@@ -181,7 +181,35 @@ pub struct MqttConfig {
     pub auth_throttle: ThrottleConfig,
     pub cert_chain: String,
     pub cert_private_key: String,
+    /// Database that keeps the sessions of clients that outlive their connection (`run.mqtt.session_database_url`,
+    /// `DT_MQTT_SESSION_DATABASE_URL`). May contain a password, never logged. Empty (the default): the sessions are
+    /// kept in memory only and are lost at a restart. There is no fallback to the history database.
+    pub session_database_url: String,
     pub limits: BrokerLimits,
+}
+
+impl fmt::Debug for MqttConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MqttConfig")
+            .field("port", &self.port)
+            .field("protocol", &self.protocol)
+            .field("authentication", &self.authentication)
+            .field("auth_cache_s", &self.auth_cache_s)
+            .field("auth_max_concurrent", &self.auth_max_concurrent)
+            .field("auth_throttle", &self.auth_throttle)
+            .field("cert_chain", &self.cert_chain)
+            .field("cert_private_key", &self.cert_private_key)
+            .field(
+                "session_database_url",
+                &if self.session_database_url.is_empty() {
+                    ""
+                } else {
+                    "<redacted>"
+                },
+            )
+            .field("limits", &self.limits)
+            .finish()
+    }
 }
 
 /// `run.rest.*`. Parsed but not used yet.
@@ -375,6 +403,7 @@ struct FileMqtt {
     auth_max_pending_per_ip: Option<StrNum>,
     cert_chain: Option<String>,
     cert_private_key: Option<String>,
+    session_database_url: Option<String>,
     limits: Option<FileLimits>,
 }
 
@@ -386,6 +415,10 @@ struct FileLimits {
     max_subscriptions_per_session: Option<StrNum>,
     max_pending_send_bytes: Option<StrNum>,
     connect_timeout_s: Option<StrNum>,
+    receive_maximum: Option<StrNum>,
+    max_queued_messages: Option<StrNum>,
+    session_expiry_max_s: Option<StrNum>,
+    max_persistent_sessions: Option<StrNum>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -499,6 +532,7 @@ impl Config {
                 auth_throttle: ThrottleConfig::default(),
                 cert_chain: get(Argument::InstanceMqttCertChain),
                 cert_private_key: get(Argument::InstanceMqttCertPrivateKey),
+                session_database_url: String::new(),
                 limits: BrokerLimits::default(),
             },
             rest: RestConfig {
@@ -546,8 +580,8 @@ impl Config {
     }
 
     /// Environment overrides, they beat the file and the command line:
-    /// `DT_SYSML_PASSWORD`, `DT_SYSML_APPLICATION_KEY`, `DT_HISTORY_DATABASE_URL`, `DT_API_LISTEN`, `DT_API_DATABASE_URL` and
-    /// `DT_API_BEHIND_PROXY`. Empty values are ignored; an invalid boolean is reported by [`Config::validate`].
+    /// `DT_SYSML_PASSWORD`, `DT_SYSML_APPLICATION_KEY`, `DT_HISTORY_DATABASE_URL`, `DT_MQTT_SESSION_DATABASE_URL`,
+    /// `DT_API_LISTEN`, `DT_API_DATABASE_URL` and `DT_API_BEHIND_PROXY`. Empty values are ignored; an invalid boolean is reported by [`Config::validate`].
     pub fn apply_env(&mut self, get: impl Fn(&str) -> Option<String>) {
         let non_empty = |name: &str| get(name).filter(|v| !v.is_empty());
         if let Some(v) = non_empty("DT_SYSML_PASSWORD") {
@@ -560,6 +594,9 @@ impl Config {
         }
         if let Some(v) = non_empty("DT_HISTORY_DATABASE_URL") {
             self.history.database_url = v;
+        }
+        if let Some(v) = non_empty("DT_MQTT_SESSION_DATABASE_URL") {
+            self.mqtt.session_database_url = v;
         }
         if let Some(v) = non_empty("DT_API_LISTEN") {
             self.api.listen = v;
@@ -696,6 +733,10 @@ impl Config {
             )?;
             set_string(&mqtt.cert_chain, &mut self.mqtt.cert_chain);
             set_string(&mqtt.cert_private_key, &mut self.mqtt.cert_private_key);
+            set_string(
+                &mqtt.session_database_url,
+                &mut self.mqtt.session_database_url,
+            );
             if let Some(l) = &mqtt.limits {
                 let limits = &mut self.mqtt.limits;
                 convert(
@@ -735,6 +776,41 @@ impl Config {
                     "run.mqtt.limits.connect_timeout_s",
                     &l.connect_timeout_s,
                     &mut limits.connect_timeout_s,
+                )?;
+                convert(
+                    "run.mqtt.limits.receive_maximum",
+                    &l.receive_maximum,
+                    &mut limits.receive_maximum,
+                )?;
+                // 0 is a protocol error as a Receive Maximum; every queued entry owns one of 65535 packet ids
+                if l.receive_maximum.is_some() && limits.receive_maximum == 0 {
+                    return Err(invalid(
+                        "run.mqtt.limits.receive_maximum",
+                        "must be at least 1",
+                    ));
+                }
+                convert(
+                    "run.mqtt.limits.max_queued_messages",
+                    &l.max_queued_messages,
+                    &mut limits.max_queued_messages,
+                )?;
+                if l.max_queued_messages.is_some()
+                    && !(1..=usize::from(u16::MAX)).contains(&limits.max_queued_messages)
+                {
+                    return Err(invalid(
+                        "run.mqtt.limits.max_queued_messages",
+                        "must be between 1 and 65535",
+                    ));
+                }
+                convert(
+                    "run.mqtt.limits.session_expiry_max_s",
+                    &l.session_expiry_max_s,
+                    &mut limits.session_expiry_max_s,
+                )?;
+                convert(
+                    "run.mqtt.limits.max_persistent_sessions",
+                    &l.max_persistent_sessions,
+                    &mut limits.max_persistent_sessions,
                 )?;
             }
         }
@@ -826,6 +902,7 @@ mod tests {
         assert_eq!(c.api.listen, "");
         assert_eq!(c.api.database_url, "");
         assert!(!c.api.behind_proxy);
+        assert_eq!(c.mqtt.session_database_url, "");
     }
 
     #[test]
@@ -1328,6 +1405,63 @@ mod tests {
         c.apply_json(r#"{"run":{"api":{"database_url":"postgres://ro"}}}"#)
             .unwrap();
         assert_eq!(c.api.effective_database_url(&c.history), "postgres://ro");
+    }
+
+    #[test]
+    fn session_database_url_comes_from_file_and_environment_and_ignores_the_history_url() {
+        let mut c = config(&[]);
+        assert_eq!(c.mqtt.session_database_url, "");
+        // no fallback to the history database
+        c.apply_json(r#"{"run":{"history":{"database_url":"postgres://h"}}}"#)
+            .unwrap();
+        assert_eq!(c.mqtt.session_database_url, "");
+        c.apply_json(r#"{"run":{"mqtt":{"session_database_url":"postgres://file"}}}"#)
+            .unwrap();
+        assert_eq!(c.mqtt.session_database_url, "postgres://file");
+        // the environment beats the file; an empty variable changes nothing
+        c.apply_env(|name| {
+            (name == "DT_MQTT_SESSION_DATABASE_URL").then(|| "postgres://env".to_owned())
+        });
+        assert_eq!(c.mqtt.session_database_url, "postgres://env");
+        c.apply_env(|_| Some(String::new()));
+        assert_eq!(c.mqtt.session_database_url, "postgres://env");
+        // never shown
+        let shown = format!("{c:?}");
+        assert!(!shown.contains("postgres://env"), "{shown}");
+        assert!(shown.contains("<redacted>"));
+        assert!(!format!("{:?}", config(&[]).mqtt).contains("redacted"));
+    }
+
+    #[test]
+    fn session_limits_are_parsed_and_validated() {
+        let mut c = config(&[]);
+        c.apply_json(
+            r#"{"run":{"mqtt":{"limits":{"receive_maximum":"7","max_queued_messages":65535,
+                "session_expiry_max_s":600,"max_persistent_sessions":"12"}}}}"#,
+        )
+        .unwrap();
+        let l = &c.mqtt.limits;
+        assert_eq!(l.receive_maximum, 7);
+        assert_eq!(l.max_queued_messages, 65535);
+        assert_eq!(l.session_expiry_max_s, 600);
+        assert_eq!(l.max_persistent_sessions, 12);
+        for bad in [
+            r#"{"receive_maximum":0}"#,
+            r#"{"receive_maximum":65536}"#,
+            r#"{"receive_maximum":"x"}"#,
+            r#"{"max_queued_messages":0}"#,
+            r#"{"max_queued_messages":65536}"#,
+            r#"{"session_expiry_max_s":4294967296}"#,
+            r#"{"max_persistent_sessions":-1}"#,
+        ] {
+            let json = format!(r#"{{"run":{{"mqtt":{{"limits":{bad}}}}}}}"#);
+            assert!(config(&[]).apply_json(&json).is_err(), "{bad}");
+        }
+        // 0 persistent sessions is allowed: every client then needs a session that ends with its connection
+        let mut c = config(&[]);
+        c.apply_json(r#"{"run":{"mqtt":{"limits":{"max_persistent_sessions":0}}}}"#)
+            .unwrap();
+        assert_eq!(c.mqtt.limits.max_persistent_sessions, 0);
     }
 
     #[test]

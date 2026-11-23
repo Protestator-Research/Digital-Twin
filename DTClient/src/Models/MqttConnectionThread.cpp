@@ -11,7 +11,9 @@ namespace DigitalTwin::Client {
 
     MQTTConnectionThread::MQTTConnectionThread(std::string url, std::string port, DigitalTwin::Communication::MqttProtocolVersion version,
                                                std::string username, std::string password) :
-        Service(std::make_unique<DigitalTwin::Communication::MqttClientService>(std::move(url), std::move(port), "digital-twin-client", version,
+        // An empty client id: the service makes up a unique one. A fixed id would let two clients on one broker take
+        // each other's session over (the broker allows one connection per client id).
+        Service(std::make_unique<DigitalTwin::Communication::MqttClientService>(std::move(url), std::move(port), "", version,
                                                                                 std::move(username), std::move(password)))
     {
         connect(this, SIGNAL(connected()), this, SLOT(onConnect()));

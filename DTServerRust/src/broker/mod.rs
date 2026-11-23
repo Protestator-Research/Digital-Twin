@@ -1,8 +1,10 @@
-//! MQTT broker for 3.1.1 and 5, selectable per [`ProtocolMode`] (QoS 0 only). Port of `MqttBrokerService`.
+//! MQTT broker for 3.1.1 and 5, selectable per [`ProtocolMode`] (QoS 0, 1 and 2, resumable sessions). Port of `MqttBrokerService`.
 
+pub(crate) mod client;
 pub mod codec;
 pub(crate) mod core;
 pub mod limits;
+pub(crate) mod persist;
 pub mod protocol;
 pub(crate) mod session;
 pub mod subscriptions;
@@ -19,11 +21,13 @@ use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
 pub use limits::BrokerLimits;
-pub use protocol::{ProtocolMode, ProtocolVersion};
+pub use persist::SessionDatabase;
+pub use protocol::{ProtocolMode, ProtocolVersion, QoS};
 
 use self::core::Core;
+use self::persist::{PgSessionStore, SessionStore};
 use crate::auth::{Authenticator, ThrottleConfig};
-use crate::hub::Hub;
+use crate::hub::{now_unix_ms, Hub};
 
 /// Everything besides the port and the limits that configures a broker.
 #[derive(Clone, Default)]
@@ -34,18 +38,25 @@ pub struct BrokerOptions {
     pub authenticator: Option<Arc<dyn Authenticator>>,
     /// Blocking of repeated failed logins and limit of simultaneous checks (only used with an authenticator).
     pub throttle: ThrottleConfig,
+    /// PostgreSQL database that keeps the sessions of clients that outlive their connection (MQTT 3.1.1 with
+    /// clean session 0, MQTT 5 with a Session Expiry Interval): subscriptions, queued and unacknowledged
+    /// messages, QoS 2 state. `None` keeps them in memory only, so a restart of the broker loses them.
+    pub sessions: Option<SessionDatabase>,
 }
 
 /// A running broker. Dropping it starts the same shutdown as [`Broker::shutdown`] (MQTT 5 clients receive
-/// DISCONNECT "server shutting down", MQTT 3.1.1 clients are just disconnected, the hub is closed) but does not wait for the sessions to end;
-/// use [`Broker::shutdown`] to wait.
+/// DISCONNECT "server shutting down", MQTT 3.1.1 clients are just disconnected, the hub is closed) but does not wait for the sessions to end
+/// or for the session database; use [`Broker::shutdown`] to wait. Changes that are still queued for the database are lost.
 pub struct Broker {
     local_addr: SocketAddr,
     hub: Hub,
     core: Arc<Core>,
     shutdown_tx: watch::Sender<bool>,
     accept: JoinHandle<()>,
+    sweeper: JoinHandle<()>,
     sessions_done: mpsc::Receiver<()>,
+    /// The durable copy of the sessions, if there is one; stopped by [`Broker::shutdown`].
+    session_store: Option<Arc<PgSessionStore>>,
 }
 
 impl Broker {
@@ -70,6 +81,7 @@ impl Broker {
                 protocol,
                 authenticator: None,
                 throttle: ThrottleConfig::default(),
+                sessions: None,
             },
         )
         .await
@@ -87,19 +99,51 @@ impl Broker {
             protocol,
             authenticator,
             throttle,
+            sessions,
         } = options;
-        let listener = bind_dual_stack(port)?;
-        let local_addr = listener.local_addr()?;
+        // 0 is not a legal Receive Maximum (the CONNACK would announce it): callers of the library can pass it
+        let mut limits = limits;
+        limits.receive_maximum = limits.receive_maximum.max(1);
+        // The database comes first: an unreachable one is an error of the start, and the sessions it holds
+        // have to be there before the first client can connect.
+        let (persist, initial, session_store) = match &sessions {
+            Some(database) => {
+                let (store, initial) = PgSessionStore::connect(database, now_unix_ms(), &limits)
+                    .await
+                    .map_err(|e| {
+                        std::io::Error::other(format!("cannot open the MQTT session database: {e}"))
+                    })?;
+                info!(
+                    sessions = initial.len(),
+                    "MQTT sessions loaded from the database"
+                );
+                let persist: Arc<dyn SessionStore> = store.clone();
+                (Some(persist), initial, Some(store))
+            }
+            None => (None, Vec::new(), None),
+        };
+        let listener = match bind_dual_stack(port).and_then(|l| Ok((l.local_addr()?, l))) {
+            Ok((local_addr, listener)) => (local_addr, listener),
+            Err(e) => {
+                if let Some(store) = &session_store {
+                    store.shutdown(Duration::from_secs(1)).await;
+                }
+                return Err(e);
+            }
+        };
+        let (local_addr, listener) = listener;
         info!(
             %local_addr,
             protocol = %protocol,
             authentication = authenticator.is_some(),
             "MQTT broker listening"
         );
-        let core = Core::with_authenticator(limits, protocol, authenticator, throttle);
+        let core =
+            Core::with_authenticator(limits, protocol, authenticator, throttle, persist, initial);
         let hub = Hub::new(Arc::clone(&core));
         let (shutdown_tx, shutdown_rx) = watch::channel(false);
         let (alive_tx, sessions_done) = mpsc::channel::<()>(1);
+        let sweeper = core.spawn_sweeper(shutdown_rx.clone());
         let accept = tokio::spawn(accept_loop(
             listener,
             Arc::clone(&core),
@@ -112,7 +156,9 @@ impl Broker {
             core,
             shutdown_tx,
             accept,
+            sweeper,
             sessions_done,
+            session_store,
         })
     }
 
@@ -140,7 +186,7 @@ impl Broker {
         self.core.tracker.total()
     }
 
-    /// Number of subscriptions (session, filter) of all client sessions.
+    /// Number of subscriptions (session, filter) of all client sessions, offline ones included.
     pub fn subscription_count(&self) -> usize {
         self.core.store.lock().unwrap().subscription_count()
     }
@@ -151,18 +197,24 @@ impl Broker {
     }
 
     /// Stops accepting, closes the connections of all clients (MQTT 5 clients get a DISCONNECT first, 3.1.1 has
-    /// none from the server) and waits until all sessions are gone (at most 5 seconds).
+    /// none from the server) and waits until all sessions are gone (at most 5 seconds). Then the changes still
+    /// queued for the session database are written (at most 5 seconds more).
     ///
     /// Afterwards the hub is closed: internal subscriptions end (`recv()` returns `None`) and
     /// `Hub::publish` / `Hub::subscribe` return `HubError::Closed`.
     pub async fn shutdown(mut self) {
         self.begin_shutdown();
         let _ = (&mut self.accept).await;
+        let _ = (&mut self.sweeper).await;
         if tokio::time::timeout(Duration::from_secs(5), self.sessions_done.recv())
             .await
             .is_err()
         {
             warn!("not all sessions ended within 5 seconds");
+        }
+        // The sessions have written their last changes (disconnect times, ...): store them before the end.
+        if let Some(store) = self.session_store.take() {
+            store.shutdown(Duration::from_secs(5)).await;
         }
         info!("MQTT broker stopped");
     }

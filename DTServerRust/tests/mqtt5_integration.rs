@@ -16,7 +16,7 @@ use rumqttc::{QoS, SubscribeReasonCode};
 const SHORT: Duration = Duration::from_millis(400);
 
 /// CONNACK properties the broker announces to MQTT 5 clients with a maximum packet size of 1024.
-const CONNACK_PROPS_1024: [u8; 13] = [0x24, 0, 0x25, 0, 0x27, 0, 0, 4, 0, 0x29, 0, 0x2A, 0];
+const CONNACK_PROPS_1024: [u8; 14] = [0x21, 0, 100, 0x25, 0, 0x27, 0, 0, 4, 0, 0x29, 0, 0x2A, 0];
 
 // --- protocol modes --------------------------------------------------------------------------
 
@@ -178,7 +178,7 @@ async fn connack_announces_what_the_broker_supports() {
     };
     let broker = start_mode(limits, ProtocolMode::V5).await;
     let (_raw, body) = Raw::connected5(&addr(&broker), "props").await;
-    // session present 0, reason 0, then the property block: max QoS 0, retain not available, maximum packet
+    // session present 0, reason 0, then the property block: receive maximum 100, retain not available, maximum packet
     // size, subscription identifiers and shared subscriptions not available
     let mut expected = vec![0, 0, CONNACK_PROPS_1024.len() as u8];
     expected.extend(CONNACK_PROPS_1024);
@@ -187,7 +187,9 @@ async fn connack_announces_what_the_broker_supports() {
     // the same through a real client
     let client = ClientV5::connect(broker.port(), "rumqttc").await;
     let props = client.connack.properties.as_ref().expect("properties");
-    assert_eq!(props.max_qos, Some(0));
+    // Maximum QoS is not sent any more: absent means QoS 2
+    assert_eq!(props.max_qos, None);
+    assert_eq!(props.receive_max, Some(100));
     assert_eq!(props.retain_available, Some(0));
     assert_eq!(props.max_packet_size, Some(1024));
     assert_eq!(props.shared_subscription_available, Some(0));
@@ -221,7 +223,7 @@ async fn empty_client_id_is_assigned_in_mqtt5_and_checked_in_3_1_1() {
         raw.send(&connect5_raw(flags, 30, &[], "")).await;
         let (first, body) = raw.read_packet().await.unwrap();
         assert_eq!((first, &body[..2]), (0x20, &[0u8, 0][..]));
-        // property block: the 13 bytes of the standard announcements, then the assigned id as the last
+        // property block: the 14 bytes of the standard announcements, then the assigned id as the last
         // property: 0x12, length (2 bytes), "dt-..."
         let props = &body[3..];
         let at = CONNACK_PROPS_1024.len();
@@ -262,7 +264,7 @@ async fn suback_and_unsuback_carry_mqtt5_reason_codes() {
     };
     let broker = start_mode(limits, ProtocolMode::V5).await;
     let (mut raw, _) = Raw::connected5(&addr(&broker), "codes").await;
-    // QoS 2 is granted as 0; shared subscriptions are not supported; "a/#/b" is invalid; the third filter
+    // QoS 2 is granted as requested; shared subscriptions are not supported; "a/#/b" is invalid; the third filter
     // exceeds the quota of 2
     let codes = raw
         .subscribe5(
@@ -276,7 +278,7 @@ async fn suback_and_unsuback_carry_mqtt5_reason_codes() {
             ],
         )
         .await;
-    assert_eq!(codes, [0x00, 0x9E, 0x8F, 0x00, 0x97]);
+    assert_eq!(codes, [0x02, 0x9E, 0x8F, 0x00, 0x97]);
 
     // UNSUBACK: one reason code per filter, 0x11 for a filter the session did not have
     raw.send(&unsubscribe5(9, &["a", "nope"])).await;
@@ -296,7 +298,7 @@ async fn real_client_gets_mqtt5_reason_codes() {
     c.client.subscribe("a", QoS5::AtLeastOnce).await.unwrap();
     assert_eq!(
         c.wait_suback().await,
-        vec![SubReason5::Success(QoS5::AtMostOnce)]
+        vec![SubReason5::Success(QoS5::AtLeastOnce)]
     );
     c.client.subscribe("b", QoS5::AtMostOnce).await.unwrap();
     assert_eq!(c.wait_suback().await, vec![SubReason5::QuotaExceeded]);
@@ -368,7 +370,6 @@ async fn protocol_violations_end_with_a_disconnect_reason_code() {
     let broker = start_mode(limits, ProtocolMode::Both).await;
     let a = addr(&broker);
     let cases: Vec<(&str, Vec<u8>, u8)> = vec![
-        ("QoS 1 publish", packet(0x32, &[0, 1, b't', 0, 1, 0]), 0x9B),
         ("QoS 3 publish", packet(0x36, &[0, 1, b't', 0]), 0x81),
         ("second CONNECT", connect5("again"), 0x82),
         ("AUTH packet", vec![0xF0, 0], 0x82),
@@ -392,7 +393,7 @@ async fn protocol_violations_end_with_a_disconnect_reason_code() {
     }
     // the same violations close a 3.1.1 connection without any packet
     let mut raw = Raw::connected(&a, "violator311").await;
-    raw.send(&publish_qos1("t", b"x")).await;
+    raw.send(&packet(0x36, &[0, 1, b't', 0, 1])).await;
     assert!(raw.read_until_closed().await.is_none());
     broker.shutdown().await;
 }

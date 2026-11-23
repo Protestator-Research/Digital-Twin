@@ -260,12 +260,14 @@ async fn slow_internal_subscriber_never_blocks_the_broker() {
 // --- protocol violations and limits (raw sockets) ---------------------------------------------
 
 #[tokio::test]
-async fn qos1_publish_closes_the_connection_without_a_packet() {
+async fn qos1_publish_is_acknowledged_with_puback() {
     let broker = start(BrokerLimits::default()).await;
     let mut raw = Raw::connected(&addr(&broker), "q1").await;
     raw.send(&publish_qos1("t", b"x")).await;
-    // MQTT 3.1.1 has no server DISCONNECT: the connection is just closed
-    assert!(raw.read_until_closed().await.is_none());
+    // packet identifier 1 comes back in the PUBACK, the connection stays open
+    assert_eq!(raw.read_packet().await.unwrap(), (0x40, vec![0, 1]));
+    raw.send(&pingreq()).await;
+    assert_eq!(raw.read_packet().await.unwrap().0, 0xD0);
     broker.shutdown().await;
 }
 
@@ -760,10 +762,10 @@ async fn nothing_but_connack_is_sent_before_the_connection_is_established() {
 async fn hub_publish_rejects_payloads_that_do_not_fit() {
     let broker = start(BrokerLimits::default()).await;
     let hub = broker.hub();
-    // encoded size = 1 + 3 (remaining length) + 2 + 1 (topic) + payload
-    assert_eq!(hub.publish("t", vec![0u8; 262_144 - 7]), Ok(()));
+    // encoded size at QoS 1 = 1 + 3 (remaining length) + 2 + 1 (topic) + 2 (packet id) + payload
+    assert_eq!(hub.publish("t", vec![0u8; 262_144 - 9]), Ok(()));
     assert_eq!(
-        hub.publish("t", vec![0u8; 262_144 - 6]),
+        hub.publish("t", vec![0u8; 262_144 - 8]),
         Err(HubError::PayloadTooLarge)
     );
     assert_eq!(
@@ -805,7 +807,7 @@ async fn empty_client_id_needs_a_clean_session() {
         "closed after the refusal"
     );
 
-    // an explicit id is fine without clean session (nothing is persisted, session present is 0)
+    // an explicit id is fine without clean session (there is no earlier session, so session present is 0)
     let (_raw, body) =
         Raw::connected_with(&addr(&broker), &connect_raw(0b00, 30, "mine", &[])).await;
     assert_eq!(body, [0, 0]);
@@ -851,17 +853,23 @@ async fn connect_with_will_and_credentials() {
 }
 
 #[tokio::test]
-async fn subscribe_grants_qos_0_and_disconnect_closes() {
+async fn subscribe_grants_the_requested_qos_and_disconnect_closes() {
     let broker = start(BrokerLimits::default()).await;
     let hub = broker.hub();
     let mut raw = Raw::connected(&addr(&broker), "qos").await;
-    // SUBSCRIBE id 3: "t" requested with QoS 1, "u" with QoS 2; both are granted with QoS 0
+    // SUBSCRIBE id 3: "t" requested with QoS 1, "u" with QoS 2; both are granted as requested
     raw.send(&packet(0x82, &[0, 3, 0, 1, b't', 1, 0, 1, b'u', 2]))
         .await;
     let (first, body) = raw.read_packet().await.unwrap();
-    assert_eq!((first, &body[..]), (0x90, &[0, 3, 0, 0][..]));
+    assert_eq!((first, &body[..]), (0x90, &[0, 3, 1, 2][..]));
+    // the server's own publish is QoS 1, delivered with the lower of that and the granted QoS
     hub.publish("t", "x").unwrap();
-    assert_eq!(raw.read_publish().await, ("t".to_owned(), b"x".to_vec()));
+    let got = raw.read_any_publish(false).await;
+    assert_eq!(
+        (got.topic.as_str(), got.payload.as_slice(), got.qos),
+        ("t", &b"x"[..], 1)
+    );
+    raw.send(&ack(PUBACK, got.packet_id)).await;
     // UNSUBACK is just the packet id
     raw.send(&unsubscribe(4, &["t", "u"])).await;
     let (first, body) = raw.read_packet().await.unwrap();
@@ -883,7 +891,8 @@ async fn tracker_slot_is_released_after_keep_alive_timeout_and_decode_error() {
     let broker = start(limits).await;
     let mut idle = Raw::connected_keep_alive(&addr(&broker), "idle", 1).await;
     let mut bad = Raw::connected(&addr(&broker), "bad").await;
-    bad.send(&publish_qos1("t", b"x")).await;
+    // PUBLISH with the invalid QoS 3
+    bad.send(&packet(0x36, &[0, 1, b't', 0, 1])).await;
     bad.read_until_closed().await;
     // the decode error released its slot while the idle client still holds one
     for _ in 0..50 {

@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use dt_server::api::{ApiService, BasicAuth};
 use dt_server::auth::{redact_url, AuthMode, Authenticator, SysmlAuthOptions, SysmlAuthenticator};
-use dt_server::broker::{Broker, BrokerOptions};
+use dt_server::broker::{Broker, BrokerOptions, SessionDatabase};
 use dt_server::config::Config;
 use dt_server::twin::{StoreSettings, StoreStats, TwinBackend, TwinOptions, TwinService};
 use tracing::{error, info, warn};
@@ -90,6 +90,28 @@ async fn run() -> std::process::ExitCode {
             }
         }
     };
+    let session_url = config.mqtt.session_database_url.as_str();
+    let sessions = if config.mqtt.limits.session_expiry_max_s == 0 {
+        // no session can outlive its connection, so there is nothing to store: the store is not even opened
+        info!(
+            "MQTT session persistence is off because run.mqtt.limits.session_expiry_max_s is 0: every session ends \
+             with its connection"
+        );
+        None
+    } else if session_url.is_empty() {
+        warn!(
+            "MQTT sessions are kept in memory only and are lost when the server restarts: set \
+             run.mqtt.session_database_url (environment variable DT_MQTT_SESSION_DATABASE_URL) to keep them in \
+             PostgreSQL"
+        );
+        None
+    } else {
+        info!("MQTT sessions are stored in PostgreSQL (the URL is not logged)");
+        Some(SessionDatabase {
+            url: session_url.to_owned(),
+            schema: None,
+        })
+    };
     let broker = match Broker::start_with(
         config.mqtt.port,
         config.mqtt.limits.clone(),
@@ -97,6 +119,7 @@ async fn run() -> std::process::ExitCode {
             protocol: config.mqtt.protocol,
             authenticator: authenticator.clone(),
             throttle: config.mqtt.auth_throttle.clone(),
+            sessions,
         },
     )
     .await

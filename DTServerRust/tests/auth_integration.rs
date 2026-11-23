@@ -80,6 +80,7 @@ async fn start_auth_throttled(
             protocol: mode,
             authenticator: Some(Arc::new(Handle(Arc::clone(fake)))),
             throttle,
+            ..BrokerOptions::default()
         },
     )
     .await

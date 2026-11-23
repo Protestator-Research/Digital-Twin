@@ -13,6 +13,35 @@ pub enum ProtocolVersion {
     V5,
 }
 
+/// Quality of service level of a PUBLISH or a subscription (MQTT 3.1.1 4.3, MQTT 5 4.3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub enum QoS {
+    /// At most once: no acknowledgement, no retransmission.
+    #[default]
+    AtMostOnce = 0,
+    /// At least once: acknowledged with PUBACK.
+    AtLeastOnce = 1,
+    /// Exactly once: PUBREC / PUBREL / PUBCOMP handshake.
+    ExactlyOnce = 2,
+}
+
+impl QoS {
+    /// The QoS of the two wire bits; 3 is not a valid level and gives `None`.
+    pub fn from_bits(bits: u8) -> Option<QoS> {
+        match bits {
+            0 => Some(QoS::AtMostOnce),
+            1 => Some(QoS::AtLeastOnce),
+            2 => Some(QoS::ExactlyOnce),
+            _ => None,
+        }
+    }
+
+    /// The value of the two wire bits.
+    pub fn bits(self) -> u8 {
+        self as u8
+    }
+}
+
 /// Which protocol versions the broker accepts (`run.mqtt.protocol_version`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ProtocolMode {
@@ -84,6 +113,17 @@ impl FromStr for ProtocolMode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn qos_bits_round_trip() {
+        for bits in 0..=2u8 {
+            assert_eq!(QoS::from_bits(bits).unwrap().bits(), bits);
+        }
+        assert_eq!(QoS::from_bits(3), None);
+        assert_eq!(QoS::from_bits(255), None);
+        assert!(QoS::AtMostOnce < QoS::AtLeastOnce && QoS::AtLeastOnce < QoS::ExactlyOnce);
+        assert_eq!(QoS::default(), QoS::AtMostOnce);
+    }
 
     #[test]
     fn parses_the_three_modes() {

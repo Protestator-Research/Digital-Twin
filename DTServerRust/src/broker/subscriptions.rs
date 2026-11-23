@@ -3,6 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use super::protocol::QoS;
 use super::topic::match_filter;
 
 /// Identity of a session inside the broker.
@@ -16,13 +17,20 @@ pub enum AddResult {
     QuotaExceeded,
 }
 
+/// Options of one subscription.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Options {
+    /// QoS granted to the subscriber: the upper bound of the QoS of the messages delivered through it.
+    qos: QoS,
+    /// MQTT 5 No Local.
+    no_local: bool,
+}
+
 /// Not thread safe on its own; the broker keeps it behind a mutex.
 #[derive(Debug, Default)]
 pub struct SubscriptionStore {
-    by_filter: HashMap<String, Vec<SessionId>>,
+    by_filter: HashMap<String, Vec<(SessionId, Options)>>,
     by_session: HashMap<SessionId, HashSet<String>>,
-    /// Subscriptions (session, filter) made with the MQTT 5 No Local option.
-    no_local: HashSet<(SessionId, String)>,
 }
 
 impl SubscriptionStore {
@@ -30,11 +38,14 @@ impl SubscriptionStore {
         Self::default()
     }
 
-    /// Adds or updates a subscription. Updating an existing filter never counts against the quota.
+    #[cfg(test)]
+    /// Adds or updates a subscription with granted QoS 0. Updating an existing filter never counts against
+    /// the quota.
     pub fn add(&mut self, session: SessionId, filter: &str, max_subscriptions: usize) -> AddResult {
         self.add_with_options(session, filter, max_subscriptions, false)
     }
 
+    #[cfg(test)]
     /// Like [`SubscriptionStore::add`] with the MQTT 5 No Local option: with `no_local` the session does not
     /// get the messages it published itself through this subscription. An update replaces the option.
     pub fn add_with_options(
@@ -44,12 +55,31 @@ impl SubscriptionStore {
         max_subscriptions: usize,
         no_local: bool,
     ) -> AddResult {
-        if self
+        self.add_subscription(
+            session,
+            filter,
+            max_subscriptions,
+            QoS::AtMostOnce,
+            no_local,
+        )
+    }
+
+    /// Adds or updates a subscription that is granted `qos`. An update replaces QoS and No Local.
+    pub fn add_subscription(
+        &mut self,
+        session: SessionId,
+        filter: &str,
+        max_subscriptions: usize,
+        qos: QoS,
+        no_local: bool,
+    ) -> AddResult {
+        let options = Options { qos, no_local };
+        if let Some(existing) = self
             .by_filter
-            .get(filter)
-            .is_some_and(|sessions| sessions.contains(&session))
+            .get_mut(filter)
+            .and_then(|sessions| sessions.iter_mut().find(|(s, _)| *s == session))
         {
-            self.set_no_local(session, filter, no_local);
+            existing.1 = options;
             return AddResult::Updated;
         }
         let owned = self.by_session.entry(session).or_default();
@@ -63,17 +93,8 @@ impl SubscriptionStore {
         self.by_filter
             .entry(filter.to_owned())
             .or_default()
-            .push(session);
-        self.set_no_local(session, filter, no_local);
+            .push((session, options));
         AddResult::Added
-    }
-
-    fn set_no_local(&mut self, session: SessionId, filter: &str, no_local: bool) {
-        if no_local {
-            self.no_local.insert((session, filter.to_owned()));
-        } else if !self.no_local.is_empty() {
-            self.no_local.remove(&(session, filter.to_owned()));
-        }
     }
 
     /// Removes one subscription. Returns true if the session had it.
@@ -81,14 +102,11 @@ impl SubscriptionStore {
         let mut removed = false;
         if let Some(sessions) = self.by_filter.get_mut(filter) {
             let before = sessions.len();
-            sessions.retain(|s| *s != session);
+            sessions.retain(|(s, _)| *s != session);
             removed = sessions.len() != before;
             if sessions.is_empty() {
                 self.by_filter.remove(filter);
             }
-        }
-        if !self.no_local.is_empty() {
-            self.no_local.remove(&(session, filter.to_owned()));
         }
         if let Some(owned) = self.by_session.get_mut(&session) {
             owned.remove(filter);
@@ -105,11 +123,8 @@ impl SubscriptionStore {
             return;
         };
         for filter in filters {
-            if !self.no_local.is_empty() {
-                self.no_local.remove(&(session, filter.clone()));
-            }
             if let Some(sessions) = self.by_filter.get_mut(&filter) {
-                sessions.retain(|s| *s != session);
+                sessions.retain(|(s, _)| *s != session);
                 if sessions.is_empty() {
                     self.by_filter.remove(&filter);
                 }
@@ -117,6 +132,7 @@ impl SubscriptionStore {
         }
     }
 
+    #[cfg(test)]
     /// Number of distinct filters of a session.
     pub fn filter_count(&self, session: SessionId) -> usize {
         self.by_session.get(&session).map_or(0, HashSet::len)
@@ -127,38 +143,67 @@ impl SubscriptionStore {
         self.by_session.values().map(HashSet::len).sum()
     }
 
+    #[cfg(test)]
     /// True if no subscription is stored at all.
     pub fn is_empty(&self) -> bool {
         self.by_filter.is_empty() && self.by_session.is_empty()
     }
 
+    /// The subscriptions of a session as (filter, granted QoS, No Local), in no particular order.
+    pub fn subscriptions_of(&self, session: SessionId) -> Vec<(String, QoS, bool)> {
+        let Some(filters) = self.by_session.get(&session) else {
+            return Vec::new();
+        };
+        filters
+            .iter()
+            .filter_map(|filter| {
+                let (_, o) = self
+                    .by_filter
+                    .get(filter)?
+                    .iter()
+                    .find(|(s, _)| *s == session)?;
+                Some((filter.clone(), o.qos, o.no_local))
+            })
+            .collect()
+    }
+
+    #[cfg(test)]
     /// Sessions that receive a message on `topic`, each session once, even if several of its filters match.
     /// The publisher is not excluded.
     pub fn matching(&self, topic: &str) -> Vec<SessionId> {
         self.matching_from(topic, None)
     }
 
+    #[cfg(test)]
     /// Like [`SubscriptionStore::matching`] for a message published by session `publisher`: a subscription
     /// with the No Local option does not count for the publisher, so the publisher only receives the message
     /// if one of its other matching subscriptions allows it.
     pub fn matching_from(&self, topic: &str, publisher: Option<SessionId>) -> Vec<SessionId> {
-        let mut seen = HashSet::new();
-        let mut out = Vec::new();
+        self.targets_from(topic, publisher)
+            .into_iter()
+            .map(|(session, _)| session)
+            .collect()
+    }
+
+    /// Like [`SubscriptionStore::matching_from`], with the QoS each session is granted for the message: the
+    /// highest QoS of its matching subscriptions (that count for the publisher), because a session gets
+    /// the message once, with the best level it asked for.
+    pub fn targets_from(&self, topic: &str, publisher: Option<SessionId>) -> Vec<(SessionId, QoS)> {
+        let mut best: HashMap<SessionId, QoS> = HashMap::new();
         for (filter, sessions) in &self.by_filter {
             if !match_filter(filter, topic) {
                 continue;
             }
-            for &session in sessions {
-                if publisher == Some(session) && self.no_local.contains(&(session, filter.clone()))
-                {
+            for (session, options) in sessions {
+                if publisher == Some(*session) && options.no_local {
                     continue;
                 }
-                if seen.insert(session) {
-                    out.push(session);
-                }
+                best.entry(*session)
+                    .and_modify(|q| *q = (*q).max(options.qos))
+                    .or_insert(options.qos);
             }
         }
-        out
+        best.into_iter().collect()
     }
 }
 
@@ -253,9 +298,64 @@ mod tests {
         s.add_with_options(1, "a", 10, true);
         assert!(s.matching_from("a", Some(1)).is_empty());
         s.remove(1, "a");
-        assert!(s.no_local.is_empty());
+        assert!(s.is_empty());
         s.add_with_options(1, "b", 10, true);
         s.remove_all(1);
-        assert!(s.no_local.is_empty() && s.is_empty());
+        assert!(s.is_empty());
+    }
+
+    fn targets(
+        s: &SubscriptionStore,
+        topic: &str,
+        publisher: Option<SessionId>,
+    ) -> Vec<(SessionId, QoS)> {
+        let mut v = s.targets_from(topic, publisher);
+        v.sort_unstable();
+        v
+    }
+
+    #[test]
+    fn highest_granted_qos_of_the_matching_filters_counts() {
+        let mut s = SubscriptionStore::new();
+        s.add_subscription(1, "a/b", 10, QoS::AtLeastOnce, false);
+        s.add_subscription(1, "a/+", 10, QoS::ExactlyOnce, false);
+        s.add_subscription(1, "#", 10, QoS::AtMostOnce, false);
+        s.add_subscription(2, "a/#", 10, QoS::AtLeastOnce, false);
+        s.add(3, "a/b", 10);
+        // one entry per session, with the best QoS of its matching filters
+        assert_eq!(
+            targets(&s, "a/b", None),
+            vec![
+                (1, QoS::ExactlyOnce),
+                (2, QoS::AtLeastOnce),
+                (3, QoS::AtMostOnce)
+            ]
+        );
+        // only "#" matches
+        assert_eq!(targets(&s, "x", None), vec![(1, QoS::AtMostOnce)]);
+    }
+
+    #[test]
+    fn update_replaces_the_qos_and_no_local_stays_per_subscription() {
+        let mut s = SubscriptionStore::new();
+        assert_eq!(
+            s.add_subscription(1, "t", 10, QoS::ExactlyOnce, true),
+            AddResult::Added
+        );
+        assert!(targets(&s, "t", Some(1)).is_empty());
+        assert_eq!(
+            s.add_subscription(1, "t", 10, QoS::AtLeastOnce, false),
+            AddResult::Updated
+        );
+        assert_eq!(targets(&s, "t", Some(1)), vec![(1, QoS::AtLeastOnce)]);
+        assert_eq!(
+            s.subscriptions_of(1),
+            vec![("t".to_owned(), QoS::AtLeastOnce, false)]
+        );
+        // a no local subscription with a higher QoS does not raise the QoS of the publisher's other match
+        s.add_subscription(1, "#", 10, QoS::ExactlyOnce, true);
+        assert_eq!(targets(&s, "t", Some(1)), vec![(1, QoS::AtLeastOnce)]);
+        assert_eq!(targets(&s, "t", Some(2)), vec![(1, QoS::ExactlyOnce)]);
+        assert!(s.subscriptions_of(9).is_empty());
     }
 }

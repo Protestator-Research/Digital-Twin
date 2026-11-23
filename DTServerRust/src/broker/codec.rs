@@ -1,21 +1,24 @@
-//! Minimal MQTT codec for exactly the packets the broker needs (QoS 0 only), for MQTT 3.1.1 (protocol
-//! level 4) and MQTT 5 (level 5).
+//! Minimal MQTT codec for exactly the packets the broker needs, for MQTT 3.1.1 (protocol level 4) and
+//! MQTT 5 (level 5), with QoS 0, 1 and 2.
 //!
-//! Decoded: CONNECT, PUBLISH (QoS 0), SUBSCRIBE, UNSUBSCRIBE, PINGREQ, DISCONNECT. All other packet types
-//! are reported as [`Packet::Ignored`]. Encoded: CONNACK, PUBLISH (QoS 0), SUBACK, UNSUBACK, PINGRESP and, in
-//! MQTT 5 only, the server-sent DISCONNECT.
+//! Decoded: CONNECT, PUBLISH (any QoS, with packet identifier and DUP flag), PUBACK, PUBREC, PUBREL,
+//! PUBCOMP, SUBSCRIBE (with the requested QoS of every filter), UNSUBSCRIBE, PINGREQ, DISCONNECT. All other
+//! packet types are reported as [`Packet::Ignored`]. Encoded: CONNACK, PUBLISH (any QoS), PUBACK, PUBREC,
+//! PUBREL, PUBCOMP, SUBACK, UNSUBACK, PINGRESP and, in MQTT 5 only, the server-sent DISCONNECT.
 //! The version of a connection is known after its CONNECT ([`Connect::protocol`]); every later `decode` and
-//! `encode_*` call takes it. In MQTT 5 the properties of incoming packets are validated for length and
-//! skipped (none of them changes what a QoS 0 broker does), and outgoing packets carry no properties except
-//! in CONNACK. Of a CONNECT the will is validated and skipped; user name and password are decoded
-//! ([`Connect::username`], [`Connect::password`]) for the authentication of the session.
+//! `encode_*` call takes it. In MQTT 5 the properties of CONNECT (Session Expiry Interval, Receive Maximum)
+//! and DISCONNECT (Session Expiry Interval) are walked with the wire type of every property and the numeric
+//! ones the broker acts on are reported; the properties of all other incoming packets are validated for
+//! length and skipped. Outgoing packets carry no properties except in CONNACK. Of a CONNECT the will is
+//! validated and skipped; user name and password are decoded ([`Connect::username`], [`Connect::password`])
+//! for the authentication of the session.
 //!
 //! The size check happens on the fixed header, before the body is buffered.
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use thiserror::Error;
 
-pub use super::protocol::ProtocolVersion;
+pub use super::protocol::{ProtocolVersion, QoS};
 
 /// CONNACK return codes (MQTT 3.1.1, 3.2.2.3) and reason codes (MQTT 5, 3.2.2.2) used by the broker.
 pub mod connack {
@@ -38,6 +41,17 @@ pub mod connack {
     pub const V5_BAD_USERNAME_OR_PASSWORD: u8 = 0x86;
     /// MQTT 5: Server unavailable.
     pub const V5_SERVER_UNAVAILABLE: u8 = 0x88;
+    /// MQTT 5: Quota exceeded (here: too many sessions that outlive their connection).
+    pub const V5_QUOTA_EXCEEDED: u8 = 0x97;
+
+    /// Code that refuses a CONNECT because no further persistent session may be created. MQTT 3.1.1 has no
+    /// better code than "server unavailable".
+    pub fn quota_exceeded(version: ProtocolVersion) -> u8 {
+        match version {
+            ProtocolVersion::V311 => SERVER_UNAVAILABLE,
+            ProtocolVersion::V5 => V5_QUOTA_EXCEEDED,
+        }
+    }
 
     /// Code that refuses a CONNECT because of missing or wrong credentials.
     pub fn bad_credentials(version: ProtocolVersion) -> u8 {
@@ -75,6 +89,8 @@ pub mod connack {
 /// SUBACK return codes (MQTT 3.1.1, 3.9.3) and reason codes (MQTT 5, 3.9.3).
 pub mod suback {
     pub const GRANTED_QOS_0: u8 = 0x00;
+    pub const GRANTED_QOS_1: u8 = 0x01;
+    pub const GRANTED_QOS_2: u8 = 0x02;
     /// MQTT 3.1.1 failure; MQTT 5 uses the more specific codes below.
     pub const FAILURE: u8 = 0x80;
     /// MQTT 5: Topic Filter invalid.
@@ -97,9 +113,21 @@ pub mod disconnect {
     pub const PROTOCOL_ERROR: u8 = 0x82;
     pub const SERVER_SHUTTING_DOWN: u8 = 0x8B;
     pub const KEEP_ALIVE_TIMEOUT: u8 = 0x8D;
+    /// Another connection with the same client identifier took over the session.
+    pub const SESSION_TAKEN_OVER: u8 = 0x8E;
     pub const TOPIC_NAME_INVALID: u8 = 0x90;
     pub const PACKET_TOO_LARGE: u8 = 0x95;
-    pub const QOS_NOT_SUPPORTED: u8 = 0x9B;
+    /// The client has more unacknowledged QoS 1/2 PUBLISH packets in flight than the broker allows.
+    pub const RECEIVE_MAXIMUM_EXCEEDED: u8 = 0x93;
+}
+
+/// Reason codes (MQTT 5, 3.4.2.1, 3.5.2.1, 3.6.2.1, 3.7.2.1) shared by PUBACK, PUBREC, PUBREL and PUBCOMP.
+/// MQTT 3.1.1 has none.
+pub mod puback {
+    pub const SUCCESS: u8 = 0x00;
+    pub const PACKET_IDENTIFIER_IN_USE: u8 = 0x91;
+    pub const PACKET_IDENTIFIER_NOT_FOUND: u8 = 0x92;
+    pub const QUOTA_EXCEEDED: u8 = 0x97;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -117,8 +145,6 @@ pub enum DecodeError {
         "unsupported protocol level (only MQTT 3.1.1, level 4, and MQTT 5, level 5, are supported)"
     )]
     UnacceptableProtocolLevel,
-    #[error("only QoS 0 is supported")]
-    QosNotSupported,
     /// A packet that is not allowed here (MQTT 5 AUTH: there is no enhanced authentication): DISCONNECT 0x82.
     #[error("protocol error: {0}")]
     ProtocolError(&'static str),
@@ -135,6 +161,15 @@ pub struct Connect {
     pub username: Option<String>,
     /// Password of the CONNECT (binary data), if the flag was set. Never log it.
     pub password: Option<Bytes>,
+    /// The raw MQTT 5 Session Expiry Interval in seconds (property 0x11): 0 when absent and always 0 in
+    /// 3.1.1. The session layer derives the effective expiry of a 3.1.1 client from `clean_session`.
+    pub session_expiry: u32,
+    /// MQTT 5 Receive Maximum (property 0x21): how many unacknowledged QoS 1/2 PUBLISH packets the client
+    /// accepts from the broker; 65535 if absent and always in 3.1.1.
+    pub receive_maximum: u16,
+    /// MQTT 5 Maximum Packet Size the client accepts (property 0x27); `None` when absent and always in
+    /// 3.1.1. The value 0 is a protocol error.
+    pub maximum_packet_size: Option<u32>,
 }
 
 impl std::fmt::Debug for Connect {
@@ -147,6 +182,9 @@ impl std::fmt::Debug for Connect {
             .field("protocol", &self.protocol)
             .field("username", &self.username)
             .field("password", &self.password.as_ref().map(|_| "<redacted>"))
+            .field("session_expiry", &self.session_expiry)
+            .field("receive_maximum", &self.receive_maximum)
+            .field("maximum_packet_size", &self.maximum_packet_size)
             .finish()
     }
 }
@@ -155,6 +193,11 @@ impl std::fmt::Debug for Connect {
 pub struct Publish {
     pub topic: String,
     pub payload: Bytes,
+    pub qos: QoS,
+    /// Packet identifier, `Some` exactly for QoS 1 and 2 (never 0).
+    pub packet_id: Option<u16>,
+    /// DUP flag: the sender repeats an earlier attempt to send this packet (only possible above QoS 0).
+    pub dup: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -162,6 +205,8 @@ pub struct SubscribeEntry {
     pub filter: String,
     /// MQTT 5 No Local option: do not deliver the client's own publishes back to it. Always false in 3.1.1.
     pub no_local: bool,
+    /// QoS the client asks for (bits 0-1 of the subscription options, both versions).
+    pub qos: QoS,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -177,13 +222,40 @@ pub enum Packet {
         filters: Vec<String>,
     },
     PingReq,
-    Disconnect,
-    /// A well formed packet of a type the broker does not act on (PUBACK, ...).
+    Disconnect {
+        /// MQTT 5 Session Expiry Interval (property 0x11) of the DISCONNECT, `None` if absent or in 3.1.1.
+        session_expiry: Option<u32>,
+    },
+    /// PUBACK: acknowledges a QoS 1 PUBLISH. `reason` is 0 in 3.1.1 and when MQTT 5 omits it.
+    PubAck {
+        packet_id: u16,
+        reason: u8,
+    },
+    /// PUBREC: first answer to a QoS 2 PUBLISH.
+    PubRec {
+        packet_id: u16,
+        reason: u8,
+    },
+    /// PUBREL: release of a QoS 2 message, answer to PUBREC.
+    PubRel {
+        packet_id: u16,
+        reason: u8,
+    },
+    /// PUBCOMP: end of the QoS 2 handshake, answer to PUBREL.
+    PubComp {
+        packet_id: u16,
+        reason: u8,
+    },
+    /// A well formed packet of a type the broker does not act on (SUBACK, ...).
     Ignored(u8),
 }
 
 const CONNECT: u8 = 1;
 const PUBLISH: u8 = 3;
+const PUBACK: u8 = 4;
+const PUBREC: u8 = 5;
+const PUBREL: u8 = 6;
+const PUBCOMP: u8 = 7;
 const SUBSCRIBE: u8 = 8;
 const UNSUBSCRIBE: u8 = 10;
 const PINGREQ: u8 = 12;
@@ -237,8 +309,8 @@ fn decode_body(first: u8, body: Bytes, version: ProtocolVersion) -> Result<Packe
     let flags = first & 0x0F;
     let mut r = Reader(body);
     let required_flags = match kind {
-        CONNECT | PINGREQ | DISCONNECT => Some(0),
-        SUBSCRIBE | UNSUBSCRIBE => Some(0b0010),
+        CONNECT | PINGREQ | DISCONNECT | PUBACK | PUBREC | PUBCOMP => Some(0),
+        SUBSCRIBE | UNSUBSCRIBE | PUBREL => Some(0b0010),
         _ => None,
     };
     if required_flags.is_some_and(|f| f != flags) {
@@ -251,19 +323,36 @@ fn decode_body(first: u8, body: Bytes, version: ProtocolVersion) -> Result<Packe
             if flags & 0b1000 != 0 && (flags >> 1) & 0b11 == 0 {
                 return Err(DecodeError::Malformed("DUP flag on a QoS 0 PUBLISH"));
             }
-            match (flags >> 1) & 0b11 {
-                0 => {}
-                3 => return Err(DecodeError::Malformed("QoS 3")),
-                _ => return Err(DecodeError::QosNotSupported),
-            }
+            let qos = QoS::from_bits((flags >> 1) & 0b11).ok_or(DecodeError::Malformed("QoS 3"))?;
             let topic = r.string()?;
+            // the packet identifier follows the topic, before the MQTT 5 properties (MQTT 3.3.2)
+            let packet_id = if qos == QoS::AtMostOnce {
+                None
+            } else {
+                match r.u16()? {
+                    0 => return Err(DecodeError::Malformed("packet identifier 0")),
+                    id => Some(id),
+                }
+            };
             if v5 {
                 r.skip_properties()?;
             }
             Ok(Packet::Publish(Publish {
                 topic,
                 payload: r.0,
+                qos,
+                packet_id,
+                dup: flags & 0b1000 != 0,
             }))
+        }
+        PUBACK | PUBREC | PUBREL | PUBCOMP => {
+            let (packet_id, reason) = decode_ack(&mut r, v5)?;
+            Ok(match kind {
+                PUBACK => Packet::PubAck { packet_id, reason },
+                PUBREC => Packet::PubRec { packet_id, reason },
+                PUBREL => Packet::PubRel { packet_id, reason },
+                _ => Packet::PubComp { packet_id, reason },
+            })
         }
         SUBSCRIBE => {
             let packet_id = r.u16()?;
@@ -274,6 +363,9 @@ fn decode_body(first: u8, body: Bytes, version: ProtocolVersion) -> Result<Packe
             while r.0.has_remaining() {
                 let filter = r.string()?;
                 let options = r.u8()?;
+                // both versions: bits 0-1 are the requested QoS; 3 is rejected below
+                let qos = QoS::from_bits(options & 0b11)
+                    .ok_or(DecodeError::Malformed("subscription QoS 3"))?;
                 let no_local = if v5 {
                     // MQTT 5 subscription options: bits 0-1 QoS (3 is invalid), 2 No Local, 3 Retain As
                     // Published, 4-5 Retain Handling (3 is invalid), 6-7 reserved
@@ -291,7 +383,11 @@ fn decode_body(first: u8, body: Bytes, version: ProtocolVersion) -> Result<Packe
                     }
                     false
                 };
-                entries.push(SubscribeEntry { filter, no_local });
+                entries.push(SubscribeEntry {
+                    filter,
+                    no_local,
+                    qos,
+                });
             }
             if entries.is_empty() {
                 return Err(DecodeError::Malformed("SUBSCRIBE without filters"));
@@ -314,14 +410,29 @@ fn decode_body(first: u8, body: Bytes, version: ProtocolVersion) -> Result<Packe
         }
         PINGREQ => Ok(Packet::PingReq),
         DISCONNECT => {
+            let mut session_expiry = None;
             if v5 && r.0.has_remaining() {
-                // optional reason code, then optional properties; the broker acts on neither
+                // optional reason code (the broker does not act on it), then optional properties
                 r.u8()?;
                 if r.0.has_remaining() {
-                    r.skip_properties()?;
+                    r.read_properties(|id, value| {
+                        if id == PROP_SESSION_EXPIRY_INTERVAL
+                            && session_expiry.replace(value).is_some()
+                        {
+                            return Err(DecodeError::ProtocolError(
+                                "duplicate Session Expiry Interval",
+                            ));
+                        }
+                        Ok(())
+                    })?;
+                }
+                if r.0.has_remaining() {
+                    return Err(DecodeError::Malformed(
+                        "data after the DISCONNECT properties",
+                    ));
                 }
             }
-            Ok(Packet::Disconnect)
+            Ok(Packet::Disconnect { session_expiry })
         }
         // 15 is AUTH in MQTT 5; the broker has no enhanced authentication, so it is a protocol error there
         15 if v5 => Err(DecodeError::ProtocolError(
@@ -330,6 +441,26 @@ fn decode_body(first: u8, body: Bytes, version: ProtocolVersion) -> Result<Packe
         0 | 15 => Err(DecodeError::Malformed("reserved packet type")),
         other => Ok(Packet::Ignored(other)),
     }
+}
+
+/// Body of PUBACK, PUBREC, PUBREL and PUBCOMP: packet identifier, and in MQTT 5 an optional reason code
+/// (absent means success) followed by optional properties (MQTT 3.4.2, 3.5.2, 3.6.2, 3.7.2).
+fn decode_ack(r: &mut Reader, v5: bool) -> Result<(u16, u8), DecodeError> {
+    let packet_id = match r.u16()? {
+        0 => return Err(DecodeError::Malformed("packet identifier 0")),
+        id => id,
+    };
+    let mut reason = 0;
+    if v5 && r.0.has_remaining() {
+        reason = r.u8()?;
+        if r.0.has_remaining() {
+            r.skip_properties()?;
+        }
+    }
+    if r.0.has_remaining() {
+        return Err(DecodeError::Malformed("data after the acknowledgement"));
+    }
+    Ok((packet_id, reason))
 }
 
 fn decode_connect(r: &mut Reader) -> Result<Packet, DecodeError> {
@@ -366,10 +497,45 @@ fn decode_connect(r: &mut Reader) -> Result<Packet, DecodeError> {
         ));
     }
     let keep_alive = r.u16()?;
+    let mut session_expiry = 0u32;
+    let mut receive_maximum = u16::MAX;
+    let mut maximum_packet_size = None;
     if protocol == ProtocolVersion::V5 {
-        // CONNECT properties (session expiry, receive maximum, maximum packet size, ...): checked for length
-        // and skipped. The broker keeps no session state and sends only QoS 0, so none of them applies.
-        r.skip_properties()?;
+        // CONNECT properties: Session Expiry Interval and Receive Maximum are used, each at most once
+        // (MQTT 3.1.2.11.2, 3.1.2.11.3); all others are validated and ignored.
+        let (mut seen_expiry, mut seen_receive) = (false, false);
+        r.read_properties(|id, value| {
+            match id {
+                PROP_SESSION_EXPIRY_INTERVAL => {
+                    if std::mem::replace(&mut seen_expiry, true) {
+                        return Err(DecodeError::ProtocolError(
+                            "duplicate Session Expiry Interval",
+                        ));
+                    }
+                    session_expiry = value;
+                }
+                PROP_RECEIVE_MAXIMUM => {
+                    if std::mem::replace(&mut seen_receive, true) {
+                        return Err(DecodeError::ProtocolError("duplicate Receive Maximum"));
+                    }
+                    // the value is a u16 on the wire; 0 is a protocol error
+                    receive_maximum = u16::try_from(value)
+                        .ok()
+                        .filter(|&v| v != 0)
+                        .ok_or(DecodeError::ProtocolError("Receive Maximum 0"))?;
+                }
+                PROP_MAXIMUM_PACKET_SIZE => {
+                    if value == 0 {
+                        return Err(DecodeError::ProtocolError("Maximum Packet Size 0"));
+                    }
+                    if maximum_packet_size.replace(value).is_some() {
+                        return Err(DecodeError::ProtocolError("duplicate Maximum Packet Size"));
+                    }
+                }
+                _ => {}
+            }
+            Ok(())
+        })?;
     }
     let client_id = r.string()?;
     if will_flag {
@@ -399,6 +565,9 @@ fn decode_connect(r: &mut Reader) -> Result<Packet, DecodeError> {
         protocol,
         username,
         password,
+        session_expiry,
+        receive_maximum,
+        maximum_packet_size,
     }))
 }
 
@@ -442,6 +611,61 @@ impl Reader {
         Ok(())
     }
 
+    /// Walks an MQTT 5 property block (length prefix and content). Every property id has a fixed wire type
+    /// (MQTT 2.2.2.2); numeric properties (byte, two byte, four byte integers and variable byte integers) are
+    /// reported to `on` as `(id, value)`, strings, binary data and user properties are only skipped. An
+    /// unknown id or a value running over the end of the block is malformed.
+    fn read_properties(
+        &mut self,
+        mut on: impl FnMut(u8, u32) -> Result<(), DecodeError>,
+    ) -> Result<(), DecodeError> {
+        let len = self.varint()?;
+        if self.0.remaining() < len {
+            return Err(DecodeError::Malformed("truncated properties"));
+        }
+        let mut block = Reader(self.0.split_to(len));
+        while block.0.has_remaining() {
+            let id = block.u8()?;
+            match id {
+                // payload format, request problem information, request response information, maximum QoS,
+                // retain available, wildcard / subscription identifier / shared subscription available
+                0x01 | 0x17 | 0x19 | 0x24 | 0x25 | 0x28 | 0x29 | 0x2A => {
+                    on(id, u32::from(block.u8()?))?
+                }
+                // server keep alive, receive maximum, topic alias maximum, topic alias
+                0x13 | 0x21 | 0x22 | 0x23 => on(id, u32::from(block.u16()?))?,
+                // message expiry, session expiry, will delay, maximum packet size
+                0x02 | 0x11 | 0x18 | 0x27 => {
+                    if block.0.remaining() < 4 {
+                        return Err(DecodeError::Malformed("truncated property"));
+                    }
+                    on(id, block.0.get_u32())?
+                }
+                // subscription identifier
+                0x0B => {
+                    let value = block.varint()?;
+                    on(id, value as u32)?
+                }
+                // UTF-8 strings: content type, response topic, authentication method, assigned client id,
+                // response information, server reference, reason string
+                0x03 | 0x08 | 0x12 | 0x15 | 0x1A | 0x1C | 0x1F => {
+                    block.string()?;
+                }
+                // correlation data, authentication data: binary
+                0x09 | 0x16 => {
+                    block.binary()?;
+                }
+                // user property: a pair of UTF-8 strings
+                0x26 => {
+                    block.string()?;
+                    block.string()?;
+                }
+                _ => return Err(DecodeError::Malformed("unknown property")),
+            }
+        }
+        Ok(())
+    }
+
     /// Binary data: two byte length, then the bytes.
     fn binary(&mut self) -> Result<Bytes, DecodeError> {
         let len = usize::from(self.u16()?);
@@ -457,7 +681,14 @@ impl Reader {
             return Err(DecodeError::Malformed("truncated string"));
         }
         let raw = self.0.split_to(len);
-        String::from_utf8(raw.to_vec()).map_err(|_| DecodeError::Malformed("invalid UTF-8"))
+        let text =
+            String::from_utf8(raw.to_vec()).map_err(|_| DecodeError::Malformed("invalid UTF-8"))?;
+        // MQTT 3.1.1 1.5.3 / MQTT 5 1.5.4 [MQTT-1.5.4-2]: U+0000 must not be in a UTF-8 string. PostgreSQL TEXT
+        // cannot hold it either, so the session store would refuse the row.
+        if text.contains('\0') {
+            return Err(DecodeError::Malformed("U+0000 in a UTF-8 string"));
+        }
+        Ok(text)
     }
 }
 
@@ -480,8 +711,8 @@ fn put_fixed_header(out: &mut BytesMut, first: u8, remaining: usize) {
     put_varint(out, remaining);
 }
 
-/// CONNACK with session_present = false (the broker keeps no session state), the given return code (3.1.1) or
-/// reason code (MQTT 5) and, in MQTT 5, no properties. Used for refusals.
+/// CONNACK that refuses the connection: session_present = false, the given return code (3.1.1) or reason
+/// code (MQTT 5) and, in MQTT 5, no properties.
 pub fn encode_connack(version: ProtocolVersion, code: u8) -> Bytes {
     match version {
         ProtocolVersion::V311 => Bytes::copy_from_slice(&[0x20, 0x02, 0x00, code]),
@@ -489,35 +720,59 @@ pub fn encode_connack(version: ProtocolVersion, code: u8) -> Bytes {
     }
 }
 
+const PROP_SESSION_EXPIRY_INTERVAL: u8 = 0x11;
 const PROP_ASSIGNED_CLIENT_IDENTIFIER: u8 = 0x12;
-const PROP_MAXIMUM_QOS: u8 = 0x24;
+const PROP_RECEIVE_MAXIMUM: u8 = 0x21;
 const PROP_RETAIN_AVAILABLE: u8 = 0x25;
 const PROP_MAXIMUM_PACKET_SIZE: u8 = 0x27;
 const PROP_SUBSCRIPTION_IDENTIFIERS_AVAILABLE: u8 = 0x29;
 const PROP_SHARED_SUBSCRIPTION_AVAILABLE: u8 = 0x2A;
 
+/// What a CONNACK that accepts the connection announces.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConnackAccepted<'a> {
+    /// An earlier session of the client is continued.
+    pub session_present: bool,
+    pub max_packet_size: u32,
+    /// Receive Maximum the broker announces (MQTT 5 property 0x21).
+    pub receive_maximum: u16,
+    /// Session Expiry Interval the broker uses, announced (0x11) only when `Some` (it differs from what the
+    /// client asked for).
+    pub session_expiry: Option<u32>,
+    /// The identifier the broker made up if the client sent an empty one.
+    pub assigned_client_id: Option<&'a str>,
+}
+
 /// CONNACK that accepts the connection. In MQTT 5 it announces what the broker does and does not do:
-/// Maximum QoS 0, Retain Available 0, Shared Subscription Available 0, the maximum packet size, and the
-/// identifier the broker made up if the client sent an empty one (`assigned_client_id`).
-pub fn encode_connack_accepted(
-    version: ProtocolVersion,
-    max_packet_size: u32,
-    assigned_client_id: Option<&str>,
-) -> Bytes {
+/// Receive Maximum, Retain Available 0, the maximum packet size, Subscription Identifiers and Shared
+/// Subscriptions not available, the Session Expiry Interval if the broker changed it, and the assigned
+/// client identifier. Maximum QoS is not sent: absent means QoS 2 (MQTT 3.2.2.3.4).
+pub fn encode_connack_accepted(version: ProtocolVersion, info: &ConnackAccepted<'_>) -> Bytes {
     if version == ProtocolVersion::V311 {
-        return encode_connack(version, connack::ACCEPTED);
+        return Bytes::copy_from_slice(&[
+            0x20,
+            0x02,
+            u8::from(info.session_present),
+            connack::ACCEPTED,
+        ]);
     }
-    let mut props = BytesMut::with_capacity(16);
-    props.put_slice(&[PROP_MAXIMUM_QOS, 0, PROP_RETAIN_AVAILABLE, 0]);
+    let mut props = BytesMut::with_capacity(32);
+    props.put_u8(PROP_RECEIVE_MAXIMUM);
+    props.put_u16(info.receive_maximum);
+    props.put_slice(&[PROP_RETAIN_AVAILABLE, 0]);
     props.put_u8(PROP_MAXIMUM_PACKET_SIZE);
-    props.put_u32(max_packet_size);
+    props.put_u32(info.max_packet_size);
     props.put_slice(&[
         PROP_SUBSCRIPTION_IDENTIFIERS_AVAILABLE,
         0,
         PROP_SHARED_SUBSCRIPTION_AVAILABLE,
         0,
     ]);
-    if let Some(id) = assigned_client_id {
+    if let Some(expiry) = info.session_expiry {
+        props.put_u8(PROP_SESSION_EXPIRY_INTERVAL);
+        props.put_u32(expiry);
+    }
+    if let Some(id) = info.assigned_client_id {
         // the id is generated by the broker and short; a longer one is simply not announced
         if let Ok(len) = u16::try_from(id.len()) {
             props.put_u8(PROP_ASSIGNED_CLIENT_IDENTIFIER);
@@ -528,7 +783,7 @@ pub fn encode_connack_accepted(
     let remaining = 2 + varint_len(props.len()) + props.len();
     let mut out = BytesMut::with_capacity(1 + 4 + remaining);
     put_fixed_header(&mut out, 0x20, remaining);
-    out.put_slice(&[0x00, connack::ACCEPTED]);
+    out.put_slice(&[u8::from(info.session_present), connack::ACCEPTED]);
     put_varint(&mut out, props.len());
     out.put_slice(&props);
     out.freeze()
@@ -546,7 +801,7 @@ fn varint_len(value: usize) -> usize {
 /// Largest value of the remaining length field.
 const MAX_REMAINING_LENGTH: usize = 268_435_455;
 
-/// Bytes between the topic (or packet id) and the payload (or reason codes) of QoS 0 PUBLISH and SUBACK:
+/// Bytes between the topic and packet id and the payload (or reason codes) of PUBLISH and SUBACK:
 /// nothing in 3.1.1, the empty property block in MQTT 5.
 fn properties_len(version: ProtocolVersion) -> usize {
     match version {
@@ -555,11 +810,13 @@ fn properties_len(version: ProtocolVersion) -> usize {
     }
 }
 
-/// Size in bytes of an encoded QoS 0 PUBLISH, `None` if it cannot be encoded at all.
+/// Size in bytes of an encoded PUBLISH, `None` if it cannot be encoded at all. Above QoS 0 the packet
+/// identifier adds two bytes.
 pub fn publish_encoded_len(
     version: ProtocolVersion,
     topic_len: usize,
     payload_len: usize,
+    qos: QoS,
 ) -> Option<usize> {
     // the topic length is a 16 bit field
     if topic_len > usize::from(u16::MAX) {
@@ -567,23 +824,76 @@ pub fn publish_encoded_len(
     }
     let remaining = 2usize
         .checked_add(topic_len)?
+        .checked_add(if qos == QoS::AtMostOnce { 0 } else { 2 })?
         .checked_add(properties_len(version))?
         .checked_add(payload_len)?;
     (remaining <= MAX_REMAINING_LENGTH).then(|| 1 + varint_len(remaining) + remaining)
 }
 
-/// Appends a QoS 0 PUBLISH to `out`. The caller makes sure the packet fits (see [`publish_encoded_len`]).
-pub fn encode_publish(version: ProtocolVersion, out: &mut BytesMut, topic: &str, payload: &[u8]) {
+/// Appends a PUBLISH to `out`. The caller makes sure the packet fits (see [`publish_encoded_len`]).
+/// `packet_id` is written after the topic for QoS 1 and 2 and ignored for QoS 0; `dup` marks a
+/// retransmission. The retain flag is never set.
+pub fn encode_publish(
+    version: ProtocolVersion,
+    out: &mut BytesMut,
+    topic: &str,
+    payload: &[u8],
+    qos: QoS,
+    packet_id: u16,
+    dup: bool,
+) {
     let props = properties_len(version);
-    let remaining = 2 + topic.len() + props + payload.len();
+    let id_len = if qos == QoS::AtMostOnce { 0 } else { 2 };
+    let remaining = 2 + topic.len() + id_len + props + payload.len();
     out.reserve(5 + remaining);
-    put_fixed_header(out, 0x30, remaining);
+    // DUP is only valid above QoS 0 [MQTT-3.3.1-2]
+    let dup = dup && qos != QoS::AtMostOnce;
+    debug_assert!(
+        qos == QoS::AtMostOnce || packet_id != 0,
+        "packet identifier 0 is invalid"
+    );
+    put_fixed_header(out, 0x30 | u8::from(dup) << 3 | qos.bits() << 1, remaining);
     out.put_u16(topic.len() as u16);
     out.put_slice(topic.as_bytes());
+    if id_len > 0 {
+        out.put_u16(packet_id);
+    }
     if props > 0 {
         out.put_u8(0); // property length 0
     }
     out.put_slice(payload);
+}
+
+/// PUBACK, PUBREC, PUBREL or PUBCOMP with the given first byte. 3.1.1 only carries the packet identifier;
+/// MQTT 5 adds the reason code unless it is 0x00 (success), and then needs no property length (it may be
+/// left out when the remaining length is below 4).
+fn encode_ack(version: ProtocolVersion, first: u8, packet_id: u16, reason: u8) -> Bytes {
+    let id = packet_id.to_be_bytes();
+    if version == ProtocolVersion::V5 && reason != 0 {
+        Bytes::copy_from_slice(&[first, 3, id[0], id[1], reason])
+    } else {
+        Bytes::copy_from_slice(&[first, 2, id[0], id[1]])
+    }
+}
+
+/// PUBACK ([`puback`] reason codes; `reason` is ignored in 3.1.1).
+pub fn encode_puback(version: ProtocolVersion, packet_id: u16, reason: u8) -> Bytes {
+    encode_ack(version, 0x40, packet_id, reason)
+}
+
+/// PUBREC, see [`encode_puback`].
+pub fn encode_pubrec(version: ProtocolVersion, packet_id: u16, reason: u8) -> Bytes {
+    encode_ack(version, 0x50, packet_id, reason)
+}
+
+/// PUBREL, see [`encode_puback`]. The fixed header flags are 0b0010 (MQTT 3.6.1).
+pub fn encode_pubrel(version: ProtocolVersion, packet_id: u16, reason: u8) -> Bytes {
+    encode_ack(version, 0x62, packet_id, reason)
+}
+
+/// PUBCOMP, see [`encode_puback`].
+pub fn encode_pubcomp(version: ProtocolVersion, packet_id: u16, reason: u8) -> Bytes {
+    encode_ack(version, 0x70, packet_id, reason)
 }
 
 /// SUBACK with one return code ([`suback`]) per requested filter.
@@ -630,6 +940,7 @@ mod tests {
 
     const V5: ProtocolVersion = ProtocolVersion::V5;
     const V311: ProtocolVersion = ProtocolVersion::V311;
+    const ALL_QOS: [QoS; 3] = [QoS::AtMostOnce, QoS::AtLeastOnce, QoS::ExactlyOnce];
 
     /// MQTT 3.1.1 decode, as before the connection has negotiated anything else.
     fn decode(buf: &mut BytesMut, max: u32) -> Result<Option<Packet>, DecodeError> {
@@ -667,6 +978,9 @@ mod tests {
                 protocol: V311,
                 username: None,
                 password: None,
+                session_expiry: 0,
+                receive_maximum: 65535,
+                maximum_packet_size: None,
             })
         );
         assert!(b.is_empty());
@@ -686,6 +1000,9 @@ mod tests {
                 protocol: V311,
                 username: None,
                 password: None,
+                session_expiry: 0,
+                receive_maximum: 65535,
+                maximum_packet_size: None,
             })
         );
     }
@@ -719,6 +1036,9 @@ mod tests {
                 protocol: V311,
                 username: Some("u".into()),
                 password: Some(Bytes::from_static(&[b'p', 0xFF])),
+                session_expiry: 0,
+                receive_maximum: 65535,
+                maximum_packet_size: None,
             })
         );
     }
@@ -734,6 +1054,7 @@ mod tests {
             panic!("not a CONNECT");
         };
         assert_eq!(c.protocol, V5);
+        assert_eq!(c.session_expiry, 60);
         assert_eq!(c.username.as_deref(), Some("abc"));
         assert_eq!(c.password.as_deref(), Some(&b"p"[..]));
     }
@@ -923,7 +1244,12 @@ mod tests {
         raw.extend([0xE0, 0x00]);
         let mut b = buf(&raw);
         assert_eq!(decode(&mut b, 16), Ok(Some(Packet::PingReq)));
-        assert_eq!(decode(&mut b, 16), Ok(Some(Packet::Disconnect)));
+        assert_eq!(
+            decode(&mut b, 16),
+            Ok(Some(Packet::Disconnect {
+                session_expiry: None
+            }))
+        );
         assert_eq!(decode(&mut b, 16), Ok(None));
     }
 
@@ -935,7 +1261,10 @@ mod tests {
             decode(&mut buf(&raw), 1024),
             Ok(Some(Packet::Publish(Publish {
                 topic: "a/b".into(),
-                payload: Bytes::from_static(b"hi")
+                payload: Bytes::from_static(b"hi"),
+                qos: QoS::AtMostOnce,
+                packet_id: None,
+                dup: false,
             })))
         );
     }
@@ -949,20 +1278,73 @@ mod tests {
             p,
             Packet::Publish(Publish {
                 topic: "a".into(),
-                payload: Bytes::from_static(&[2, 0x01, 1])
+                payload: Bytes::from_static(&[2, 0x01, 1]),
+                qos: QoS::AtMostOnce,
+                packet_id: None,
+                dup: false,
             })
         );
     }
 
     #[test]
-    fn publish_qos1_and_qos2_are_rejected() {
-        for flags in [0x32u8, 0x34] {
-            let raw = [flags, 7, 0, 1, b'a', 0, 1, 0, 0];
+    fn publish_qos1_and_qos2_carry_a_packet_id() {
+        // 3.1.1: topic "a", packet id 0x0102, payload [0, 1]
+        for (first, qos) in [(0x32u8, QoS::AtLeastOnce), (0x34, QoS::ExactlyOnce)] {
+            let raw = [first, 7, 0, 1, b'a', 1, 2, 0, 1];
             assert_eq!(
                 decode(&mut buf(&raw), 1024),
-                Err(DecodeError::QosNotSupported),
-                "flags {flags:#x}"
+                Ok(Some(Packet::Publish(Publish {
+                    topic: "a".into(),
+                    payload: Bytes::from_static(&[0, 1]),
+                    qos,
+                    packet_id: Some(0x0102),
+                    dup: false,
+                }))),
+                "flags {first:#x}"
             );
+        }
+        // the retain flag is still ignored
+        assert!(matches!(
+            decode(&mut buf(&[0x33, 5, 0, 1, b'a', 0, 9]), 64),
+            Ok(Some(Packet::Publish(Publish {
+                qos: QoS::AtLeastOnce,
+                packet_id: Some(9),
+                ..
+            })))
+        ));
+    }
+
+    #[test]
+    fn publish_dup_is_allowed_above_qos0_and_packet_id_0_is_malformed() {
+        for first in [0x3Au8, 0x3C] {
+            let Ok(Some(Packet::Publish(p))) = decode(&mut buf(&[first, 5, 0, 1, b'a', 0, 4]), 64)
+            else {
+                panic!("not a PUBLISH");
+            };
+            assert!(p.dup && p.packet_id == Some(4), "flags {first:#x}");
+        }
+        for first in [0x32u8, 0x34] {
+            assert!(
+                matches!(
+                    decode(&mut buf(&[first, 5, 0, 1, b'a', 0, 0]), 64),
+                    Err(DecodeError::Malformed(_))
+                ),
+                "flags {first:#x}"
+            );
+            // packet id missing or cut in half
+            for raw in [&[first, 3, 0, 1, b'a'][..], &[first, 4, 0, 1, b'a', 0]] {
+                assert!(matches!(
+                    decode(&mut buf(raw), 64),
+                    Err(DecodeError::Malformed(_))
+                ));
+            }
+        }
+        // QoS 3, with and without DUP
+        for first in [0x36u8, 0x3E] {
+            assert!(matches!(
+                decode(&mut buf(&[first, 5, 0, 1, b'a', 0, 1]), 64),
+                Err(DecodeError::Malformed(_))
+            ));
         }
     }
 
@@ -980,15 +1362,18 @@ mod tests {
                 entries: vec![
                     SubscribeEntry {
                         filter: "a/#".into(),
-                        no_local: false
+                        no_local: false,
+                        qos: QoS::AtMostOnce
                     },
                     SubscribeEntry {
                         filter: "b".into(),
-                        no_local: false
+                        no_local: false,
+                        qos: QoS::AtLeastOnce
                     },
                     SubscribeEntry {
                         filter: "c".into(),
-                        no_local: false
+                        no_local: false,
+                        qos: QoS::ExactlyOnce
                     },
                 ]
             }
@@ -1068,6 +1453,30 @@ mod tests {
     }
 
     #[test]
+    fn a_nul_character_in_a_string_is_malformed() {
+        // topic of a PUBLISH
+        assert!(matches!(
+            decode(&mut buf(&[0x30, 4, 0, 2, b'a', 0]), 64),
+            Err(DecodeError::Malformed(_))
+        ));
+        // filter of a SUBSCRIBE
+        assert!(matches!(
+            decode(&mut buf(&[0x82, 8, 0, 1, 0, 3, b'a', 0, b'b', 0]), 64),
+            Err(DecodeError::Malformed(_))
+        ));
+        // client identifier of a CONNECT
+        let mut raw = connect_bytes("abc", 30);
+        let last = raw.len() - 2;
+        raw[last] = 0;
+        assert!(matches!(
+            decode(&mut buf(&raw), 1024),
+            Err(DecodeError::Malformed(_))
+        ));
+        // the same strings without it are fine
+        assert!(decode(&mut buf(&[0x30, 4, 0, 2, b'a', b'b']), 64).is_ok());
+    }
+
+    #[test]
     fn reserved_and_unknown_types() {
         assert!(matches!(
             decode(&mut buf(&[0x00, 0]), 64),
@@ -1078,9 +1487,10 @@ mod tests {
             decode(&mut buf(&[0xF0, 0]), 64),
             Err(DecodeError::Malformed(_))
         ));
+        // PUBACK is decoded now; SUBACK (9) and the like are only reported
         assert_eq!(
-            decode(&mut buf(&[0x40, 2, 0, 1]), 64),
-            Ok(Some(Packet::Ignored(4)))
+            decode(&mut buf(&[0x90, 3, 0, 1, 0]), 64),
+            Ok(Some(Packet::Ignored(9)))
         );
     }
 
@@ -1094,21 +1504,36 @@ mod tests {
             &encode_connack(V311, connack::IDENTIFIER_REJECTED)[..],
             &[0x20, 0x02, 0x00, 0x02]
         );
+        let info = ConnackAccepted {
+            session_present: false,
+            max_packet_size: 1000,
+            receive_maximum: 7,
+            session_expiry: Some(3),
+            assigned_client_id: Some("ignored"),
+        };
         assert_eq!(
-            &encode_connack_accepted(V311, 1000, Some("ignored"))[..],
+            &encode_connack_accepted(V311, &info)[..],
             &[0x20, 0x02, 0x00, 0x00]
+        );
+        let present = ConnackAccepted {
+            session_present: true,
+            ..info
+        };
+        assert_eq!(
+            &encode_connack_accepted(V311, &present)[..],
+            &[0x20, 0x02, 0x01, 0x00]
         );
     }
 
     #[test]
     fn publish_bytes_and_long_remaining_length() {
         let mut out = BytesMut::new();
-        encode_publish(V311, &mut out, "a/b", b"hi");
+        encode_publish(V311, &mut out, "a/b", b"hi", QoS::AtMostOnce, 99, false);
         assert_eq!(&out[..], &[0x30, 7, 0, 3, b'a', b'/', b'b', b'h', b'i']);
 
         let payload = vec![7u8; 300];
         let mut out = BytesMut::new();
-        encode_publish(V311, &mut out, "t", &payload);
+        encode_publish(V311, &mut out, "t", &payload, QoS::AtMostOnce, 0, false);
         // remaining = 2 + 1 + 300 = 303 = 0xAF 0x02
         assert_eq!(&out[..3], &[0x30, 0xAF, 0x02]);
         let decoded = decode(&mut out, 1024).unwrap().unwrap();
@@ -1116,7 +1541,10 @@ mod tests {
             decoded,
             Packet::Publish(Publish {
                 topic: "t".into(),
-                payload: Bytes::from(payload)
+                payload: Bytes::from(payload),
+                qos: QoS::AtMostOnce,
+                packet_id: None,
+                dup: false,
             })
         );
     }
@@ -1125,19 +1553,47 @@ mod tests {
     fn publish_encoded_len_matches_encoder() {
         for (t, l) in [(1usize, 0usize), (3, 300), (10, 20_000)] {
             for version in [V311, V5] {
-                let mut out = BytesMut::new();
-                encode_publish(version, &mut out, &"t".repeat(t), &vec![2; l]);
-                assert_eq!(publish_encoded_len(version, t, l), Some(out.len()));
+                for qos in ALL_QOS {
+                    let mut out = BytesMut::new();
+                    encode_publish(
+                        version,
+                        &mut out,
+                        &"t".repeat(t),
+                        &vec![2; l],
+                        qos,
+                        5,
+                        false,
+                    );
+                    assert_eq!(publish_encoded_len(version, t, l, qos), Some(out.len()));
+                }
             }
         }
-        assert_eq!(publish_encoded_len(V311, 1, 268_435_455), None);
-        // topic length does not fit into the 16 bit length field
-        assert!(publish_encoded_len(V311, 65_535, 0).is_some());
-        assert_eq!(publish_encoded_len(V311, 65_536, 0), None);
-        // MQTT 5 needs one byte more
         assert_eq!(
-            publish_encoded_len(V5, 3, 10),
-            publish_encoded_len(V311, 3, 10).map(|n| n + 1)
+            publish_encoded_len(V311, 1, 268_435_455, QoS::AtMostOnce),
+            None
+        );
+        // topic length does not fit into the 16 bit length field
+        assert!(publish_encoded_len(V311, 65_535, 0, QoS::AtMostOnce).is_some());
+        assert_eq!(publish_encoded_len(V311, 65_536, 0, QoS::AtMostOnce), None);
+        // MQTT 5 needs one byte more, QoS 1 and 2 two bytes more
+        let base = publish_encoded_len(V311, 3, 10, QoS::AtMostOnce).unwrap();
+        assert_eq!(
+            publish_encoded_len(V5, 3, 10, QoS::AtMostOnce),
+            Some(base + 1)
+        );
+        assert_eq!(
+            publish_encoded_len(V311, 3, 10, QoS::AtLeastOnce),
+            Some(base + 2)
+        );
+        assert_eq!(
+            publish_encoded_len(V5, 3, 10, QoS::ExactlyOnce),
+            Some(base + 3)
+        );
+        // the packet identifier can push the packet over the largest remaining length
+        assert!(publish_encoded_len(V311, 1, 268_435_455 - 3, QoS::AtMostOnce).is_some());
+        assert_eq!(
+            publish_encoded_len(V311, 1, 268_435_455 - 3, QoS::AtLeastOnce),
+            None
         );
     }
 
@@ -1187,7 +1643,7 @@ mod tests {
 
     #[test]
     fn connect_v5_without_and_with_properties() {
-        let expect = |id: &str| {
+        let expect = |id: &str, session_expiry: u32| {
             Packet::Connect(Connect {
                 client_id: id.into(),
                 keep_alive: 30,
@@ -1195,6 +1651,9 @@ mod tests {
                 protocol: V5,
                 username: None,
                 password: None,
+                session_expiry,
+                receive_maximum: 65535,
+                maximum_packet_size: None,
             })
         };
         // the CONNECT is decoded by its own level, whatever version the connection had before
@@ -1202,7 +1661,7 @@ mod tests {
             let mut b = buf(&connect5_bytes("abc", 30, &[]));
             assert_eq!(
                 super::decode(&mut b, 1024, version),
-                Ok(Some(expect("abc")))
+                Ok(Some(expect("abc", 0)))
             );
             assert!(b.is_empty());
         }
@@ -1210,7 +1669,7 @@ mod tests {
         let props = [0x11, 0, 0, 0, 60, 0x26, 0, 1, b'k', 0, 2, b'v', b'v'];
         assert_eq!(
             decode(&mut buf(&connect5_bytes("", 30, &props)), 1024),
-            Ok(Some(expect("")))
+            Ok(Some(expect("", 60)))
         );
     }
 
@@ -1244,6 +1703,9 @@ mod tests {
         let expected = Packet::Publish(Publish {
             topic: "a".into(),
             payload: Bytes::from_static(b"hi"),
+            qos: QoS::AtMostOnce,
+            packet_id: None,
+            dup: false,
         });
         assert_eq!(decode5(&mut buf(&raw), 1024), Ok(Some(expected)));
         // empty properties, empty payload
@@ -1251,7 +1713,10 @@ mod tests {
             decode5(&mut buf(&[0x30, 4, 0, 1, b'a', 0]), 1024),
             Ok(Some(Packet::Publish(Publish {
                 topic: "a".into(),
-                payload: Bytes::new()
+                payload: Bytes::new(),
+                qos: QoS::AtMostOnce,
+                packet_id: None,
+                dup: false,
             })))
         );
         // property length behind the packet
@@ -1267,15 +1732,39 @@ mod tests {
     }
 
     #[test]
-    fn publish_v5_qos_and_dup_rules_are_unchanged() {
+    fn publish_v5_packet_id_comes_before_the_properties() {
+        // topic "a", packet id 7, properties: message expiry (0x02, 4 bytes), payload "hi"
+        let raw = [0x3A, 13, 0, 1, b'a', 0, 7, 5, 0x02, 0, 0, 0, 5, b'h', b'i'];
         assert_eq!(
-            decode5(&mut buf(&[0x32, 6, 0, 1, b'a', 0, 1, 0]), 64),
-            Err(DecodeError::QosNotSupported)
+            decode5(&mut buf(&raw), 64),
+            Ok(Some(Packet::Publish(Publish {
+                topic: "a".into(),
+                payload: Bytes::from_static(b"hi"),
+                qos: QoS::AtLeastOnce,
+                packet_id: Some(7),
+                dup: true,
+            })))
         );
+        // empty properties, QoS 2, id 0 is malformed
         assert!(matches!(
-            decode5(&mut buf(&[0x38, 4, 0, 1, b'a', 0]), 64),
+            decode5(&mut buf(&[0x34, 6, 0, 1, b'a', 0, 1, 0]), 64),
+            Ok(Some(Packet::Publish(Publish {
+                qos: QoS::ExactlyOnce,
+                packet_id: Some(1),
+                ..
+            })))
+        ));
+        assert!(matches!(
+            decode5(&mut buf(&[0x34, 6, 0, 1, b'a', 0, 0, 0]), 64),
             Err(DecodeError::Malformed(_))
         ));
+        // DUP at QoS 0 and QoS 3 stay malformed
+        for first in [0x38u8, 0x36] {
+            assert!(matches!(
+                decode5(&mut buf(&[first, 6, 0, 1, b'a', 0, 1, 0]), 64),
+                Err(DecodeError::Malformed(_))
+            ));
+        }
     }
 
     #[test]
@@ -1289,11 +1778,13 @@ mod tests {
                 entries: vec![
                     SubscribeEntry {
                         filter: "a".into(),
-                        no_local: true
+                        no_local: true,
+                        qos: QoS::AtLeastOnce
                     },
                     SubscribeEntry {
                         filter: "b".into(),
-                        no_local: false
+                        no_local: false,
+                        qos: QoS::AtMostOnce
                     },
                 ]
             }))
@@ -1373,7 +1864,9 @@ mod tests {
         ] {
             assert_eq!(
                 decode5(&mut buf(raw), 64),
-                Ok(Some(Packet::Disconnect)),
+                Ok(Some(Packet::Disconnect {
+                    session_expiry: None
+                })),
                 "{raw:?}"
             );
         }
@@ -1397,35 +1890,75 @@ mod tests {
         assert_eq!(connack::identifier_rejected(V5), 0x85);
         assert_eq!(connack::identifier_rejected(V311), 0x02);
 
-        // accepted: max QoS 0, retain not available, max packet size 0x00040000, no shared subscriptions
-        let expected_props = [0x24, 0, 0x25, 0, 0x27, 0, 4, 0, 0, 0x29, 0, 0x2A, 0];
-        let mut expected = vec![
-            0x20,
-            (2 + 1 + expected_props.len()) as u8,
-            0,
-            0,
-            expected_props.len() as u8,
-        ];
-        expected.extend(expected_props);
+        // accepted: receive maximum 100, retain not available, max packet size 0x00040000, no subscription
+        // identifiers, no shared subscriptions; no Maximum QoS property
+        let info = ConnackAccepted {
+            session_present: false,
+            max_packet_size: 262_144,
+            receive_maximum: 100,
+            session_expiry: None,
+            assigned_client_id: None,
+        };
+        let base_props = [0x21, 0, 100, 0x25, 0, 0x27, 0, 4, 0, 0, 0x29, 0, 0x2A, 0];
+        let frame = |flag: u8, props: &[u8]| {
+            let mut v = vec![
+                0x20,
+                (2 + 1 + props.len()) as u8,
+                flag,
+                0,
+                props.len() as u8,
+            ];
+            v.extend(props);
+            v
+        };
         assert_eq!(
-            &encode_connack_accepted(V5, 262_144, None)[..],
-            &expected[..]
+            &encode_connack_accepted(V5, &info)[..],
+            &frame(0, &base_props)[..]
         );
 
-        // with an assigned client identifier (0x12)
-        let mut with_id = expected_props.to_vec();
-        with_id.extend([0x12, 0, 3, b'd', b't', b'1']);
-        let mut expected = vec![
-            0x20,
-            (2 + 1 + with_id.len()) as u8,
-            0,
-            0,
-            with_id.len() as u8,
-        ];
-        expected.extend(with_id);
+        // session present sets the acknowledge flag
+        let present = ConnackAccepted {
+            session_present: true,
+            ..info
+        };
         assert_eq!(
-            &encode_connack_accepted(V5, 262_144, Some("dt1"))[..],
-            &expected[..]
+            &encode_connack_accepted(V5, &present)[..],
+            &frame(1, &base_props)[..]
+        );
+
+        // session expiry (0x11) comes after the standard properties, the assigned identifier (0x12) last
+        let mut with_expiry = base_props.to_vec();
+        with_expiry.extend([0x11, 0, 0, 0x0E, 0x10]);
+        let expiry = ConnackAccepted {
+            session_expiry: Some(3600),
+            ..info
+        };
+        assert_eq!(
+            &encode_connack_accepted(V5, &expiry)[..],
+            &frame(0, &with_expiry)[..]
+        );
+        let mut with_both = with_expiry.clone();
+        with_both.extend([0x12, 0, 3, b'd', b't', b'1']);
+        let both = ConnackAccepted {
+            session_present: true,
+            assigned_client_id: Some("dt1"),
+            ..expiry
+        };
+        assert_eq!(
+            &encode_connack_accepted(V5, &both)[..],
+            &frame(1, &with_both)[..]
+        );
+
+        // only the assigned identifier
+        let mut with_id = base_props.to_vec();
+        with_id.extend([0x12, 0, 3, b'd', b't', b'1']);
+        let id_only = ConnackAccepted {
+            assigned_client_id: Some("dt1"),
+            ..info
+        };
+        assert_eq!(
+            &encode_connack_accepted(V5, &id_only)[..],
+            &frame(0, &with_id)[..]
         );
     }
 
@@ -1433,7 +1966,16 @@ mod tests {
     fn connack_v5_can_be_decoded_by_the_property_layout() {
         // a long assigned id pushes the property length over one byte: the varint must be right
         let id = "x".repeat(200);
-        let ack = encode_connack_accepted(V5, 1, Some(&id));
+        let ack = encode_connack_accepted(
+            V5,
+            &ConnackAccepted {
+                session_present: false,
+                max_packet_size: 1,
+                receive_maximum: 100,
+                session_expiry: None,
+                assigned_client_id: Some(&id),
+            },
+        );
         // fixed header: type, remaining length (2 bytes); body: flags, reason, property length (2 bytes)
         let mut b = BytesMut::from(&ack[..]);
         let first = b.split_to(1);
@@ -1445,20 +1987,23 @@ mod tests {
         assert_eq!(r.u8().unwrap(), 0);
         let props = r.varint().unwrap();
         assert_eq!(props, r.0.remaining());
-        assert_eq!(props, 4 + 5 + 2 + 2 + 3 + 200);
+        assert_eq!(props, 3 + 2 + 5 + 2 + 2 + 3 + 200);
     }
 
     #[test]
     fn publish_v5_bytes() {
         let mut out = BytesMut::new();
-        encode_publish(V5, &mut out, "a/b", b"hi");
+        encode_publish(V5, &mut out, "a/b", b"hi", QoS::AtMostOnce, 0, false);
         assert_eq!(&out[..], &[0x30, 8, 0, 3, b'a', b'/', b'b', 0, b'h', b'i']);
         // what the encoder writes is what the decoder reads
         assert_eq!(
             decode5(&mut out, 64),
             Ok(Some(Packet::Publish(Publish {
                 topic: "a/b".into(),
-                payload: Bytes::from_static(b"hi")
+                payload: Bytes::from_static(b"hi"),
+                qos: QoS::AtMostOnce,
+                packet_id: None,
+                dup: false,
             })))
         );
     }
@@ -1511,5 +2056,541 @@ mod tests {
         assert!(r.varint().is_err());
         let mut r = Reader(Bytes::from_static(&[0x80]));
         assert!(r.varint().is_err());
+    }
+
+    // ---- QoS 1 and 2 ----
+
+    /// Reads back what `encode_publish` wrote.
+    fn publish_roundtrip(version: ProtocolVersion, qos: QoS, id: u16, dup: bool) -> Publish {
+        let mut out = BytesMut::new();
+        encode_publish(version, &mut out, "a/b", b"payload", qos, id, dup);
+        match super::decode(&mut out, 1024, version) {
+            Ok(Some(Packet::Publish(p))) => {
+                assert!(out.is_empty());
+                p
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn publish_encode_decode_round_trip_at_every_qos() {
+        for version in [V311, V5] {
+            for qos in ALL_QOS {
+                for dup in [false, true] {
+                    // DUP at QoS 0 is not a valid packet, so it is not part of the round trip
+                    if dup && qos == QoS::AtMostOnce {
+                        continue;
+                    }
+                    let p = publish_roundtrip(version, qos, 0xABCD, dup);
+                    assert_eq!(p.topic, "a/b");
+                    assert_eq!(&p.payload[..], b"payload");
+                    assert_eq!((p.qos, p.dup), (qos, dup));
+                    let expected_id = (qos != QoS::AtMostOnce).then_some(0xABCD);
+                    assert_eq!(p.packet_id, expected_id, "{version:?} {qos:?}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn publish_encoding_bytes_for_qos_and_dup() {
+        let enc = |version, qos, id, dup| {
+            let mut out = BytesMut::new();
+            encode_publish(version, &mut out, "a", b"x", qos, id, dup);
+            out.to_vec()
+        };
+        // the packet id argument is ignored at QoS 0
+        assert_eq!(
+            enc(V311, QoS::AtMostOnce, 7, false),
+            [0x30, 4, 0, 1, b'a', b'x']
+        );
+        assert_eq!(
+            enc(V311, QoS::AtLeastOnce, 0x0102, false),
+            [0x32, 6, 0, 1, b'a', 1, 2, b'x']
+        );
+        assert_eq!(
+            enc(V311, QoS::ExactlyOnce, 9, true),
+            [0x3C, 6, 0, 1, b'a', 0, 9, b'x']
+        );
+        // MQTT 5: packet id, then the empty property block, then the payload
+        assert_eq!(
+            enc(V5, QoS::AtLeastOnce, 9, true),
+            [0x3A, 7, 0, 1, b'a', 0, 9, 0, b'x']
+        );
+    }
+
+    type AckPacket = fn(u16, u8) -> Packet;
+    type AckEncoder = fn(ProtocolVersion, u16, u8) -> Bytes;
+
+    #[test]
+    fn ack_packets_decode_in_3_1_1() {
+        let cases: [(u8, AckPacket); 4] = [
+            (0x40, |packet_id, reason| Packet::PubAck {
+                packet_id,
+                reason,
+            }),
+            (0x50, |packet_id, reason| Packet::PubRec {
+                packet_id,
+                reason,
+            }),
+            (0x62, |packet_id, reason| Packet::PubRel {
+                packet_id,
+                reason,
+            }),
+            (0x70, |packet_id, reason| Packet::PubComp {
+                packet_id,
+                reason,
+            }),
+        ];
+        for (first, make) in cases {
+            assert_eq!(
+                decode(&mut buf(&[first, 2, 0x12, 0x34]), 64),
+                Ok(Some(make(0x1234, 0))),
+                "{first:#x}"
+            );
+            // nothing may follow the packet id in 3.1.1
+            assert!(
+                matches!(
+                    decode(&mut buf(&[first, 3, 0x12, 0x34, 0]), 64),
+                    Err(DecodeError::Malformed(_))
+                ),
+                "{first:#x}"
+            );
+            // missing or truncated packet id
+            for raw in [&[first, 0][..], &[first, 1, 0x12]] {
+                assert!(matches!(
+                    decode(&mut buf(raw), 64),
+                    Err(DecodeError::Malformed(_))
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn ack_packets_have_fixed_header_flags() {
+        // PUBACK, PUBREC, PUBCOMP need flags 0, PUBREL needs 0b0010
+        for (kind, required) in [(4u8, 0u8), (5, 0), (6, 0b0010), (7, 0)] {
+            for flags in 0..16u8 {
+                for version in [V311, V5] {
+                    let raw = [kind << 4 | flags, 2, 0, 1];
+                    let result = super::decode(&mut buf(&raw), 64, version);
+                    if flags == required {
+                        assert!(matches!(result, Ok(Some(_))), "{kind} {flags:#x}");
+                    } else {
+                        assert!(
+                            matches!(result, Err(DecodeError::Malformed(_))),
+                            "{kind} {flags:#x}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn ack_packets_decode_in_v5_with_and_without_reason_and_properties() {
+        // packet id only: success; with reason code; with reason code and empty properties; with a reason
+        // string property (0x1F "x") and a user property
+        let cases: [(&[u8], u8); 5] = [
+            (&[0x50, 2, 0, 5], 0x00),
+            (&[0x50, 3, 0, 5, 0x00], 0x00),
+            (&[0x50, 3, 0, 5, 0x97], 0x97),
+            (&[0x50, 4, 0, 5, 0x91, 0], 0x91),
+            (
+                &[
+                    0x50, 15, 0, 5, 0x92, 11, 0x1F, 0, 1, b'x', 0x26, 0, 1, b'k', 0, 1, b'v',
+                ],
+                0x92,
+            ),
+        ];
+        for (raw, reason) in cases {
+            assert_eq!(
+                decode5(&mut buf(raw), 64),
+                Ok(Some(Packet::PubRec {
+                    packet_id: 5,
+                    reason
+                })),
+                "{raw:?}"
+            );
+        }
+        assert_eq!(
+            decode5(&mut buf(&[0x62, 3, 0, 5, 0x92]), 64),
+            Ok(Some(Packet::PubRel {
+                packet_id: 5,
+                reason: puback::PACKET_IDENTIFIER_NOT_FOUND
+            }))
+        );
+        assert_eq!(
+            decode5(&mut buf(&[0x40, 3, 0, 5, 0x10]), 64),
+            Ok(Some(Packet::PubAck {
+                packet_id: 5,
+                reason: 0x10
+            }))
+        );
+        assert_eq!(
+            decode5(&mut buf(&[0x70, 2, 0, 5]), 64),
+            Ok(Some(Packet::PubComp {
+                packet_id: 5,
+                reason: 0
+            }))
+        );
+        // property length behind the packet, and data after the properties
+        for raw in [&[0x40u8, 4, 0, 5, 0, 9][..], &[0x40, 5, 0, 5, 0, 0, 0]] {
+            assert!(matches!(
+                decode5(&mut buf(raw), 64),
+                Err(DecodeError::Malformed(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn ack_encoding_bytes() {
+        let encoders: [(u8, AckEncoder); 4] = [
+            (0x40, encode_puback),
+            (0x50, encode_pubrec),
+            (0x62, encode_pubrel),
+            (0x70, encode_pubcomp),
+        ];
+        for (first, encode) in encoders {
+            // 3.1.1 ignores the reason
+            assert_eq!(&encode(V311, 0x0102, 0)[..], &[first, 2, 1, 2]);
+            assert_eq!(&encode(V311, 0x0102, 0x97)[..], &[first, 2, 1, 2]);
+            // MQTT 5: success needs no reason code, others append it without a property length
+            assert_eq!(&encode(V5, 0x0102, 0)[..], &[first, 2, 1, 2]);
+            assert_eq!(&encode(V5, 0x0102, 0x97)[..], &[first, 3, 1, 2, 0x97]);
+            // what is written can be read back
+            for version in [V311, V5] {
+                let reason = if version == V5 { 0x91 } else { 0 };
+                let mut b = BytesMut::from(&encode(version, 77, reason)[..]);
+                let packet = super::decode(&mut b, 64, version).unwrap().unwrap();
+                let (Packet::PubAck {
+                    packet_id,
+                    reason: r,
+                }
+                | Packet::PubRec {
+                    packet_id,
+                    reason: r,
+                }
+                | Packet::PubRel {
+                    packet_id,
+                    reason: r,
+                }
+                | Packet::PubComp {
+                    packet_id,
+                    reason: r,
+                }) = packet
+                else {
+                    panic!("{packet:?}");
+                };
+                assert_eq!((packet_id, r), (77, reason));
+            }
+        }
+        assert_eq!(puback::SUCCESS, 0);
+        assert_eq!(suback::GRANTED_QOS_1, 1);
+        assert_eq!(suback::GRANTED_QOS_2, 2);
+    }
+
+    #[test]
+    fn subscribe_qos_in_both_versions() {
+        for (bits, qos) in [
+            (0u8, QoS::AtMostOnce),
+            (1, QoS::AtLeastOnce),
+            (2, QoS::ExactlyOnce),
+        ] {
+            let Ok(Some(Packet::Subscribe { entries, .. })) =
+                decode(&mut buf(&[0x82, 6, 0, 1, 0, 1, b'a', bits]), 64)
+            else {
+                panic!("3.1.1 {bits}");
+            };
+            assert_eq!(entries[0].qos, qos);
+            // MQTT 5 with No Local, retain as published and retain handling 2 set
+            let options = bits | 0b100 | 0b1000 | 0b10_0000;
+            let Ok(Some(Packet::Subscribe { entries, .. })) =
+                decode5(&mut buf(&[0x82, 7, 0, 1, 0, 0, 1, b'a', options]), 64)
+            else {
+                panic!("v5 {bits}");
+            };
+            assert_eq!((entries[0].qos, entries[0].no_local), (qos, true));
+        }
+    }
+
+    /// MQTT 5 CONNECT bytes, `connect5_bytes` with a bigger property block possible.
+    fn decode_connect5(props: &[u8]) -> Result<Connect, DecodeError> {
+        match decode5(&mut buf(&connect5_bytes("c", 10, props)), 1024) {
+            Ok(Some(Packet::Connect(c))) => Ok(c),
+            Ok(other) => panic!("{other:?}"),
+            Err(e) => Err(e),
+        }
+    }
+
+    #[test]
+    fn connect_session_expiry_and_receive_maximum() {
+        // defaults
+        let c = decode_connect5(&[]).unwrap();
+        assert_eq!((c.session_expiry, c.receive_maximum), (0, 65_535));
+        let c = decode(&mut buf(&connect_bytes("c", 1)), 64)
+            .unwrap()
+            .unwrap();
+        let Packet::Connect(c) = c else { panic!() };
+        assert_eq!((c.session_expiry, c.receive_maximum), (0, 65_535));
+        // values, also behind other properties and in any order
+        let c = decode_connect5(&[0x11, 0, 0, 0x0E, 0x10, 0x21, 0x01, 0x00]).unwrap();
+        assert_eq!((c.session_expiry, c.receive_maximum), (3600, 256));
+        let props = [
+            0x26, 0, 1, b'k', 0, 1, b'v', 0x21, 0, 5, 0x27, 0, 0, 1, 0, 0x11, 0xFF, 0xFF, 0xFF,
+            0xFF,
+        ];
+        let c = decode_connect5(&props).unwrap();
+        assert_eq!((c.session_expiry, c.receive_maximum), (u32::MAX, 5));
+        let c = decode_connect5(&[0x21, 0xFF, 0xFF]).unwrap();
+        assert_eq!((c.session_expiry, c.receive_maximum), (0, 65_535));
+    }
+
+    #[test]
+    fn connect_duplicate_or_invalid_properties_are_errors() {
+        for props in [
+            &[0x11, 0, 0, 0, 1, 0x11, 0, 0, 0, 2][..],
+            &[0x21, 0, 1, 0x21, 0, 2],
+            &[0x21, 0, 1, 0x11, 0, 0, 0, 0, 0x21, 0, 1],
+            // receive maximum 0
+            &[0x21, 0, 0],
+        ] {
+            assert!(
+                matches!(decode_connect5(props), Err(DecodeError::ProtocolError(_))),
+                "{props:?}"
+            );
+        }
+        // unknown property id, truncated values, string running over the block
+        for props in [
+            &[0x7F, 0][..],
+            &[0x00, 0],
+            &[0x11, 0, 0, 0],
+            &[0x21, 0],
+            &[0x03, 0, 5, b'x'],
+            &[0x26, 0, 1, b'k'],
+            &[0x0B, 0x80],
+        ] {
+            assert!(
+                matches!(decode_connect5(props), Err(DecodeError::Malformed(_))),
+                "{props:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn connect_debug_shows_session_expiry_and_receive_maximum() {
+        let c = decode_connect5(&[0x11, 0, 0, 0, 9, 0x21, 0, 3]).unwrap();
+        let text = format!("{c:?}");
+        assert!(
+            text.contains("session_expiry: 9") && text.contains("receive_maximum: 3"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn disconnect_session_expiry() {
+        let expiry = |raw: &[u8], version| match super::decode(&mut buf(raw), 64, version) {
+            Ok(Some(Packet::Disconnect { session_expiry })) => session_expiry,
+            other => panic!("{other:?}"),
+        };
+        // reason code 0, properties: session expiry 120
+        assert_eq!(
+            expiry(&[0xE0, 7, 0x00, 5, 0x11, 0, 0, 0, 120], V5),
+            Some(120)
+        );
+        // with a reason string before it; an explicit 0 is not the same as absent
+        assert_eq!(
+            expiry(&[0xE0, 11, 0x04, 9, 0x1F, 0, 1, b'x', 0x11, 0, 0, 0, 0], V5),
+            Some(0)
+        );
+        // absent: no body, reason only, empty properties, other properties
+        for raw in [
+            &[0xE0u8, 0][..],
+            &[0xE0, 1, 0x04],
+            &[0xE0, 2, 0x04, 0],
+            &[0xE0, 6, 0x04, 4, 0x1F, 0, 1, b'x'],
+        ] {
+            assert_eq!(expiry(raw, V5), None, "{raw:?}");
+        }
+        // 3.1.1 has no body and always reports None
+        assert_eq!(expiry(&[0xE0, 0], V311), None);
+        // duplicate and unknown properties
+        assert!(matches!(
+            decode5(
+                &mut buf(&[0xE0, 12, 0, 10, 0x11, 0, 0, 0, 1, 0x11, 0, 0, 0, 2]),
+                64
+            ),
+            Err(DecodeError::ProtocolError(_))
+        ));
+        assert!(matches!(
+            decode5(&mut buf(&[0xE0, 4, 0, 2, 0x7F, 0]), 64),
+            Err(DecodeError::Malformed(_))
+        ));
+    }
+
+    /// Property block with the given content, run through the walker; returns the reported numbers.
+    fn walk(content: &[u8]) -> Result<Vec<(u8, u32)>, DecodeError> {
+        let mut bytes = Vec::new();
+        put_varint_vec(&mut bytes, content.len());
+        bytes.extend(content);
+        bytes.extend([0xEE]); // trailing byte of the packet, must stay unread
+        let mut r = Reader(Bytes::from(bytes));
+        let mut seen = Vec::new();
+        r.read_properties(|id, value| {
+            seen.push((id, value));
+            Ok(())
+        })?;
+        assert_eq!(r.u8(), Ok(0xEE));
+        Ok(seen)
+    }
+
+    fn put_varint_vec(out: &mut Vec<u8>, value: usize) {
+        let mut b = BytesMut::new();
+        put_varint(&mut b, value);
+        out.extend(&b[..]);
+    }
+
+    #[test]
+    fn property_walker_knows_every_wire_type() {
+        // byte properties
+        for id in [0x01u8, 0x17, 0x19, 0x24, 0x25, 0x28, 0x29, 0x2A] {
+            assert_eq!(walk(&[id, 0xAB]), Ok(vec![(id, 0xAB)]), "{id:#x}");
+            assert!(walk(&[id]).is_err(), "{id:#x}");
+        }
+        // two byte
+        for id in [0x13u8, 0x21, 0x22, 0x23] {
+            assert_eq!(walk(&[id, 0x01, 0x02]), Ok(vec![(id, 0x0102)]), "{id:#x}");
+            assert!(walk(&[id, 1]).is_err(), "{id:#x}");
+        }
+        // four byte
+        for id in [0x02u8, 0x11, 0x18, 0x27] {
+            assert_eq!(
+                walk(&[id, 1, 2, 3, 4]),
+                Ok(vec![(id, 0x0102_0304)]),
+                "{id:#x}"
+            );
+            assert!(walk(&[id, 1, 2, 3]).is_err(), "{id:#x}");
+        }
+        // variable byte integer
+        assert_eq!(walk(&[0x0B, 0x80, 0x01]), Ok(vec![(0x0B, 128)]));
+        assert!(walk(&[0x0B, 0x80]).is_err());
+        // strings and binary data are skipped, not reported
+        for id in [0x03u8, 0x08, 0x09, 0x12, 0x15, 0x16, 0x1A, 0x1C, 0x1F] {
+            assert_eq!(walk(&[id, 0, 2, b'h', b'i']), Ok(vec![]), "{id:#x}");
+            assert_eq!(walk(&[id, 0, 0]), Ok(vec![]), "{id:#x}");
+            assert!(walk(&[id, 0, 3, b'h', b'i']).is_err(), "{id:#x}");
+            assert!(walk(&[id, 0]).is_err(), "{id:#x}");
+        }
+        // string pair
+        assert_eq!(walk(&[0x26, 0, 1, b'k', 0, 2, b'v', b'v']), Ok(vec![]));
+        assert!(walk(&[0x26, 0, 1, b'k']).is_err());
+        assert!(walk(&[0x26, 0, 1, b'k', 0, 2, b'v']).is_err());
+    }
+
+    #[test]
+    fn property_walker_handles_mixed_blocks_and_errors() {
+        // empty block
+        assert_eq!(walk(&[]), Ok(vec![]));
+        // several properties of different types, in order, user property in the middle
+        let content = [
+            0x01, 1, 0x26, 0, 1, b'k', 0, 1, b'v', 0x21, 0, 9, 0x02, 0, 0, 1, 0, 0x03, 0, 1, b'x',
+        ];
+        assert_eq!(walk(&content), Ok(vec![(0x01, 1), (0x21, 9), (0x02, 256)]));
+        // unknown ids, including 0 and ids between the known ones
+        for id in [0x00u8, 0x04, 0x05, 0x0A, 0x0C, 0x14, 0x1B, 0x2B, 0x80, 0xFF] {
+            assert!(
+                matches!(walk(&[id, 0, 0]), Err(DecodeError::Malformed(_))),
+                "{id:#x}"
+            );
+        }
+        // block longer than the data
+        let mut r = Reader(Bytes::from_static(&[5, 0x01, 1]));
+        assert!(matches!(
+            r.read_properties(|_, _| Ok(())),
+            Err(DecodeError::Malformed(_))
+        ));
+        // a value may not run into the bytes behind the block
+        let mut r = Reader(Bytes::from_static(&[2, 0x11, 0, 0, 0, 1]));
+        assert!(r.read_properties(|_, _| Ok(())).is_err());
+        // errors of the callback are passed on
+        let mut r = Reader(Bytes::from_static(&[2, 0x01, 1]));
+        assert_eq!(
+            r.read_properties(|_, _| Err(DecodeError::ProtocolError("stop"))),
+            Err(DecodeError::ProtocolError("stop"))
+        );
+    }
+
+    #[test]
+    fn new_reason_code_constants() {
+        assert_eq!(disconnect::SESSION_TAKEN_OVER, 0x8E);
+        assert_eq!(disconnect::RECEIVE_MAXIMUM_EXCEEDED, 0x93);
+        assert_eq!(puback::PACKET_IDENTIFIER_IN_USE, 0x91);
+        assert_eq!(puback::PACKET_IDENTIFIER_NOT_FOUND, 0x92);
+        assert_eq!(puback::QUOTA_EXCEEDED, 0x97);
+    }
+
+    #[test]
+    fn review_fixes() {
+        // encode_publish never sets DUP at QoS 0
+        let mut out = BytesMut::new();
+        encode_publish(V311, &mut out, "a", b"x", QoS::AtMostOnce, 0, true);
+        assert_eq!(out[0], 0x30);
+
+        // DISCONNECT: data after the property block is malformed
+        assert!(matches!(
+            decode5(&mut buf(&[0xE0, 3, 0, 0, 0xFF]), 64),
+            Err(DecodeError::Malformed(_))
+        ));
+
+        // string properties must be UTF-8, binary ones need not
+        for id in [0x03u8, 0x08, 0x12, 0x15, 0x1A, 0x1C, 0x1F] {
+            assert!(
+                matches!(walk(&[id, 0, 1, 0xFF]), Err(DecodeError::Malformed(_))),
+                "{id:#x}"
+            );
+        }
+        for id in [0x09u8, 0x16] {
+            assert_eq!(walk(&[id, 0, 1, 0xFF]), Ok(vec![]), "{id:#x}");
+        }
+        assert!(walk(&[0x26, 0, 1, 0xFF, 0, 1, b'v']).is_err());
+        assert!(walk(&[0x26, 0, 1, b'k', 0, 1, 0xFF]).is_err());
+
+        // acknowledgements with packet id 0
+        for first in [0x40u8, 0x50, 0x62, 0x70] {
+            for version in [V311, V5] {
+                assert!(matches!(
+                    super::decode(&mut buf(&[first, 2, 0, 0]), 64, version),
+                    Err(DecodeError::Malformed(_))
+                ));
+            }
+        }
+
+        // v5 QoS 1 PUBLISH truncated after the packet id
+        assert!(matches!(
+            decode5(&mut buf(&[0x32, 5, 0, 1, b'a', 0, 1]), 64),
+            Err(DecodeError::Malformed(_))
+        ));
+
+        // Maximum Packet Size
+        let c = decode_connect5(&[]).unwrap();
+        assert_eq!(c.maximum_packet_size, None);
+        let c = decode_connect5(&[0x27, 0, 0, 4, 0]).unwrap();
+        assert_eq!(c.maximum_packet_size, Some(1024));
+        for props in [
+            &[0x27u8, 0, 0, 0, 0][..],
+            &[0x27, 0, 0, 0, 1, 0x27, 0, 0, 0, 2],
+        ] {
+            assert!(matches!(
+                decode_connect5(props),
+                Err(DecodeError::ProtocolError(_))
+            ));
+        }
+        let text = format!("{c:?}");
+        assert!(text.contains("maximum_packet_size: Some(1024)"), "{text}");
+        let Ok(Some(Packet::Connect(c))) = decode(&mut buf(&connect_bytes("c", 1)), 64) else {
+            panic!()
+        };
+        assert_eq!(c.maximum_packet_size, None);
     }
 }
