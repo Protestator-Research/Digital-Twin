@@ -105,7 +105,6 @@ target_link_libraries(DigitalTwinClient PUBLIC
         Qt::Widgets
         Qt::Network
         Qt::Charts
-        mqtt_cpp::mqtt_cpp
         paho-mqtt-cpp::paho-mqtt-cpp
         md4c::md4c
         sysmllib::sysmllib)
@@ -132,4 +131,8 @@ elseif (UNIX AND NOT APPLE)
     target_compile_options(DigitalTwinClient PRIVATE -Wall -Wextra -Wpedantic -Werror)
 else ()
     target_compile_options(DigitalTwinClient PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+
+if(RUN_TESTS)
+    add_subdirectory(tests)
 endif()

@@ -8,7 +8,7 @@
 
 namespace DigitalTwin::Model
 {
-    class StringVariable : public IVariable
+    class CPPDIGITALTWINLIB_EXPORT StringVariable : public IVariable
     {
     public:
 	    StringVariable() = delete;
@@ -24,6 +24,10 @@ namespace DigitalTwin::Model
         void setValue(const std::string& value);
     	
     	std::string getType() override;
+
+        ValueType getValueType() const override;
+        VariableValue getStateValue() const override;
+        bool setStateValue(const VariableValue& value) override;
 
     protected:
 	    void updateLinkedVariables() override;

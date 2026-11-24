@@ -9,23 +9,21 @@
 #include <chrono>
 #include <iostream>
 
-#ifdef WIN32
+#if defined(_WIN32) || defined(WIN32)
 #include <windows.h>
 #endif
 
 namespace DigitalTwin::Communication {
 
-    CommunicationService::CommunicationService(std::string mqttPort) {
+    CommunicationService::CommunicationService(std::string mqttPort, MqttProtocolVersion version,
+                                               std::string username, std::string password) {
         MqttPort=std::stoi(mqttPort);
-        ClientService = new MqttClientService(new boost::asio::io_context(),"localhost",std::to_string(MqttPort),"");
+        ClientService = new MqttClientService("localhost",std::to_string(MqttPort),"", version,
+                                              std::move(username), std::move(password));
     }
 
     void CommunicationService::startThreads() {
         try {
-            // ServerThread = std::thread([this]{
-            //     MQTTBrokerService::runBroker(MqttPort);
-            // });
-
             ClientThread = std::thread([this] {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 ClientService->start();

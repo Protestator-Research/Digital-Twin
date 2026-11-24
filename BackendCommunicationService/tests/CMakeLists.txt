@@ -1,7 +1,8 @@
 
 
 add_executable(BackendCommunicationLibTests
-        main.cpp)
+        main.cpp
+        TestBackendErrors.cpp)
 
 target_include_directories(BackendCommunicationLibTests PRIVATE
                                     ../src/)

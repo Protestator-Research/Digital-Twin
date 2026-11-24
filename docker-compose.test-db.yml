@@ -1,0 +1,26 @@
+# Throwaway PostgreSQL for the database tests of DigitalTwinStore (C++) and of the REST API (Rust).
+#
+#   docker compose -f docker-compose.test-db.yml up -d --wait
+#   export DT_TEST_DATABASE_URL=postgres://dt_test:dt_test@127.0.0.1:55432/dt_test      (PowerShell: $env:DT_TEST_DATABASE_URL = "...")
+#   docker compose -f docker-compose.test-db.yml down
+#
+# The data lives in memory (tmpfs) and is gone after `down`. The port is bound to localhost only and the
+# credentials are test values: never use this file for a real database.
+# Every test creates its own schema (dt_test_<uuid>) and drops it again, so the tests can run in parallel.
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: dt_test
+      POSTGRES_PASSWORD: dt_test
+      POSTGRES_DB: dt_test
+    ports:
+      - "127.0.0.1:55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dt_test -d dt_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

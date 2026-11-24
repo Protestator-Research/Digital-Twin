@@ -26,8 +26,12 @@ namespace DigitalTwin::Communication {
         /**
          * Generates a Server instance with the given port as the listening port.
          * @param mqttPort The listening Port of the
+         * @param version The MQTT protocol version the client speaks.
+         * @param username User name for the login at the DT server (SysML user), not sent when empty.
+         * @param password Password for the login at the DT server.
          */
-        explicit CommunicationService(std::string mqttPort);
+        explicit CommunicationService(std::string mqttPort, MqttProtocolVersion version = MqttProtocolVersion::V3_1_1,
+                                      std::string username = std::string(), std::string password = std::string());
 
         /**
          * Destructor

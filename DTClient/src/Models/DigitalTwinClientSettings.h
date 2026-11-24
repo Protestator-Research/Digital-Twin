@@ -6,6 +6,7 @@
 #define DIGITALTWIN_DIGITALTWINCLIENTSETTINGS_H
 
 #include <QSettings>
+#include <Services/IMqttClientService.h>
 
 namespace DigitalTwin::Client {
     /**
@@ -50,6 +51,18 @@ namespace DigitalTwin::Client {
 
         void setMQTTPort(QString port);
 
+        /**
+         * The MQTT protocol version as text: "3.1.1" or "5".
+         */
+        QString getMQTTProtocolVersionAsText();
+
+        DigitalTwin::Communication::MqttProtocolVersion getMQTTProtocolVersion();
+
+        /**
+         * @param version "3.1.1" or "5"; anything else is stored as "3.1.1".
+         */
+        void setMQTTProtocolVersion(QString version);
+
         void setRESTUser(QString user);
 
         QString getRESTUser();
@@ -85,6 +98,8 @@ namespace DigitalTwin::Client {
         const QString DefaultMQTTServer = "localhost";
         const char *MQTTPortIdentifier = "MQTTPort";
         const QString DefaultMQTTPort = "1883";
+        const char *MQTTProtocolVersionIdentifier = "MQTTProtocolVersion";
+        const QString DefaultMQTTProtocolVersion = "3.1.1";
 
         void initAfterSoftwareStart();
     };

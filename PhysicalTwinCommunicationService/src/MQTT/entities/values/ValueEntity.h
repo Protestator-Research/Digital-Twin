@@ -5,10 +5,13 @@
 #pragma once
 
 #include <chrono>
+#include <string>
+
+#include "../../../cpp_physical_twin_communication_global.h"
 
 
 namespace DigitalTwin::Communication {
-    class ValueEntity {
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT ValueEntity {
     public:
         ValueEntity() = default;
         virtual ~ValueEntity() = default;

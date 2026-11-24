@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include "../../State/ValueCodec.h"
+
 namespace DigitalTwin::Model
 {
 	RealVariable::RealVariable(std::string name) :
@@ -38,7 +40,27 @@ namespace DigitalTwin::Model
 	void RealVariable::setValue(const double& value)
 	{
 		Value = value;
+		notifyChanged();
 		updateLinkedVariables();
+	}
+
+	ValueType RealVariable::getValueType() const
+	{
+		return ValueType::Real;
+	}
+
+	VariableValue RealVariable::getStateValue() const
+	{
+		return ValueCodec::encodeReal(Value);
+	}
+
+	bool RealVariable::setStateValue(const VariableValue& value)
+	{
+		double decoded = 0.0;
+		if (!ValueCodec::decodeReal(value, decoded))
+			return false;
+		setValueWithoutPropagation(decoded);
+		return true;
 	}
 
 	void RealVariable::updateLinkedVariables()
@@ -59,5 +81,6 @@ namespace DigitalTwin::Model
 	void RealVariable::setValueWithoutPropagation(const double& value)
 	{
 		Value = value;
+		notifyChanged();
 	}
 }

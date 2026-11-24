@@ -4,6 +4,7 @@
 
 #include "TwinRequest.h"
 
+#include <stdexcept>
 #include <nlohmann/json.hpp>
 #include <sysmlv2/rest/entities/JSONEntities.h>
 
@@ -20,6 +21,8 @@ namespace SysMLv2::REST {
     }
 
     std::string TwinRequest::serializeToJson() {
+        if (!ReferencedCommit)
+            throw std::invalid_argument("A digital twin needs a referenced commit. The project has no commit yet.");
         nlohmann::json json;
         json[SysMLv2::REST::JSON_TYPE_ENTITY] = Type;
         json[SysMLv2::REST::JSON_NAME_ENTITY] = Name;

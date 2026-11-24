@@ -6,6 +6,8 @@
 
 #include <iostream>
 
+#include "../../State/ValueCodec.h"
+
 namespace DigitalTwin::Model
 {
 	StringVariable::StringVariable(const std::string& name) : IVariable(name)
@@ -31,7 +33,27 @@ namespace DigitalTwin::Model
 	void StringVariable::setValue(const std::string& value)
 	{
 		Value = value;
+		notifyChanged();
 		updateLinkedVariables();
+	}
+
+	ValueType StringVariable::getValueType() const
+	{
+		return ValueType::String;
+	}
+
+	VariableValue StringVariable::getStateValue() const
+	{
+		return ValueCodec::encodeString(Value);
+	}
+
+	bool StringVariable::setStateValue(const VariableValue& value)
+	{
+		std::string decoded;
+		if (!ValueCodec::decodeString(value, decoded))
+			return false;
+		setValueWithoutPropagation(std::move(decoded));
+		return true;
 	}
 
 	std::string StringVariable::getType()
@@ -56,5 +78,6 @@ namespace DigitalTwin::Model
 	void StringVariable::setValueWithoutPropagation(std::string value)
 	{
 		Value = value;
+		notifyChanged();
 	}
 }

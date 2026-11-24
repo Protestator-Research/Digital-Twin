@@ -21,6 +21,9 @@ namespace DigitalTwin::Client {
             resetToDefault();
         if (getRESTFolder().isEmpty())
             Settings->setValue(RESTFolderIdentifier,DefaultRestFolder);
+        // Settings of an older version do not have the MQTT protocol version yet.
+        if (!Settings->contains(MQTTProtocolVersionIdentifier))
+            Settings->setValue(MQTTProtocolVersionIdentifier, DefaultMQTTProtocolVersion);
     }
 
     void DigitalTwinClientSettings::resetToDefault() {
@@ -28,6 +31,7 @@ namespace DigitalTwin::Client {
         Settings->setValue(RESTPortIdentifier, DefaultRESTPort);
         Settings->setValue(MQTTServerIdentifier, DefaultMQTTServer);
         Settings->setValue(MQTTPortIdentifier, DefaultMQTTPort);
+        Settings->setValue(MQTTProtocolVersionIdentifier, DefaultMQTTProtocolVersion);
         Settings->setValue(RESTLoginIdentifier,DefaultRESTLogin);
         Settings->setValue(RESTPasswordIdentifier, DefaultRESTPassword);
         Settings->sync();
@@ -85,6 +89,19 @@ namespace DigitalTwin::Client {
 
     void DigitalTwinClientSettings::setMQTTPort(QString port) {
         Settings->setValue(MQTTPortIdentifier, port);
+    }
+
+    QString DigitalTwinClientSettings::getMQTTProtocolVersionAsText() {
+        return Settings->value(MQTTProtocolVersionIdentifier, DefaultMQTTProtocolVersion).toString() == "5" ? "5" : "3.1.1";
+    }
+
+    DigitalTwin::Communication::MqttProtocolVersion DigitalTwinClientSettings::getMQTTProtocolVersion() {
+        return getMQTTProtocolVersionAsText() == "5" ? DigitalTwin::Communication::MqttProtocolVersion::V5
+                                                     : DigitalTwin::Communication::MqttProtocolVersion::V3_1_1;
+    }
+
+    void DigitalTwinClientSettings::setMQTTProtocolVersion(QString version) {
+        Settings->setValue(MQTTProtocolVersionIdentifier, version == "5" ? "5" : "3.1.1");
     }
 
     void DigitalTwinClientSettings::setRESTUser(QString user) {

@@ -5,12 +5,16 @@
 #include "PositiveVariable.h"
 
 #include <iostream>
+#include <limits>
+
+#include "../../State/ValueCodec.h"
 
 namespace DigitalTwin::Model
 {
 	PositiveVariable::PositiveVariable(std::string name) : 
 	IVariable(name)
 	{
+		Value = 0;   // was left uninitialised, the state of the model must always be readable
 	}
 
 	PositiveVariable::PositiveVariable(std::string name, unsigned int value) : 
@@ -32,7 +36,29 @@ namespace DigitalTwin::Model
 	void PositiveVariable::setValue(const unsigned int& value)
 	{
 		Value = value;
+		notifyChanged();
 		updateLinkedVariables();
+	}
+
+	ValueType PositiveVariable::getValueType() const
+	{
+		return ValueType::Integer;
+	}
+
+	VariableValue PositiveVariable::getStateValue() const
+	{
+		return ValueCodec::encodeInteger(static_cast<int64_t>(Value));
+	}
+
+	bool PositiveVariable::setStateValue(const VariableValue& value)
+	{
+		int64_t decoded = 0;
+		if (!ValueCodec::decodeInteger(value, decoded))
+			return false;
+		if (decoded < 0 || decoded > static_cast<int64_t>(std::numeric_limits<unsigned int>::max()))
+			return false;
+		setValueWithoutPropagation(static_cast<unsigned int>(decoded));
+		return true;
 	}
 
 	std::string PositiveVariable::getType()
@@ -58,6 +84,7 @@ namespace DigitalTwin::Model
 	void PositiveVariable::setValueWithoutPropagation(const unsigned int& value)
 	{
 		Value = value;
+		notifyChanged();
 	}
 }
 

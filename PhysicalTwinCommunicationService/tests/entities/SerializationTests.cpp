@@ -14,8 +14,8 @@ TEST(TestSerilization, TestDigitalTwinEntity){
     DigitalTwin::Communication::DigitalTwinEntity entity(dtId,proId);
 
     std::ostringstream stream;
-    stream << "{\"projectID\":\""<<boost::uuids::to_string(entity.projectId())
-            <<"\",\"twinID\":\""<<boost::uuids::to_string(entity.digitalTwinId())<<"\"}";
+    stream << "{\"project_id\":\""<<boost::uuids::to_string(entity.projectId())
+            <<"\",\"twin_id\":\""<<boost::uuids::to_string(entity.digitalTwinId())<<"\"}";
 
 
     EXPECT_EQ(entity.serialize(),stream.str());

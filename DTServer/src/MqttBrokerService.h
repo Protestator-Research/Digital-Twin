@@ -9,7 +9,9 @@
 #include <unordered_set>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include "Session.h"
+#include "BrokerLimits.h"
 #include "AuthenticationService.h"
 
 namespace DIGITAL_TWIN_SERVER {
@@ -34,14 +36,21 @@ namespace DIGITAL_TWIN_SERVER {
 
     class MQTTBrokerService {
     public:
-        explicit MQTTBrokerService(boost::asio::io_context* ioc, unsigned serverPort, std::string serverCertPath = "", std::string serverCertPrivKeyPath = "");
+        explicit MQTTBrokerService(boost::asio::io_context* ioc, unsigned serverPort, BrokerLimits limits = BrokerLimits(), std::string serverCertPath = "", std::string serverCertPrivKeyPath = "");
         explicit MQTTBrokerService(boost::asio::io_context* ioc, std::string serverCertPath, std::string serverCertPrivKeyPath);
 
         void setUpTLS();
+        /**
+         * Blocks and runs the (broker owned) io_context until stop() is called.
+         */
         void run();
+        /**
+         * Stops accepting and terminates run(). Thread safe.
+         */
+        void stop();
 
     private:
-        void accept_one(SubscriptionStorage& hub);
+        void accept_one();
         void openAcceptor(unsigned port);
 
         boost::asio::io_context* Context;
@@ -51,6 +60,10 @@ namespace DIGITAL_TWIN_SERVER {
         std::string ServerCertPath = "";
         std::string ServerCertPrivKeyPath = "";
         AuthenticationService authService;
+        BrokerLimits Limits;
+        std::shared_ptr<SubscriptionStorage> Subscriptions = std::make_shared<SubscriptionStorage>();
+        std::shared_ptr<ConnectionTracker> Tracker;
+        boost::asio::steady_timer AcceptRetryTimer;
     };
 }
 

@@ -16,15 +16,19 @@
 #include <kerml/core/types/Type.h>
 #include <kerml/kernel/datatypes/DataType.h>
 #include <kerml/root/namespaces/Namespace.h>
+#include <kerml/kernel/expressions/FeatureReferenceExpression.h>
+#include <kerml/kernel/expressions/OperatorExpression.h>
 #include <sysml/occurrences/OccurrenceUsage.h>
 #include <sysml/attibutes/AttributeDefinition.h>
 #include <kerml/core/classifiers/Subclassification.h>
 #include <sysml/metadata/MetadataUsage.h>
-
+#include <kerml/kernel/packages/Package.h>
+#include <sysml/parts/PartDefinition.h>
 #include "DigitalTwinModel.h"
-
-#include <async_mqtt/protocol/impl/buffer_to_packet_variant.ipp>
-#include <async_mqtt/protocol/impl/store.hpp>
+#include "ModelBlocks.h"
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
 
 #include "Entities/IDigitalTwinElement.h"
 #include "Entities/ICollectionType.h"
@@ -46,9 +50,40 @@
 #include "Entities/Variables/PositiveVariable.h"
 #include "Entities/Variables/RationalVariable.h"
 #include "Entities/Variables/StringVariable.h"
+#include "Entities/Variables/ScalarQuantities.h"
 #include "MQTT/entities/FunctionRegistrationRequest.hpp"
+#include "MQTT/entities/values/BooleanValueEntity.h"
+#include "MQTT/entities/values/ComplexValueEntity.h"
+#include "MQTT/entities/values/IntegerValueEntity.h"
+#include "MQTT/entities/values/PositiveValueEntity.h"
+#include "MQTT/entities/values/RationalValueEntity.h"
+#include "MQTT/entities/values/RealValueEntity.h"
+#include "MQTT/entities/values/StringValueEntity.h"
+#include "MQTT/entities/FunctionValueEntity.h"
+#include "State/ModelTree.h"
+#include "State/StateTracking.h"
+
+namespace {
+	// IN and OUT are empty macros of the Windows headers, so the enumerators cannot be named while they are defined.
+#pragma push_macro("IN")
+#pragma push_macro("OUT")
+#undef IN
+#undef OUT
+	/**
+	 * True for a feature that is explicitly declared 'in' or 'inout'.
+	 */
+	bool isInputDirection(const std::optional<KerML::Entities::FeatureDirectionKind>& direction)
+	{
+		return direction.has_value()
+			&& (direction.value() == KerML::Entities::FeatureDirectionKind::IN
+				|| direction.value() == KerML::Entities::FeatureDirectionKind::IN_OUT);
+	}
+#pragma pop_macro("OUT")
+#pragma pop_macro("IN")
+}
 
 namespace DigitalTwin::Model {
+
 	DigitalTwinModel::DigitalTwinModel(std::shared_ptr<SysMLv2::REST::DigitalTwin> digitalTwin, DigitalTwinManager* manager) :
 		DigitalTwin(digitalTwin),
 		Manager(manager),
@@ -59,12 +94,131 @@ namespace DigitalTwin::Model {
 	}
 
 	DigitalTwinModel::~DigitalTwinModel() {
+		delete Tracking;   // removes the observers from the variables
 		delete Instance;
+	}
+
+	StateTracking& DigitalTwinModel::stateTracking()
+	{
+		if (!Tracking)
+			Tracking = new StateTracking(walkModelTree(PackageMap, ComponentMap, PortMap));
+		return *Tracking;
 	}
 
 	void DigitalTwinModel::generateDigitalTwinBackend() {
 		buildDigitalTwinModel();
 
+	}
+
+	UpdateResult DigitalTwinModel::updateVariable(const std::string& path, const std::string& payload)
+	{
+		UpdateResult result;
+		//std::cout << "Variable with Address: " << path << " is updated with Value:" << std::endl << payload << std::endl;
+		// A path ending in the return segment addresses the result of a variable that has a function attached.
+		std::string variablePath = path;
+		bool isReturnPath = false;
+		const std::string returnSuffix = std::string("/") + RETURN_TOPIC;
+		if (variablePath.size() > returnSuffix.size() &&
+			variablePath.compare(variablePath.size() - returnSuffix.size(), returnSuffix.size(), returnSuffix) == 0)
+		{
+			variablePath.resize(variablePath.size() - returnSuffix.size());
+			isReturnPath = true;
+		}
+
+		auto variableToBeEdited = getVariableWithAddress(variablePath);
+		if (isReturnPath && variableToBeEdited != nullptr && variableToBeEdited->getFunctionInvovation() == nullptr)
+			variableToBeEdited = nullptr;
+		if (variableToBeEdited!=nullptr)
+		{
+			auto& tracking = stateTracking();
+			const StateTracking::Scope recording(tracking);
+			//std::cout << "Variable found?" << std::endl;
+			//std::cout << "Varialbe To Be Edited: " << variableToBeEdited->getName() <<std::endl;
+			const std::string &type = variableToBeEdited->getType();
+			if (type== "BooelanVariable")
+			{
+				auto json_value = DigitalTwin::Communication::BooleanValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
+				dynamic_cast<BooleanVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "ComplexVariable")
+			{
+				auto json_value = DigitalTwin::Communication::ComplexValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
+				dynamic_cast<ComplexVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "IntegerVariable")
+			{
+				auto json_value = DigitalTwin::Communication::IntegerValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
+				dynamic_cast<IntegerVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "PositiveVariable")
+			{
+				auto json_value = DigitalTwin::Communication::PositiveValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
+				dynamic_cast<PositiveVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "RationalVariable")
+			{
+				auto json_value = DigitalTwin::Communication::RationalValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
+				dynamic_cast<RationalVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "RealVariable")
+			{
+				auto json_value = DigitalTwin::Communication::RealValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
+				dynamic_cast<RealVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+			if (type == "StringVariable")
+			{
+				auto json_value = DigitalTwin::Communication::StringValueEntity(payload);
+				result.timePoint = json_value.getTimepoint();
+				dynamic_cast<StringVariable*>(variableToBeEdited)->setValue(json_value.getValue());
+			}
+
+			//TODO Some Variable Types are missing that need to be filled.
+
+			result.changes = tracking.collectChanges(variableToBeEdited, variablePath);
+		}
+		else
+			std::cout << "Error in Variable search. Variable not found." << std::endl;
+		return result;
+	}
+
+	std::vector<ModelElementInfo> DigitalTwinModel::getModelTree()
+	{
+		std::vector<ModelElementInfo> tree;
+		const auto& entries = stateTracking().entries();
+		tree.reserve(entries.size());
+		for (const auto& entry : entries)
+			tree.push_back(entry.info);
+		return tree;
+	}
+
+	std::vector<VariableState> DigitalTwinModel::snapshotState()
+	{
+		return stateTracking().snapshot();
+	}
+
+	size_t DigitalTwinModel::restoreState(const std::vector<VariableState>& state)
+	{
+		return stateTracking().restore(state);
+	}
+
+	boost::uuids::uuid DigitalTwinModel::commitId() const
+	{
+		if (!DigitalTwin->referencedCommit())
+			throw std::runtime_error("The digital twin references no commit.");
+		return DigitalTwin->referencedCommit()->getId();
+	}
+
+	boost::uuids::uuid DigitalTwinModel::projectId() const
+	{
+		if (!DigitalTwin->owningProject())
+			throw std::runtime_error("The digital twin references no project.");
+		return DigitalTwin->owningProject()->getId();
 	}
 
 	std::string DigitalTwinModel::digitalTwinName() {
@@ -75,16 +229,69 @@ namespace DigitalTwin::Model {
 		UpdateModelFunction = updateModel;
 	}
 
+	boost::uuids::uuid DigitalTwinModel::getId() const
+	{
+		return DigitalTwin->getId();
+	}
+
+	std::shared_ptr<DigitalTwin::Communication::ValueEntity> DigitalTwinModel::createValueEntity(IVariable* variable)
+	{
+		using namespace DigitalTwin::Communication;
+		// JSON has no NaN/inf (nlohmann writes null, which the server rejects), so a non-finite initial value is 0.
+		const auto finiteOrZero = [](double v) { return std::isfinite(v) ? v : 0.0; };
+		if (auto real = dynamic_cast<RealVariable*>(variable))
+			return std::make_shared<RealValueEntity>(finiteOrZero(real->getValue()));
+		if (auto integer = dynamic_cast<IntegerVariable*>(variable))
+			return std::make_shared<IntegerValueEntity>(static_cast<int>(integer->getValue()));
+		if (auto boolean = dynamic_cast<BooleanVariable*>(variable))
+			return std::make_shared<BooleanValueEntity>(boolean->getValue());
+		if (auto complex = dynamic_cast<ComplexVariable*>(variable))
+		{
+			const auto value = complex->getValue();
+			return std::make_shared<ComplexValueEntity>(finiteOrZero(value.real()), finiteOrZero(value.imag()));
+		}
+		if (auto rational = dynamic_cast<RationalVariable*>(variable))
+			return std::make_shared<RationalValueEntity>(rational->getValue());
+		if (auto positive = dynamic_cast<PositiveVariable*>(variable))
+			return std::make_shared<PositiveValueEntity>(positive->getValue());
+		if (auto string = dynamic_cast<StringVariable*>(variable))
+			return std::make_shared<StringValueEntity>(string->getValue());
+		if (dynamic_cast<ScalarQuantities*>(variable))
+			return std::make_shared<RealValueEntity>(0.0); // Provisional default for scalar quantities.
+		return std::make_shared<IntegerValueEntity>(0); // Provisional default for unknown variable types.
+	}
+
+	std::shared_ptr<DigitalTwin::Communication::FunctionValueEntity> DigitalTwinModel::createFunctionValueEntity(Function* function)
+	{
+		if (!function)
+			return nullptr;
+		std::vector<DigitalTwin::Communication::FunctionValueEntity::NamedEntity> parameters;
+		const auto arguments = function->getParameters();
+		const auto& names = function->getParameterNames();
+		if (arguments.size() != names.size())
+			throw std::invalid_argument("function '" + function->getName() + "' has " + std::to_string(arguments.size()) +
+				" arguments but its definition declares " + std::to_string(names.size()) + " parameters");
+		for (std::size_t i = 0; i < arguments.size(); ++i)
+		{
+			const auto parameter = arguments[i];
+			// An argument that could not be resolved while building the model: publishing the remaining parameters would
+			// give clients a wrong signature, so the function gets no topic (the caller logs and skips it).
+			if (!parameter)
+				throw std::invalid_argument("function '" + function->getName() + "' has an unresolved argument for parameter '" + names[i] + "'");
+			parameters.emplace_back(names[i], createValueEntity(parameter));
+		}
+		return std::make_shared<DigitalTwin::Communication::FunctionValueEntity>(std::move(parameters));
+	}
+
 	void DigitalTwinModel::buildDigitalTwinModel()
 	{
-		const auto& textualRepresentations = Manager->downloadDigitalTwinModel(DigitalTwin->owningProject()->getId(), DigitalTwin->referencedCommit()->getId());
+		if (!DigitalTwin->owningProject() || !DigitalTwin->referencedCommit())
+			throw std::runtime_error("The digital twin references no project or no commit, its model cannot be built.");
 
-		std::string completeModel;
+		const auto& elements = Manager->downloadDigitalTwinModel(DigitalTwin->owningProject()->getId(), DigitalTwin->referencedCommit()->getId());
 
-		for (const auto& elem : textualRepresentations)
-			if ((std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->language() != "Markdown") && (std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->language() != "YaML"))
-				completeModel += std::dynamic_pointer_cast<KerML::Entities::TextualRepresentation>(elem)->body();
-
+		// Only the TextualRepresentations that contain code, in document order. Other elements (Package, memberships) are skipped.
+		const std::string completeModel = assembleModelCode(elements);
 
 		Instance->parseModel(completeModel);
 		DigitalTwinModelElements = Instance->getElements();
@@ -137,26 +344,32 @@ namespace DigitalTwin::Model {
 				parent->appendFunction(function);
 			};
 
-
-		if (element->getType() == "Namespace")
+		auto namespaceRepresentation = std::dynamic_pointer_cast<KerML::Entities::Namespace>(element);
+		auto package = std::dynamic_pointer_cast<KerML::Entities::Package>(element);
+		auto partDefintion = std::dynamic_pointer_cast<SysMLv2::Entities::PartDefinition>(element);
+		
+		
+		if ((namespaceRepresentation)&&(namespaceRepresentation->getType()=="Namespace"))
 		{
-			for (const auto& elem : std::dynamic_pointer_cast<KerML::Entities::Namespace>(element)->ownedMember())
+			for (const auto& elem : namespaceRepresentation->ownedMember())
 			{
 				generateDigitalTwinModelRecursively(elem, parent);
 			}
+			return;
 		}
 
-		if (element->getType() == "Package")
+		if ((package)&&(!partDefintion))
 		{
-			auto newParent = new Package(element->declaredName().value());
+			auto newParent = new Package(package->declaredName().value());
 			storePackageInModel(parent, newParent);
-			for (const auto& elem : element->ownedElements())
+			for (const auto& elem : package->ownedElements())
 			{
 				generateDigitalTwinModelRecursively(elem, newParent);
 			}
+			return;
 		}
 
-		if (element->getType() == "PartDefinition")
+		if (partDefintion)
 		{
 			auto newParent = new Component(element->declaredName().value());
 			storeComponentInModel(parent, newParent);
@@ -164,9 +377,11 @@ namespace DigitalTwin::Model {
 			{
 				generateDigitalTwinModelRecursively(elem, newParent);
 			}
+			return;
 		}
 
-		if (element->getType() == "Function")
+		auto function = std::dynamic_pointer_cast<KerML::Entities::Function>(element);
+		if (function)
 		{
 			auto newParent = new Function(element->declaredName().value());
 			storeFunctionInModel(parent, newParent);
@@ -174,31 +389,72 @@ namespace DigitalTwin::Model {
 			{
 				if (elem->declaredName().has_value())
 				{
-					if (elem->getType()=="Feature")
-					{
-						auto feature = std::dynamic_pointer_cast<KerML::Entities::Feature>(elem);
-						newParent->appendParameter(buildVariableOfFeature(feature));
-					}
+					// Only the formal names are recorded; an invocation's Parameters are its actual arguments.
+					// A parameter is a feature explicitly declared 'in' or 'inout'. The return feature and local
+					// features carry no direction, 'out' features are results. The cast (not the type name) also
+					// covers the parameters of a calc def, which are ReferenceUsages.
+					const auto feature = std::dynamic_pointer_cast<KerML::Entities::Feature>(elem);
+					if (feature && isInputDirection(feature->direction()))
+						newParent->appendParameterName(elem->declaredName().value());
 				}
-				else
+				else if (!newParent->getReturnVariable())
 					newParent->setReturnVariable(new RealVariable("Return"));
 			}
+			return;
 		}
 
-
-		if (element->getType() == "AttributeUsage")
+		auto attribute = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeUsage>(element);
+		if (attribute)
 		{
-			auto attribute = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeUsage>(element);
 			auto variable = buildVariableOfDataType(attribute);
-			if (variable)
+
+			if ((variable == nullptr) && (attribute->ownedElements().size() > 0))
 			{
+				variable = buildVariableOfOwnedElements(attribute);
+				if (variable)
+					storeMeasurableInModel(parent, variable);
+			}
+
+			if (variable) {
 				ElementType type = ElementType::Variable;
 				for (const auto& elem : attribute->member())
 				{
-					if (elem->getType()=="MetadataUsage")
+					auto metadataUsage = std::dynamic_pointer_cast<SysMLv2::Entities::MetadataUsage>(elem);
+					if (metadataUsage)
 					{
-						type = getElementTypeOfMetaDataUsage(std::dynamic_pointer_cast<SysMLv2::Entities::MetadataUsage>(elem));
+						type = getElementTypeOfMetaDataUsage(metadataUsage);
 					}
+					const auto operatorExpression = std::dynamic_pointer_cast<KerML::Entities::OperatorExpression > (elem);
+					if (operatorExpression)
+					{
+						
+					}
+					const auto invocationExpression = std::dynamic_pointer_cast<KerML::Entities::InvocationExpression>(elem);
+					if ((invocationExpression) && (!operatorExpression))
+					{
+						if (invocationExpression->instantiatedType() && invocationExpression->instantiatedType()->qualifiedName().has_value()) {
+							const auto qualifiedName = invocationExpression->instantiatedType()->qualifiedName().value();
+							const auto definition = dynamic_cast<Function*>(getElementFromQualifiedName(qualifiedName));
+							if (!definition)
+								std::cerr << "Function " << qualifiedName << " invoked by variable " << variable->getName()
+									<< " is not (yet) part of the model, the variable gets no function topic." << std::endl;
+							const auto invokedFunction = definition ? definition->invocate() : nullptr;
+							if (invokedFunction) {
+								for (const auto& arg : invocationExpression->argument())
+								{
+									const auto reference = std::dynamic_pointer_cast<KerML::Entities::FeatureReferenceExpression>(arg);
+									// Exactly one entry per argument keeps the positions aligned; nullptr marks an unresolved argument.
+									IVariable* connectedVariable = nullptr;
+									if (reference && reference->referent() && reference->referent()->qualifiedName().has_value())
+										connectedVariable = dynamic_cast<IVariable*>(getElementFromQualifiedName(reference->referent()->qualifiedName().value()));
+									invokedFunction->appendParameter(connectedVariable);
+								}
+								invokedFunction->setReturnVariable(variable);
+								variable->setFunctionInvocation(invokedFunction);
+							}
+						}
+					}
+
 				}
 				switch (type)
 				{
@@ -212,23 +468,21 @@ namespace DigitalTwin::Model {
 				case Variable:
 					storeAttributeInModel(parent, variable);
 					break;
-					default:
+				default:
 					break;
 				}
-			}else if (attribute->ownedElements().size()>0)
-			{
-				 variable = buildVariableOfOwnedElements(attribute);
-				if (variable)
-					storeMeasurableInModel(parent, variable);
-			}else
+			}
+			else
 				std::cerr << "Issue with the type of the given Attribute." << std::endl;
+
+			return;
 		}
 
-		if (element->getType() == "OccurrenceUsage")
+		const auto& occurrence = std::dynamic_pointer_cast<SysMLv2::Entities::OccurrenceUsage>(element);
+		if (occurrence)
 		{
-			const auto& occurrence = std::dynamic_pointer_cast<SysMLv2::Entities::OccurrenceUsage>(element);
-			std::cout << "Create Instance of " << occurrence->type().front()->declaredName().value() << std::endl;
-			dynamic_cast<Package*>(parent)->instantiateComponent(occurrence->declaredName().value(),occurrence->type().front()->declaredName().value());
+			dynamic_cast<Package*>(parent)->instantiateComponent(occurrence->declaredName().value(), occurrence->type().front()->declaredName().value());
+			return;
 		}
 	}
 
@@ -275,18 +529,14 @@ namespace DigitalTwin::Model {
 	IVariable* DigitalTwinModel::buildVariableOfOwnedElements(std::shared_ptr<SysMLv2::Entities::AttributeUsage>& attribute)
 	{
 		IVariable* variable = nullptr;
-		auto featureTyping = std::dynamic_pointer_cast<KerML::Entities::FeatureTyping>(attribute->ownedElements().front());
-		if (featureTyping)
+		auto attributeDefinition = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeDefinition>(attribute->attributeDefinition().back());
+		if (attributeDefinition)
 		{
-			auto attributeDefinition = std::dynamic_pointer_cast<SysMLv2::Entities::AttributeDefinition>(featureTyping->type());
-			if (attributeDefinition)
+			const auto subclassification = attributeDefinition->ownedSubclassification().back();
+			if (subclassification->general()->declaredName().has_value())
 			{
-				const auto subclassification = attributeDefinition->ownedSubclassification().back();
-				if (subclassification->general()->declaredName().has_value())
-				{
-					if (subclassification->general()->declaredName().value() == "ScalarQuantityValue")
-						variable = new RealVariable(attribute->declaredName().value());
-				}
+				if (subclassification->general()->declaredName().value() == "ScalarQuantityValue")
+					variable = new RealVariable(attribute->declaredName().value());
 			}
 		}
 		return variable;
@@ -298,7 +548,7 @@ namespace DigitalTwin::Model {
 		if (featureType)
 		{
 			IVariable* variable = nullptr;
-			if (!featureType->declaredName().has_value())
+			if (featureType->declaredName().has_value())
 			{
 				switch (getTypeOfSysMLType(featureType->declaredName().value()))
 				{
@@ -335,6 +585,53 @@ namespace DigitalTwin::Model {
 			return variable;
 		}
 		return nullptr;
+	}
+
+	IDigitalTwinElement* DigitalTwinModel::getElementFromQualifiedName(std::string qualifiedName)
+	{
+		std::string address = CPSBASELIB::STD_EXTENTION::StringExtention::replaceAll(qualifiedName, "::", "/");
+		IDigitalTwinElement* element = nullptr;
+
+		try
+		{
+			element=getFunctionWithAddress(address);
+		}catch (...)
+		{
+			element=nullptr;
+		}
+
+		if (!element)
+		{
+			try
+			{
+				element=getPackageWithAddress(address);
+			}catch (...)
+			{
+				element=nullptr;
+			}
+		}
+		if (!element)
+		{
+			try
+			{
+				element=getVariableWithAddress(address);
+			}catch (...)
+			{
+				element=nullptr;
+			}
+		}
+		if (!element)
+		{
+			try
+			{
+				element = getComponentOrPackageWithAddress(address);
+			}catch (...)
+			{
+				element=nullptr;
+			}
+		}
+
+		return element;
 	}
 
 	ElementType DigitalTwinModel::getElementTypeOfMetaDataUsage(
@@ -418,8 +715,81 @@ namespace DigitalTwin::Model {
 		return elements;
 	}
 
-	void DigitalTwinModel::registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest )
+	std::vector<std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>> DigitalTwinModel::getElementValueEntities() {
+		std::vector<std::pair<std::string, std::shared_ptr<DigitalTwin::Communication::ValueEntity>>> elements;
+
+		// A variable with an attached function is published as <variable topic>/<functionName> (parameters,
+		// twin -> client) and <variable topic>/return (result, client -> twin); the plain variable topic is dropped.
+		// If the function entity cannot be created, only the plain variable topic is published.
+		const auto appendVariable = [this, &elements](const std::string& variableTopic, IVariable* variable)
+		{
+			const auto function = variable ? variable->getFunctionInvovation() : nullptr;
+			if (function)
+			{
+				const auto functionTopic = variableTopic + "/" + function->getName();
+				try
+				{
+					if (const auto entity = createFunctionValueEntity(function))
+					{
+						elements.push_back(std::make_pair(functionTopic, entity));
+						elements.push_back(std::make_pair(variableTopic + "/" + RETURN_TOPIC, createValueEntity(variable)));
+						return;
+					}
+				}
+				catch (const std::invalid_argument& e)
+				{
+					std::cerr << "Function topic " << functionTopic << " is skipped: " << e.what() << std::endl;
+				}
+			}
+			elements.push_back(std::make_pair(variableTopic, createValueEntity(variable)));
+		};
+
+		for (const auto& element : PackageMap) {
+			const auto package = dynamic_cast<Package*>(element.second);
+			if (!package)
+				continue;
+			for (const auto& variable : package->getAllMQTTVariables())
+			{
+				appendVariable(element.first + "/" + variable.first, variable.second);
+			}
+		}
+
+		for (const auto& element : ComponentMap) {
+			const auto component = dynamic_cast<Component*>(element.second);
+			if (!component)
+				continue;
+			for (const auto& variable : component->getAllMQTTVariables())
+			{
+				appendVariable(element.first + "/" + variable.first, variable.second);
+			}
+		}
+
+		return elements;
+	}
+
+	void DigitalTwinModel::registerFunction(DigitalTwin::Communication::FunctionRegistrationRequest* functionRegistrationRequest)
 	{
+		std::string functionName = functionRegistrationRequest->getQualifiedName();
+		if (functionName.empty())
+			return;
+		std::cout<<"Registering Function: "<<functionName<<std::endl;
+		std::string functionPartsInDTCode = CPSBASELIB::STD_EXTENTION::StringExtention::replaceAll(functionName, "::", "/");
+
+		const auto parts = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(functionPartsInDTCode, '/');
+		if (parts.empty())
+			return;
+
+		std::string componentPath = "";
+		for (size_t i = 0; i < parts.size() - 1; i++)
+		{
+			componentPath += parts[i];
+			if (i < (parts.size() - 2))
+				componentPath += "/";
+		}
+
+		const auto element = getComponentOrPackageWithAddress(componentPath);
+		if (element)
+			std::cout<<"Registration Element: "<<element->getName()<<std::endl;
 
 	}
 
@@ -430,7 +800,12 @@ namespace DigitalTwin::Model {
 			throw DigitalTwinAddressException();
 
 		if (splittedAdress.size() == 1)
-			return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]]);
+		{
+			if (ComponentMap.contains(splittedAdress[0]))
+				return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]]);
+			else
+				return nullptr;
+		}
 
 		std::string addressWithHigherIndex = "";
 		for (size_t i = 1; i < splittedAdress.size(); i++) {
@@ -438,15 +813,63 @@ namespace DigitalTwin::Model {
 			if (i < (splittedAdress.size() - 1))
 				addressWithHigherIndex += "/";
 		}
+		if (ComponentMap.contains(splittedAdress[0]))
+			return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getComponent(addressWithHigherIndex);
 
-		return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->getComponent(addressWithHigherIndex);
+		return nullptr;
+	}
+
+	Package* DigitalTwinModel::getPackageWithAddress(std::string address)
+	{
+		const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
+
+		if (splittedAdress.size() < 1)
+			throw DigitalTwinAddressException();
+
+		if (splittedAdress.size() == 1)
+			return dynamic_cast<Package*>(PackageMap[splittedAdress[0]]);
+
+		// std::string addressWithHigherIndex = "";
+		// for (size_t i = 1; i < splittedAdress.size(); i++) {
+		// 	addressWithHigherIndex += splittedAdress[i];
+		// 	if (i < (splittedAdress.size() - 1))
+		// 		addressWithHigherIndex += "/";
+		// }
+		//
+		// return dynamic_cast<Component*>(PackageMap[splittedAdress[0]])->getComponent(addressWithHigherIndex);
+		return nullptr;
+	}
+
+	Function* DigitalTwinModel::getFunctionWithAddress(std::string address)
+	{
+		auto parts = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
+		std::string componentAddress = "";
+		for (size_t i = 0; i<parts.size()-1; i++)
+		{
+			componentAddress += parts[i];
+			if (i < parts.size()-2)
+			{
+				componentAddress+="/";
+			}
+		}
+		const auto element = getComponentOrPackageWithAddress(componentAddress);
+		if (element)
+		{
+			const auto function = element->resolveFunction(parts.back());
+			if (function)
+				return function;
+		}
+		return nullptr;
 	}
 
 	IVariable* DigitalTwinModel::getVariableWithAddress(std::string address) {
 		const auto splittedAdress = CPSBASELIB::STD_EXTENTION::StringExtention::splitString(address, '/');
+		//std::cout << "Address Splitted" << std::endl;
 
 		if (splittedAdress.size() < 2)
 			throw DigitalTwinAddressException();
+
+		//std::cout << "Address is bigger than 2" << std::endl;
 
 		std::string addressWithHigherIndex = "";
 		for (size_t i = 1; i < splittedAdress.size(); i++) {
@@ -455,6 +878,26 @@ namespace DigitalTwin::Model {
 				addressWithHigherIndex += "/";
 		}
 
-		return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
+		//std::cout << "Addresses Spllitted into:" << std::endl << "Current Interation index: " << splittedAdress[0] << std::endl << "Higher Index" << addressWithHigherIndex <<std::endl;
+
+		if (ComponentMap.contains(splittedAdress[0])) {
+			//std::cout << "Checking in Components " << std::endl;
+			return dynamic_cast<Component*>(ComponentMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
+		}
+		else {
+			//std::cout << "Checking in Packages " << std::endl;
+			if (!PackageMap.contains(splittedAdress[0]))
+				throw DigitalTwinAddressException();
+			return dynamic_cast<Package*>(PackageMap[splittedAdress[0]])->resolveVariable(addressWithHigherIndex);
+		}
+	}
+
+	ICollectionType* DigitalTwinModel::getComponentOrPackageWithAddress(std::string address)
+	{
+		ICollectionType* returnValue = getComponentWithAddress(address);
+		if (!returnValue)
+			returnValue = getPackageWithAddress(address);
+
+		return returnValue;
 	}
 }

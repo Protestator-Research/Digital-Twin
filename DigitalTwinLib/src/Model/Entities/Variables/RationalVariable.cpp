@@ -5,6 +5,9 @@
 #include "RationalVariable.h"
 
 #include <iostream>
+#include <limits>
+
+#include "../../State/ValueCodec.h"
 
 namespace DigitalTwin::Model
 {
@@ -39,12 +42,39 @@ namespace DigitalTwin::Model
 	void RationalVariable::setValue(const long& numerator, const long& denumerator)
 	{
 		Value.assign(numerator, denumerator);
+		notifyChanged();
 	}
 
 	void RationalVariable::setValue(const boost::rational<long>& value)
 	{
 		Value = value;
+		notifyChanged();
 		updateLinkedVariables();
+	}
+
+	ValueType RationalVariable::getValueType() const
+	{
+		return ValueType::Rational;
+	}
+
+	VariableValue RationalVariable::getStateValue() const
+	{
+		return ValueCodec::encodeRational(Value.numerator(), Value.denominator());
+	}
+
+	bool RationalVariable::setStateValue(const VariableValue& value)
+	{
+		int64_t numerator = 0;
+		int64_t denominator = 1;
+		if (!ValueCodec::decodeRational(value, numerator, denominator))
+			return false;
+		const auto longMin = static_cast<int64_t>(std::numeric_limits<long>::min());
+		const auto longMax = static_cast<int64_t>(std::numeric_limits<long>::max());
+		// A negated minimum is not representable, boost::rational normalises by negating.
+		if (numerator <= longMin || numerator > longMax || denominator <= longMin || denominator > longMax)
+			return false;
+		setValueWithoutPropagation(boost::rational<long>(static_cast<long>(numerator), static_cast<long>(denominator)));
+		return true;
 	}
 
 	boost::rational<long> RationalVariable::getValue()
@@ -70,5 +100,6 @@ namespace DigitalTwin::Model
 	void RationalVariable::setValueWithoutPropagation(const boost::rational<long>& value)
 	{
 		Value = value;
+		notifyChanged();
 	}
 }

@@ -6,6 +6,7 @@
 
 #include "../Exceptions/DigitalTwinAddressException.h"
 #include "Component.h"
+#include <iostream>
 
 #include "Port.h"
 #include "Function.h"
@@ -65,7 +66,9 @@ namespace DigitalTwin::Model {
     }
 
     Component *Component::getComponent(std::string name) {
-        return ComponentMap.at(name);
+        if (ComponentMap.contains(name))
+            return ComponentMap.at(name);
+        return nullptr;
     }
 
     Port* Component::getPort(std::string name)
@@ -134,10 +137,27 @@ namespace DigitalTwin::Model {
         for(auto element : Measurables)
             returnValue.push_back(element.first);
 
-        returnValue.push_back("functions/register");
-
         for (auto element : Functions)
             returnValue.push_back(element.first);
+
+        return returnValue;
+    }
+
+    std::vector<std::pair<std::string, IVariable*>> Component::getAllMQTTVariables() {
+        std::vector<std::pair<std::string, IVariable*>> returnValue;
+
+        for(const auto& comp : ComponentMap)
+            for(const auto& variable : dynamic_cast<Component*>(comp.second)->getAllMQTTVariables())
+                returnValue.push_back(std::make_pair(comp.first + "/" + variable.first, variable.second));
+
+        for(auto element : Controllables)
+            returnValue.push_back(std::make_pair(element.first, element.second));
+
+        for(auto element : Measurables)
+            returnValue.push_back(std::make_pair(element.first, element.second));
+
+        // TODO: Functions are excluded on purpose. They only get an MQTT interface after initialization,
+        //  and that interface still has to be designed.
 
         return returnValue;
     }
@@ -149,8 +169,17 @@ namespace DigitalTwin::Model {
         for (const auto& [comp_name, component] : ComponentMap)
             comp->appendComponent(component->instantiate(comp_name));
 
+        // Controllables are copied; a copy needs its own function invocation, bound to the copies.
+        std::map<IVariable*, IVariable*> copies;
         for (auto [_, controllable] : Controllables)
-            comp->appendControllable(controllable->copy());
+        {
+            const auto copy = controllable->copy();
+            copies[controllable] = copy;
+            comp->appendControllable(copy);
+        }
+        for (const auto& [original, copy] : copies)
+            if (const auto invocation = original->getFunctionInvovation())
+                copy->setFunctionInvocation(invocation->rebind(copies, copy));
 
         for (auto [_, measurable] : Measurables)
             comp->appendMeasurable(measurable);
@@ -175,6 +204,8 @@ namespace DigitalTwin::Model {
         if (index >= domains.size())
             throw DigitalTwinAddressException();
 
+        //std::cout << "Component::resolveVariable" << std::endl;
+
         if ((size_t)index == (domains.size()-1))
         {
             if (Controllables.contains(domains.back()))
@@ -185,7 +216,13 @@ namespace DigitalTwin::Model {
                 return Attributes.at(domains.back());
             throw DigitalTwinAddressException();
         }
+        
+        //std::cout << "Variable is in subpart." << std::endl;
 
-        return ComponentMap[domains[index]]->resolveVariable(domains, index + 1);
+    	if (ComponentMap.contains(domains[index]))
+			return ComponentMap[domains[index]]->resolveVariable(domains, index + 1);
+        if (PortMap.contains(domains[index]))
+            return PortMap[domains[index]]->resolveVariable(domains, index + 1);
+        throw DigitalTwinAddressException();
     } 
 }

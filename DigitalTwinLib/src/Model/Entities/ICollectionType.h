@@ -45,8 +45,24 @@ namespace DigitalTwin::Model {
             Functions.insert(std::make_pair(function->getName(), function));
         }
 
+        /**
+         * Read access to the children, for walking the model tree. The maps are keyed by the name of the element.
+         * Packages keep their component definitions and instances elsewhere, see Package.
+         */
+        const std::map<std::string, Component*>& getComponentMap() const { return ComponentMap; }
+        const std::map<std::string, Port*>& getPortMap() const { return PortMap; }
+        const std::map<std::string, IVariable*>& getControllableMap() const { return Controllables; }
+        const std::map<std::string, IVariable*>& getMeasurableMap() const { return Measurables; }
+        const std::map<std::string, IVariable*>& getAttributeMap() const { return Attributes; }
+
         virtual IVariable* resolveVariable(std::string name) = 0;
         virtual IVariable* resolveVariable(std::vector<std::string> domains, size_t index) = 0;
+    	virtual Function* resolveFunction(const std::string& name)
+    	{
+    		if (Functions.count(name)>0)
+    			return Functions.at(name);
+    		return nullptr;
+    	}
 
     protected:
     	std::map<std::string, Component*> ComponentMap;

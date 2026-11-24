@@ -1,7 +1,10 @@
 
 
 add_executable(DigitalTwinLibTests
-        main.cpp)
+        main.cpp
+        TestModelBlocks.cpp
+        TestModelState.cpp
+        TestLiveBackend.cpp)
 
 target_include_directories(DigitalTwinLibTests PRIVATE
                                     ../src/)
@@ -9,6 +12,7 @@ target_link_libraries(DigitalTwinLibTests
                                     boost::boost
                                     GTest::gtest_main
                                     PhysicalTwinCommunication
+                                    DigitalTwinLib
                                     BackendCommunication
                                     CPSBaseLib)
 

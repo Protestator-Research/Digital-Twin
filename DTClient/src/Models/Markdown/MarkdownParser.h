@@ -35,7 +35,7 @@ namespace DigitalTwin::Client {
 
     private:
         std::string MarkdownString;
-        cmark_node* MarkdownDocument;
+        cmark_node* MarkdownDocument = nullptr;
 
         std::shared_ptr<KerML::Entities::Element> createElement(std::string language, std::string body);
         void parseInternally();

@@ -5,6 +5,7 @@
 #include "../Exceptions/DigitalTwinAddressException.h"
 #include "Variables/Variable.hpp"
 #include "BaseFuctions/StringExtention.hpp"
+#include <iostream>
 
 namespace DigitalTwin::Model
 {
@@ -65,7 +66,7 @@ namespace DigitalTwin::Model
 	{
 		if (index >= domains.size())
 			throw DigitalTwinAddressException();
-
+		//std::cout << "Package::resolveVariable" << std::endl;
 		if ((size_t)index == (domains.size() - 1))
 		{
 			if (Controllables.contains(domains.back()))
@@ -74,10 +75,17 @@ namespace DigitalTwin::Model
 				return Measurables.at(domains.back());
 			if (Attributes.contains(domains.back()))
 				return Attributes.at(domains.back());
+
 			throw DigitalTwinAddressException();
 		}
-
-		return dynamic_cast<Component*>(ComponentDefinitions[domains[index]])->resolveVariable(domains, index + 1);
+		//std::cout << "Variable is in subpart." << std::endl;
+		if (ComponentDefinitions.contains(domains[index]))
+			return dynamic_cast<Component*>(ComponentDefinitions[domains[index]])->resolveVariable(domains, index + 1);
+		if (PortDefinitions.contains(domains[index]))
+			return dynamic_cast<Port*>(PortDefinitions[domains[index]])->resolveVariable(domains, index + 1);
+		if (IndividualInstances.contains(domains[index]))
+			return dynamic_cast<Component*>(IndividualInstances[domains[index]])->resolveVariable(domains, index + 1);
+		throw DigitalTwinAddressException();
 	}
 
 	IVariable* Package::getMeasurable(std::string name)
@@ -111,6 +119,26 @@ namespace DigitalTwin::Model
 
 		for (const auto& [name, _] : Functions)
 			returnValue.push_back(name);
+
+		return returnValue;
+	}
+
+	std::vector<std::pair<std::string, IVariable*>> Package::getAllMQTTVariables()
+	{
+		std::vector<std::pair<std::string, IVariable*>> returnValue;
+
+		for (const auto& [name, variable] : Controllables)
+			returnValue.push_back(std::make_pair(name, variable));
+
+		for (const auto& [name, variable] : Measurables)
+			returnValue.push_back(std::make_pair(name, variable));
+
+		for (const auto& [_, instance] : IndividualInstances)
+			for (const auto& variable : instance->getAllMQTTVariables())
+				returnValue.push_back(std::make_pair(instance->getName() + "/" + variable.first, variable.second));
+
+		// TODO: Functions are excluded on purpose. They only get an MQTT interface after initialization,
+		//  and that interface still has to be designed.
 
 		return returnValue;
 	}

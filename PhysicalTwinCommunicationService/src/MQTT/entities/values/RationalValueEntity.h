@@ -10,7 +10,7 @@
 
 namespace DigitalTwin::Communication
 {
-    class RationalValueEntity : public ValueEntity
+    class CPPPHYSICALTWINCOMMUNICATION_EXPORT RationalValueEntity : public ValueEntity
     {
     public:
         RationalValueEntity() = delete;

@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <utility>
 
 #include "ICollectionType.h"
 #include "../../cpp_digital_twin_lib_global.h"
@@ -52,6 +53,7 @@ namespace DigitalTwin::Model {
         std::vector<Function*> getAllFunctions();
 
         std::vector<std::string> getAllMQTTTopics();
+        std::vector<std::pair<std::string, IVariable*>> getAllMQTTVariables();
 
         Component* instantiate(std::string name);
 
