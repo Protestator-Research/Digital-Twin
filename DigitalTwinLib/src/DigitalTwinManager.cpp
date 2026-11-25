@@ -88,7 +88,7 @@ namespace DigitalTwin {
             return;
         std::string topic = baseName + "/" + element.first;
         ClientService->publish(topic, element.second->getJson());
-        const auto updateVariableFunction = [this](std::string topic, std::string payload)
+        const auto updateVariableFunction = [](std::string topic, std::string payload)
             {
                 std::cout << "Variable with Address: " << topic << " is updated with Value:" << std::endl << payload << std::endl;
             };

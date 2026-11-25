@@ -11,7 +11,7 @@ namespace DigitalTwin::Model
     class Individual : public ICollectionType
     {
     public:
-        Individual() = default;
+        Individual() = delete;
 
         explicit Individual(const std::string& name);
 

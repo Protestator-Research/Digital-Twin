@@ -256,8 +256,8 @@ namespace DigitalTwin::Model {
 			return std::make_shared<PositiveValueEntity>(positive->getValue());
 		if (auto string = dynamic_cast<StringVariable*>(variable))
 			return std::make_shared<StringValueEntity>(string->getValue());
-		if (dynamic_cast<ScalarQuantities*>(variable))
-			return std::make_shared<RealValueEntity>(0.0); // Provisional default for scalar quantities.
+		//if (dynamic_cast<ScalarQuantities*>(variable))
+		//	return std::make_shared<RealValueEntity>(0.0); // Provisional default for scalar quantities.
 		return std::make_shared<IntegerValueEntity>(0); // Provisional default for unknown variable types.
 	}
 
