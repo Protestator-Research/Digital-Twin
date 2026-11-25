@@ -26,11 +26,15 @@ namespace DigitalTwin::Client {
     private:
         Ui::SettingsDialog *Ui;
         DigitalTwinClientSettings *Settings;
+        // The own MQTT login as typed by the user, kept while the fields show the REST login.
+        QString OwnMqttUser;
+        QString OwnMqttPassword;
         void makeConnections();
         void initSettings();
 
     private slots:
         void lockServerURL();
+        void lockMqttLogin();
         void onTextChangeOfSysMLURLLineEdit(const QString &);
         void onButtonAcceptedClicked();
         void resetToDefaults();

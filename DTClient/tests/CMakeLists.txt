@@ -5,6 +5,8 @@ list(FILTER COMMONMARK_SOURCES EXCLUDE REGEX "/main\\.c$")
 
 add_executable(DigitalTwinClientTests
         TestMarkdown.cpp
+        TestClientSettings.cpp
+        ../src/Models/DigitalTwinClientSettings.cpp
         ../src/Models/Markdown/MarkdownParser.cpp
         ${COMMONMARK_SOURCES})
 
@@ -12,6 +14,7 @@ target_include_directories(DigitalTwinClientTests PRIVATE
         ../src/Models/Markdown
         ../../BackendCommunicationService/src/
         ../../DigitalTwinLib/src/
+        ../../PhysicalTwinCommunicationService/src
         ../../CpsBaseLib/src)
 
 target_compile_definitions(DigitalTwinClientTests PRIVATE

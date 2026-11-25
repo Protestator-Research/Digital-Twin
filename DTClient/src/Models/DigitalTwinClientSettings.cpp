@@ -24,6 +24,9 @@ namespace DigitalTwin::Client {
         // Settings of an older version do not have the MQTT protocol version yet.
         if (!Settings->contains(MQTTProtocolVersionIdentifier))
             Settings->setValue(MQTTProtocolVersionIdentifier, DefaultMQTTProtocolVersion);
+        // Settings of an older version used the REST login for MQTT.
+        if (!Settings->contains(MQTTUseRESTLoginIdentifier))
+            Settings->setValue(MQTTUseRESTLoginIdentifier, DefaultMQTTUseRESTLogin);
     }
 
     void DigitalTwinClientSettings::resetToDefault() {
@@ -32,6 +35,9 @@ namespace DigitalTwin::Client {
         Settings->setValue(MQTTServerIdentifier, DefaultMQTTServer);
         Settings->setValue(MQTTPortIdentifier, DefaultMQTTPort);
         Settings->setValue(MQTTProtocolVersionIdentifier, DefaultMQTTProtocolVersion);
+        Settings->setValue(MQTTUseRESTLoginIdentifier, DefaultMQTTUseRESTLogin);
+        Settings->setValue(MQTTLoginIdentifier, DefaultMQTTLogin);
+        Settings->setValue(MQTTPasswordIdentifier, DefaultMQTTPassword);
         Settings->setValue(RESTLoginIdentifier,DefaultRESTLogin);
         Settings->setValue(RESTPasswordIdentifier, DefaultRESTPassword);
         Settings->sync();
@@ -126,6 +132,38 @@ namespace DigitalTwin::Client {
 
     std::string DigitalTwinClientSettings::getRESTPasswordAsString() {
         return Settings->value(RESTPasswordIdentifier).toString().toStdString();
+    }
+
+    bool DigitalTwinClientSettings::getMQTTUseRESTLogin() {
+        return Settings->value(MQTTUseRESTLoginIdentifier, DefaultMQTTUseRESTLogin).toBool();
+    }
+
+    void DigitalTwinClientSettings::setMQTTUseRESTLogin(bool useRESTLogin) {
+        Settings->setValue(MQTTUseRESTLoginIdentifier, useRESTLogin);
+    }
+
+    QString DigitalTwinClientSettings::getMQTTUser() {
+        return Settings->value(MQTTLoginIdentifier, DefaultMQTTLogin).toString();
+    }
+
+    void DigitalTwinClientSettings::setMQTTUser(QString user) {
+        Settings->setValue(MQTTLoginIdentifier, user);
+    }
+
+    QString DigitalTwinClientSettings::getMQTTPassword() {
+        return Settings->value(MQTTPasswordIdentifier, DefaultMQTTPassword).toString();
+    }
+
+    void DigitalTwinClientSettings::setMQTTPassword(QString password) {
+        Settings->setValue(MQTTPasswordIdentifier, password);
+    }
+
+    std::string DigitalTwinClientSettings::getMQTTLoginUserAsString() {
+        return getMQTTUseRESTLogin() ? getRESTUserAsString() : getMQTTUser().toStdString();
+    }
+
+    std::string DigitalTwinClientSettings::getMQTTLoginPasswordAsString() {
+        return getMQTTUseRESTLogin() ? getRESTPasswordAsString() : getMQTTPassword().toStdString();
     }
 
     QString DigitalTwinClientSettings::getRESTFolder() {

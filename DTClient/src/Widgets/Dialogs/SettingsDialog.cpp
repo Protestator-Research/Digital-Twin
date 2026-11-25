@@ -38,7 +38,35 @@ namespace DigitalTwin::Client {
         }
     }
 
+    void SettingsDialog::lockMqttLogin() {
+        // Must not use Settings: it is connected before Settings is set.
+        if(Ui->SameLoginCheckBox->isChecked()) {
+            Ui->DTUserLineEdit->setText(Ui->UserLineEdit->text());
+            Ui->DTPasswordLineEdit->setText(Ui->PasswordLineEdit->text());
+            Ui->DTUserLineEdit->setEnabled(false);
+            Ui->DTPasswordLineEdit->setEnabled(false);
+        }
+        else {
+            Ui->DTUserLineEdit->setText(OwnMqttUser);
+            Ui->DTPasswordLineEdit->setText(OwnMqttPassword);
+            Ui->DTUserLineEdit->setEnabled(true);
+            Ui->DTPasswordLineEdit->setEnabled(true);
+        }
+    }
+
     void SettingsDialog::makeConnections() {
+        connect(Ui->SameLoginCheckBox, SIGNAL(toggled(bool)), this, SLOT(lockMqttLogin()));
+        // The REST login is mirrored only while it is used for MQTT; the own login is not rewritten by it.
+        auto mirrorRestLogin = [this]() {
+            if(Ui->SameLoginCheckBox->isChecked())
+                lockMqttLogin();
+        };
+        connect(Ui->UserLineEdit, &QLineEdit::textChanged, this, mirrorRestLogin);
+        connect(Ui->PasswordLineEdit, &QLineEdit::textChanged, this, mirrorRestLogin);
+        // textEdited is only sent for the input of the user, not for setText(); so the own login is not overwritten
+        // by the mirrored REST login.
+        connect(Ui->DTUserLineEdit, &QLineEdit::textEdited, this, [this](const QString &text) { OwnMqttUser = text; });
+        connect(Ui->DTPasswordLineEdit, &QLineEdit::textEdited, this, [this](const QString &text) { OwnMqttPassword = text; });
         connect(Ui->SameNameCheckBox,SIGNAL(checkStateChanged(Qt::CheckState)),this, SLOT(lockServerURL()));
         connect(Ui->SysMLServerURL, SIGNAL(textChanged(QString)), this, SLOT(onTextChangeOfSysMLURLLineEdit(QString)));
         connect(Ui->buttonBox->button(QDialogButtonBox::StandardButton::Save), SIGNAL(clicked(bool)), this, SLOT(onButtonAcceptedClicked()));
@@ -61,6 +89,12 @@ namespace DigitalTwin::Client {
         Settings->setRESTPassword(Ui->PasswordLineEdit->text());
         Settings->setRESTUser(Ui->UserLineEdit->text());
         Settings->setRESTFolder(Ui->FolderLineEdit->text());
+        Settings->setMQTTUseRESTLogin(Ui->SameLoginCheckBox->isChecked());
+        // The REST login is not duplicated; the stored own login stays as it is, if it is not used.
+        if(!Ui->SameLoginCheckBox->isChecked()) {
+            Settings->setMQTTUser(Ui->DTUserLineEdit->text());
+            Settings->setMQTTPassword(Ui->DTPasswordLineEdit->text());
+        }
         accept();
     }
 
@@ -74,6 +108,11 @@ namespace DigitalTwin::Client {
         Ui->UserLineEdit->setText(Settings->getRESTUser());
         Ui->PasswordLineEdit->setText(Settings->getRESTPassword());
         Ui->FolderLineEdit->setText(Settings->getRESTFolder());
+        OwnMqttUser = Settings->getMQTTUser();
+        OwnMqttPassword = Settings->getMQTTPassword();
+        Ui->SameLoginCheckBox->setChecked(Settings->getMQTTUseRESTLogin());
+        // setChecked sends no signal, if the state does not change.
+        lockMqttLogin();
     }
 
     void SettingsDialog::resetToDefaults() {

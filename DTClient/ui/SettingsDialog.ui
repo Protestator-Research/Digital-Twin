@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>483</width>
-    <height>559</height>
+    <height>640</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -181,6 +181,45 @@
                 <string>MQTT 5</string>
                </property>
               </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="SameLoginCheckBox">
+            <property name="text">
+             <string>Same login as SysML v2 REST Server</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_dtuser">
+            <item>
+             <widget class="QLabel" name="label_dtuser">
+              <property name="text">
+               <string>User</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="DTUserLineEdit"/>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_dtpassword">
+            <item>
+             <widget class="QLabel" name="label_dtpassword">
+              <property name="text">
+               <string>Password</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="DTPasswordLineEdit">
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
              </widget>
             </item>
            </layout>

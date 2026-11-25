@@ -37,6 +37,7 @@ class CppDigitalTwinRecipe(ConanFile):
         self.requires("yaml-cpp/0.8.0")
         self.requires("openssl/3.6.5")
         self.requires("libpqxx/8.0.2")
+        self.requires("mlpack/4.4.0")
 
 
         if self.options.with_client and self.settings.os == "Linux":

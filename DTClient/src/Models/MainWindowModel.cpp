@@ -64,12 +64,12 @@ namespace DigitalTwin::Client {
             if(BackendCommunication == nullptr)
                 BackendCommunication=new BACKEND_COMMUNICATION::CommunicationService(Settings->getRESTServerAsString(),std::stoi(Settings->getRESTPortAsString()), Settings->getRESTFolderAsString());
             if(ConnectionThread == nullptr) {
-                // The DT server checks the SysML credentials of the REST settings at its backend.
+                // The DT server checks the MQTT login at its backend; it is the REST login or an own MQTT login, as set in the settings.
                 ConnectionThread = new MQTTConnectionThread(Settings->getMQTTServerAsString(), Settings->getMQTTPortAsString(), Settings->getMQTTProtocolVersion(),
-                                                            Settings->getRESTUserAsString(), Settings->getRESTPasswordAsString());
+                                                            Settings->getMQTTLoginUserAsString(), Settings->getMQTTLoginPasswordAsString());
                 connect(ConnectionThread, &MQTTConnectionThread::loginRefused, this, [this]() {
                     QMessageBox::warning(MainWindow, tr("Login at the DT server failed"),
-                                         tr("The DT server refused the user name or password of the REST settings. "
+                                         tr("The DT server refused the user name or password of the MQTT login. "
                                             "The MQTT connection is not retried. Please check the settings and connect again."));
                 });
                 if(DigitalTwinManager == nullptr)

@@ -75,6 +75,37 @@ namespace DigitalTwin::Client {
 
         std::string getRESTPasswordAsString();
 
+        /**
+         * Whether the MQTT login uses the same user and password as the SysML v2 REST server.
+         */
+        bool getMQTTUseRESTLogin();
+
+        void setMQTTUseRESTLogin(bool useRESTLogin);
+
+        /**
+         * The stored own MQTT user (only used if the REST login is not used for MQTT).
+         */
+        QString getMQTTUser();
+
+        void setMQTTUser(QString user);
+
+        /**
+         * The stored own MQTT password (only used if the REST login is not used for MQTT).
+         */
+        QString getMQTTPassword();
+
+        void setMQTTPassword(QString password);
+
+        /**
+         * The effective MQTT user: the REST user, if the REST login is used, otherwise the own MQTT user.
+         */
+        std::string getMQTTLoginUserAsString();
+
+        /**
+         * The effective MQTT password: the REST password, if the REST login is used, otherwise the own MQTT password.
+         */
+        std::string getMQTTLoginPasswordAsString();
+
         void setRESTFolder(QString folder);
         QString getRESTFolder();
         std::string getRESTFolderAsString();
@@ -100,6 +131,12 @@ namespace DigitalTwin::Client {
         const QString DefaultMQTTPort = "1883";
         const char *MQTTProtocolVersionIdentifier = "MQTTProtocolVersion";
         const QString DefaultMQTTProtocolVersion = "3.1.1";
+        const char *MQTTUseRESTLoginIdentifier = "MQTTUseRESTLogin";
+        const bool DefaultMQTTUseRESTLogin = true;
+        const char *MQTTLoginIdentifier = "MQTTLogin";
+        const QString DefaultMQTTLogin = "";
+        const char *MQTTPasswordIdentifier = "MQTTPassword";
+        const QString DefaultMQTTPassword = "";
 
         void initAfterSoftwareStart();
     };
