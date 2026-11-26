@@ -23,6 +23,7 @@
 #include "Markdown/MarkdownParser.h"
 
 #include "MqttConnectionThread.h"
+#include "MqttTlsSupport.h"
 #include "entities/DigitalTwin.h"
 
 
@@ -47,11 +48,12 @@ namespace DigitalTwin::Client {
     }
 
     void MainWindowModel::connectToBackend() {
-        // The server refused the login: build a new connection with the (possibly corrected) settings. The manager
+        // The server refused the login or the TLS check failed: build a new connection with the (possibly corrected)
+        // settings (the CA file, the TLS switch, the server and the login are read when the connection is built). The manager
         // stays, the opened tabs keep their models; it is switched to the new connection below and the refused one
         // is deleted only afterwards, so the manager never points to a deleted connection.
         MQTTConnectionThread* refusedConnection = nullptr;
-        if(ConnectionThread != nullptr && ConnectionThread->isLoginRefused()) {
+        if(ConnectionThread != nullptr && (ConnectionThread->isLoginRefused() || ConnectionThread->hasTlsProblem())) {
             refusedConnection = ConnectionThread;
             ConnectionThread = nullptr;
         }
@@ -66,11 +68,21 @@ namespace DigitalTwin::Client {
             if(ConnectionThread == nullptr) {
                 // The DT server checks the MQTT login at its backend; it is the REST login or an own MQTT login, as set in the settings.
                 ConnectionThread = new MQTTConnectionThread(Settings->getMQTTServerAsString(), Settings->getMQTTPortAsString(), Settings->getMQTTProtocolVersion(),
-                                                            Settings->getMQTTLoginUserAsString(), Settings->getMQTTLoginPasswordAsString());
+                                                            Settings->getMQTTLoginUserAsString(), Settings->getMQTTLoginPasswordAsString(),
+                                                            // Without TLS nothing is prepared; with TLS this writes the trusted roots of the system.
+                                                            MqttTlsSupport::prepare(*Settings));
                 connect(ConnectionThread, &MQTTConnectionThread::loginRefused, this, [this]() {
                     QMessageBox::warning(MainWindow, tr("Login at the DT server failed"),
                                          tr("The DT server refused the user name or password of the MQTT login. "
                                             "The MQTT connection is not retried. Please check the settings and connect again."));
+                });
+                // Once per connection: the details of the following attempts go to the log. A TLS problem is retried
+                // with growing pauses like every other failed connect (only an unusable CA file stops the client).
+                connect(ConnectionThread, &MQTTConnectionThread::tlsProblem, this, [this](const QString& message) {
+                    QMessageBox::warning(MainWindow, tr("TLS problem with the DT server"),
+                                         message + "\n\n" +
+                                         tr("The certificate of the server is always verified. Please check the TLS settings "
+                                            "(server name, port, CA file) and connect again."));
                 });
                 if(DigitalTwinManager == nullptr)
                     DigitalTwinManager = new DigitalTwin::DigitalTwinManager(BackendCommunication, ConnectionThread);

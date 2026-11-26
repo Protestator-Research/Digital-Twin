@@ -27,6 +27,11 @@ namespace DigitalTwin::Client {
         // Settings of an older version used the REST login for MQTT.
         if (!Settings->contains(MQTTUseRESTLoginIdentifier))
             Settings->setValue(MQTTUseRESTLoginIdentifier, DefaultMQTTUseRESTLogin);
+        // Settings of an older version connect without TLS.
+        if (!Settings->contains(MQTTUseTLSIdentifier))
+            Settings->setValue(MQTTUseTLSIdentifier, DefaultMQTTUseTLS);
+        if (!Settings->contains(MQTTCaFileIdentifier))
+            Settings->setValue(MQTTCaFileIdentifier, DefaultMQTTCaFile);
     }
 
     void DigitalTwinClientSettings::resetToDefault() {
@@ -38,6 +43,8 @@ namespace DigitalTwin::Client {
         Settings->setValue(MQTTUseRESTLoginIdentifier, DefaultMQTTUseRESTLogin);
         Settings->setValue(MQTTLoginIdentifier, DefaultMQTTLogin);
         Settings->setValue(MQTTPasswordIdentifier, DefaultMQTTPassword);
+        Settings->setValue(MQTTUseTLSIdentifier, DefaultMQTTUseTLS);
+        Settings->setValue(MQTTCaFileIdentifier, DefaultMQTTCaFile);
         Settings->setValue(RESTLoginIdentifier,DefaultRESTLogin);
         Settings->setValue(RESTPasswordIdentifier, DefaultRESTPassword);
         Settings->sync();
@@ -164,6 +171,22 @@ namespace DigitalTwin::Client {
 
     std::string DigitalTwinClientSettings::getMQTTLoginPasswordAsString() {
         return getMQTTUseRESTLogin() ? getRESTPasswordAsString() : getMQTTPassword().toStdString();
+    }
+
+    bool DigitalTwinClientSettings::getMQTTUseTLS() {
+        return Settings->value(MQTTUseTLSIdentifier, DefaultMQTTUseTLS).toBool();
+    }
+
+    void DigitalTwinClientSettings::setMQTTUseTLS(bool useTls) {
+        Settings->setValue(MQTTUseTLSIdentifier, useTls);
+    }
+
+    QString DigitalTwinClientSettings::getMQTTCaFile() {
+        return Settings->value(MQTTCaFileIdentifier, DefaultMQTTCaFile).toString();
+    }
+
+    void DigitalTwinClientSettings::setMQTTCaFile(QString file) {
+        Settings->setValue(MQTTCaFileIdentifier, file.trimmed());
     }
 
     QString DigitalTwinClientSettings::getRESTFolder() {

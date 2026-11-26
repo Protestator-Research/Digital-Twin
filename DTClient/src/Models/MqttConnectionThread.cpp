@@ -10,11 +10,12 @@
 namespace DigitalTwin::Client {
 
     MQTTConnectionThread::MQTTConnectionThread(std::string url, std::string port, DigitalTwin::Communication::MqttProtocolVersion version,
-                                               std::string username, std::string password) :
+                                               std::string username, std::string password,
+                                               DigitalTwin::Communication::MqttTlsOptions tls) :
         // An empty client id: the service makes up a unique one. A fixed id would let two clients on one broker take
         // each other's session over (the broker allows one connection per client id).
         Service(std::make_unique<DigitalTwin::Communication::MqttClientService>(std::move(url), std::move(port), "", version,
-                                                                                std::move(username), std::move(password)))
+                                                                                std::move(username), std::move(password), std::move(tls)))
     {
         connect(this, SIGNAL(connected()), this, SLOT(onConnect()));
         // Called on a thread of the Paho library; the signal is delivered in the thread of this object.
@@ -25,8 +26,13 @@ namespace DigitalTwin::Client {
             qWarning() << QString::fromStdString(message);
             if (service->isAuthenticationFailed())
                 QMetaObject::invokeMethod(this, [this]() { emit loginRefused(); }, Qt::QueuedConnection);
+            else if (service->hasTlsProblem() && !TlsProblemReported.exchange(true)) {
+                const QString text = QString::fromStdString(message);
+                QMetaObject::invokeMethod(this, [this, text]() { emit tlsProblem(text); }, Qt::QueuedConnection);
+            }
         });
         Service->setConnectedHandler([this]() {
+            TlsProblemReported = false;
             QMetaObject::invokeMethod(this, [this]() { emit connected(); }, Qt::QueuedConnection);
         });
     }
@@ -42,6 +48,10 @@ namespace DigitalTwin::Client {
 
     bool MQTTConnectionThread::isLoginRefused() const {
         return Service->isAuthenticationFailed();
+    }
+
+    bool MQTTConnectionThread::hasTlsProblem() const {
+        return Service->hasTlsProblem();
     }
 
     void MQTTConnectionThread::addObserverForTopic(const std::string& topic,

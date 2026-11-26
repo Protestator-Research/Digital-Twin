@@ -35,6 +35,7 @@ namespace DigitalTwin::Client {
     private slots:
         void lockServerURL();
         void lockMqttLogin();
+        void chooseCaFile();
         void onTextChangeOfSysMLURLLineEdit(const QString &);
         void onButtonAcceptedClicked();
         void resetToDefaults();

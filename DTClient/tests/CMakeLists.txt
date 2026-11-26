@@ -6,7 +6,9 @@ list(FILTER COMMONMARK_SOURCES EXCLUDE REGEX "/main\\.c$")
 add_executable(DigitalTwinClientTests
         TestMarkdown.cpp
         TestClientSettings.cpp
+        TestMqttTlsSupport.cpp
         ../src/Models/DigitalTwinClientSettings.cpp
+        ../src/Models/MqttTlsSupport.cpp
         ../src/Models/Markdown/MarkdownParser.cpp
         ${COMMONMARK_SOURCES})
 
@@ -23,9 +25,15 @@ target_compile_definitions(DigitalTwinClientTests PRIVATE
 target_link_libraries(DigitalTwinClientTests PRIVATE
         GTest::gtest_main
         Qt::Core
+        Qt::Network
+        PhysicalTwinCommunication
         DigitalTwinLib
         BackendCommunication
         CPSBaseLib
         sysmllib::sysmllib)
 
 add_test(NAME DigitalTwinClientTests COMMAND DigitalTwinClientTests)
+
+if(WIN32)
+    target_link_libraries(DigitalTwinClientTests PRIVATE crypt32)
+endif()

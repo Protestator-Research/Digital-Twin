@@ -7,6 +7,8 @@ add_library(PhysicalTwinCommunication
         src/Services/AuthenticationService.h
         src/Services/MqttClientService.cpp
         src/Services/MqttClientService.h
+        src/Services/MqttTlsOptions.cpp
+        src/Services/MqttTlsOptions.h
         src/MQTT/entities/DigitalTwinEntity.cpp
         src/MQTT/entities/DigitalTwinEntity.h
         src/MQTT/entities/JsonEntities.h
@@ -37,6 +39,9 @@ add_library(PhysicalTwinCommunication
         src/MQTT/entities/JsonEntities.cpp
         src/MQTT/entities/FunctionRegistrationRequest.hpp)
 
+# Used directly (checkMqttCaFile loads the CA file like Paho does); the same OpenSSL as Paho.
+find_package(OpenSSL REQUIRED)
+
 # Paho is PUBLIC: MqttClientService.h exposes mqtt::async_client.
 target_link_libraries(PhysicalTwinCommunication
         PUBLIC
@@ -48,6 +53,9 @@ target_link_libraries(PhysicalTwinCommunication
 
 target_include_directories(PhysicalTwinCommunication PUBLIC
         ../CpsBaseLib/src)
+
+# Only the implementation uses it (checkMqttCaFile); no public header includes OpenSSL.
+target_link_libraries(PhysicalTwinCommunication PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
 install(TARGETS PhysicalTwinCommunication DESTINATION "."
         RUNTIME DESTINATION bin

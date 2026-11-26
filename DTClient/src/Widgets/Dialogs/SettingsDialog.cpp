@@ -4,6 +4,7 @@
 
 // You may need to build the project (run Qt uic code generator) to get "ui_SettingsDialog.h" resolved
 
+#include <QFileDialog>
 #include <QPushButton>
 
 #include "SettingsDialog.h"
@@ -54,7 +55,15 @@ namespace DigitalTwin::Client {
         }
     }
 
+    void SettingsDialog::chooseCaFile() {
+        const QString file = QFileDialog::getOpenFileName(this, tr("CA file"), Ui->CaFileLineEdit->text(),
+                                                          tr("PEM certificates (*.pem *.crt *.cer);;All files (*)"));
+        if(!file.isEmpty())
+            Ui->CaFileLineEdit->setText(file);
+    }
+
     void SettingsDialog::makeConnections() {
+        connect(Ui->CaFileBrowseButton, SIGNAL(clicked(bool)), this, SLOT(chooseCaFile()));
         connect(Ui->SameLoginCheckBox, SIGNAL(toggled(bool)), this, SLOT(lockMqttLogin()));
         // The REST login is mirrored only while it is used for MQTT; the own login is not rewritten by it.
         auto mirrorRestLogin = [this]() {
@@ -84,6 +93,8 @@ namespace DigitalTwin::Client {
         Settings->setMQTTServer(Ui->DTServerLineEdit->text());
         Settings->setMQTTPort(Ui->DTPortLineEdit->text());
         Settings->setMQTTProtocolVersion(Ui->MqttVersionComboBox->currentData().toString());
+        Settings->setMQTTUseTLS(Ui->UseTlsCheckBox->isChecked());
+        Settings->setMQTTCaFile(Ui->CaFileLineEdit->text());
         Settings->setRESTServer(Ui->SysMLServerURL->text());
         Settings->setRESTPort(Ui->SysMLServerPort->text());
         Settings->setRESTPassword(Ui->PasswordLineEdit->text());
@@ -105,6 +116,8 @@ namespace DigitalTwin::Client {
         Ui->DTServerLineEdit->setText(Settings->getMQTTServer());
         Ui->DTPortLineEdit->setText(Settings->getMQTTPort());
         Ui->MqttVersionComboBox->setCurrentIndex(qMax(0, Ui->MqttVersionComboBox->findData(Settings->getMQTTProtocolVersionAsText())));
+        Ui->UseTlsCheckBox->setChecked(Settings->getMQTTUseTLS());
+        Ui->CaFileLineEdit->setText(Settings->getMQTTCaFile());
         Ui->UserLineEdit->setText(Settings->getRESTUser());
         Ui->PasswordLineEdit->setText(Settings->getRESTPassword());
         Ui->FolderLineEdit->setText(Settings->getRESTFolder());

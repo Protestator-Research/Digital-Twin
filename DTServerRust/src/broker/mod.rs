@@ -8,6 +8,7 @@ pub(crate) mod persist;
 pub mod protocol;
 pub(crate) mod session;
 pub mod subscriptions;
+pub mod tls;
 pub mod topic;
 pub mod tracker;
 
@@ -18,11 +19,13 @@ use std::time::Duration;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
-use tracing::{info, warn};
+use tokio::time::Instant;
+use tracing::{debug, info, warn};
 
 pub use limits::BrokerLimits;
 pub use persist::SessionDatabase;
 pub use protocol::{ProtocolMode, ProtocolVersion, QoS};
+pub use tls::{BrokerTls, TlsError};
 
 use self::core::Core;
 use self::persist::{PgSessionStore, SessionStore};
@@ -42,6 +45,9 @@ pub struct BrokerOptions {
     /// clean session 0, MQTT 5 with a Session Expiry Interval): subscriptions, queued and unacknowledged
     /// messages, QoS 2 state. `None` keeps them in memory only, so a restart of the broker loses them.
     pub sessions: Option<SessionDatabase>,
+    /// Certificate and key of the listener: all connections then speak TLS (and only TLS) on the port. `None`:
+    /// plain TCP.
+    pub tls: Option<BrokerTls>,
 }
 
 /// A running broker. Dropping it starts the same shutdown as [`Broker::shutdown`] (MQTT 5 clients receive
@@ -82,6 +88,7 @@ impl Broker {
                 authenticator: None,
                 throttle: ThrottleConfig::default(),
                 sessions: None,
+                tls: None,
             },
         )
         .await
@@ -100,6 +107,7 @@ impl Broker {
             authenticator,
             throttle,
             sessions,
+            tls,
         } = options;
         // 0 is not a legal Receive Maximum (the CONNACK would announce it): callers of the library can pass it
         let mut limits = limits;
@@ -136,6 +144,7 @@ impl Broker {
             %local_addr,
             protocol = %protocol,
             authentication = authenticator.is_some(),
+            tls = tls.is_some(),
             "MQTT broker listening"
         );
         let core =
@@ -147,6 +156,7 @@ impl Broker {
         let accept = tokio::spawn(accept_loop(
             listener,
             Arc::clone(&core),
+            tls,
             shutdown_rx,
             alive_tx,
         ));
@@ -247,6 +257,7 @@ fn bind_v6(port: u16) -> std::io::Result<TcpListener> {
 async fn accept_loop(
     listener: TcpListener,
     core: Arc<Core>,
+    tls: Option<BrokerTls>,
     mut shutdown: watch::Receiver<bool>,
     alive: mpsc::Sender<()>,
 ) {
@@ -257,7 +268,7 @@ async fn accept_loop(
             accepted = listener.accept() => accepted,
         };
         match accepted {
-            Ok((stream, peer)) => accept_one(stream, peer, &core, &shutdown, &alive),
+            Ok((stream, peer)) => accept_one(stream, peer, &core, tls.as_ref(), &shutdown, &alive),
             Err(e) => {
                 // Back off briefly to avoid a busy loop, e.g. on EMFILE.
                 warn!(error = %e, "MQTT accept failed");
@@ -271,20 +282,62 @@ fn accept_one(
     stream: TcpStream,
     peer: SocketAddr,
     core: &Arc<Core>,
+    tls: Option<&BrokerTls>,
     shutdown: &watch::Receiver<bool>,
     alive: &mpsc::Sender<()>,
 ) {
     let key = tracker::peer_key(peer);
     match core.tracker.acquire_permit(key) {
         Some(permit) => {
-            tokio::spawn(session::run_session(
-                stream,
-                peer,
-                Arc::clone(core),
-                permit,
-                shutdown.clone(),
-                alive.clone(),
-            ));
+            let _ = stream.set_nodelay(true);
+            // The wait for CONNECT starts now, a TLS handshake counts against it: a client that does not
+            // finish it in time is dropped like one that stays silent after the TCP connect.
+            let connect_deadline =
+                Instant::now() + Duration::from_secs(u64::from(core.limits.connect_timeout_s));
+            let core = Arc::clone(core);
+            let shutdown = shutdown.clone();
+            let alive = alive.clone();
+            match tls.cloned() {
+                None => {
+                    tokio::spawn(session::run_session(
+                        stream,
+                        peer,
+                        core,
+                        permit,
+                        connect_deadline,
+                        shutdown,
+                        alive,
+                    ));
+                }
+                // The handshake runs in the task of the connection, not in the accept loop. The permit moves
+                // into the task, so a failed handshake releases the slot.
+                Some(tls) => {
+                    tokio::spawn(async move {
+                        let limit = connect_deadline.saturating_duration_since(Instant::now());
+                        let mut stop = shutdown.clone();
+                        let handshake = tokio::select! {
+                            biased;
+                            _ = stop.wait_for(|stop| *stop) => return,
+                            handshake = tls.accept(stream, limit) => handshake,
+                        };
+                        match handshake {
+                            Ok(stream) => {
+                                session::run_session(
+                                    stream,
+                                    peer,
+                                    core,
+                                    permit,
+                                    connect_deadline,
+                                    shutdown,
+                                    alive,
+                                )
+                                .await;
+                            }
+                            Err(e) => debug!(%peer, "TLS handshake failed: {e}"),
+                        }
+                    });
+                }
+            }
         }
         None => {
             warn!(ip = %key, "MQTT connection rejected (connection limit)");

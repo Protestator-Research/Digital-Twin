@@ -106,6 +106,24 @@ namespace DigitalTwin::Client {
          */
         std::string getMQTTLoginPasswordAsString();
 
+        /**
+         * Whether the MQTT connection uses TLS (ssl://). Off by default. The certificate of the server is always
+         * verified, including its host name. A TLS scheme (ssl://, mqtts://, tls://) typed into the MQTT server
+         * field turns TLS on as well, whatever this says, and a plain scheme (tcp://, mqtt://) does not turn it
+         * off: TLS wins (see makeMqttEndpoint()).
+         */
+        bool getMQTTUseTLS();
+
+        void setMQTTUseTLS(bool useTls);
+
+        /**
+         * A PEM file with the CA certificates that are trusted for the MQTT server, or empty. If it is set, it
+         * REPLACES the certificates of the operating system (for a private CA or for tests). Only used with TLS.
+         */
+        QString getMQTTCaFile();
+
+        void setMQTTCaFile(QString file);
+
         void setRESTFolder(QString folder);
         QString getRESTFolder();
         std::string getRESTFolderAsString();
@@ -137,6 +155,10 @@ namespace DigitalTwin::Client {
         const QString DefaultMQTTLogin = "";
         const char *MQTTPasswordIdentifier = "MQTTPassword";
         const QString DefaultMQTTPassword = "";
+        const char *MQTTUseTLSIdentifier = "MQTTUseTLS";
+        const bool DefaultMQTTUseTLS = false;
+        const char *MQTTCaFileIdentifier = "MQTTCaFile";
+        const QString DefaultMQTTCaFile = "";
 
         void initAfterSoftwareStart();
     };

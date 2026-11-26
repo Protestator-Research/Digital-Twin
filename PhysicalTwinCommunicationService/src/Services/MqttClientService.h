@@ -17,9 +17,11 @@
 #include <vector>
 
 #include <mqtt/async_client.h>
+#include <mqtt/ssl_options.h>
 
 #include "../cpp_physical_twin_communication_global.h"
 #include "IMqttClientService.h"
+#include "MqttTlsOptions.h"
 
 namespace DigitalTwin::Communication {
     /**
@@ -46,17 +48,26 @@ namespace DigitalTwin::Communication {
 
         /**
          * Constructor needed for the connection to a Server. Nothing is connected before start().
-         * @param server The Server URL or IP. A scheme (tcp://, ssl://, ...) is kept, without one tcp:// is used.
+         * @param server The Server URL or IP. A scheme (tcp://, ssl://, ...) is kept, without one tcp:// is used (or
+         * ssl:// with TLS switched on). See makeMqttEndpoint() for the schemes and for a scheme that contradicts the
+         * TLS option.
          * @param port The Port on the server, where the DT Server is running.
          * @param clientId The MQTT client id. An empty id is replaced by a generated unique one.
          * @param version The MQTT protocol version. It has to be enabled on the server
          * (run.mqtt.protocol_version of DTServerRust).
          * @param username User name of the login at the DT server (the SysML user). Not sent when empty.
          * @param password Password of the login. Not sent when empty. Never written to a log or an error message.
+         * @param tls TLS settings. With the default (TLS off, no ssl:// scheme) the connection is plain TCP as before.
+         * With TLS the server certificate is always verified, including the host name, there is no way to switch that
+         * off. A problem with TLS (certificate not trusted, wrong host name, expired, no TLS on the server, TLS on a
+         * plain server, unreadable CA file) is reported by the error handler with a text that starts with "TLS", and
+         * the connect is retried with the usual growing pauses, except for an unusable CA file, which stops the
+         * client (see isTlsConfigurationFailed()). IPv6 literals ("[::1]") do not work with TLS, see MqttEndpoint.
          */
         MqttClientService(std::string server, std::string port, std::string clientId,
                           MqttProtocolVersion version = MqttProtocolVersion::V3_1_1,
-                          std::string username = std::string(), std::string password = std::string());
+                          std::string username = std::string(), std::string password = std::string(),
+                          MqttTlsOptions tls = MqttTlsOptions());
 
         ~MqttClientService() override;
 
@@ -87,6 +98,31 @@ namespace DigitalTwin::Communication {
          */
         bool isAuthenticationFailed() const;
 
+        /**
+         * True if the CA file given for TLS cannot be used (missing, unreadable, no certificate in it). The client
+         * then stops trying to connect, because retrying cannot help. Once it has connected successfully, a CA file that
+         * fails the check later (network share, virus scanner) is only reported and retried with the usual pauses. A new start() after stop() tries again.
+         */
+        bool isTlsConfigurationFailed() const;
+
+        /**
+         * True if a connect attempt failed because of TLS (certificate not trusted, wrong host name, expired
+         * certificate, TLS handshake not possible, or the CA file is unusable) and there was no successful connect
+         * since. A connect failure without a message of OpenSSL (server not reachable, host name not matching) only counts
+         * while this object has never connected; after the first successful connect such failures are ordinary outages and
+         * do not set it (a restart of the server must not look like a certificate problem). It stays set while the following
+         * attempts are made, so that an application can tell "a TLS problem
+         * is being retried" from "connected". The connect is retried with growing pauses (1 s up to 60 s) as for
+         * any other failure.
+         */
+        bool hasTlsProblem() const;
+
+        /** True if the connection uses TLS (ssl:// URI). */
+        bool usesTls() const;
+
+        /** The URI of the server as Paho gets it (scheme, host and port). */
+        std::string serverUri() const;
+
         MqttProtocolVersion protocolVersion() const;
 
         /**
@@ -114,6 +150,9 @@ namespace DigitalTwin::Communication {
         void retryLoop();
         void attemptConnect();
         void reportError(const std::string& message);
+        bool onTlsConnectFailed(const mqtt::token& token);
+        void reportTlsError(const std::string& message);
+        void recordTlsDetail(const std::string& detail);
         void onMessage(mqtt::const_message_ptr message);
 
         // Everything the Paho callbacks touch is declared before Client, so that it still exists while the
@@ -124,6 +163,16 @@ namespace DigitalTwin::Communication {
         std::string Password;
         std::atomic<bool> Started;
         std::atomic<bool> AuthenticationFailed;
+        MqttTlsOptions Tls;
+        MqttEndpoint Endpoint;
+        std::atomic<bool> TlsConfigurationFailed{false};
+        std::atomic<bool> TlsProblem{false};
+        // Set by the first successful connect and kept: what looks like a TLS problem before it (nothing was ever trusted)
+        // is only an outage after it.
+        std::atomic<bool> EverConnected{false};
+        // The messages of OpenSSL about the current connect attempt (set on a Paho thread).
+        std::mutex TlsDetailMutex;
+        std::string TlsDetail;
         // Reconnect state. The worker thread is joined in stop(), which the destructor calls, before Client goes away.
         std::mutex RetryMutex;
         std::condition_variable RetryCv;

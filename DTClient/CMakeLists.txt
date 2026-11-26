@@ -71,6 +71,8 @@ set(SOURCES src/Widgets/DigitalTwinMainWindow.cpp
         src/Widgets/Dialogs/CreateProjectDialog.h
         src/Models/MqttConnectionThread.cpp
         src/Models/MqttConnectionThread.h
+        src/Models/MqttTlsSupport.cpp
+        src/Models/MqttTlsSupport.h
         ui/DigitalTwinTabWidget.ui
         ui/SettingsDialog.ui
         ui/DigitalTwinMainWindow.ui
@@ -108,6 +110,11 @@ target_link_libraries(DigitalTwinClient PUBLIC
         paho-mqtt-cpp::paho-mqtt-cpp
         md4c::md4c
         sysmllib::sysmllib)
+
+if(WIN32)
+    # the roots of the Windows certificate store, see MqttTlsSupport.cpp
+    target_link_libraries(DigitalTwinClient PRIVATE crypt32)
+endif()
 
 if (!UNIX)
 set_target_properties(DigitalTwinClient PROPERTIES

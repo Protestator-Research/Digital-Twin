@@ -117,3 +117,68 @@ TEST_F(ClientSettingsTest, ResetToDefaultRestoresTheMqttLogin) {
     EXPECT_TRUE(settings.getMQTTPassword().isEmpty());
     EXPECT_EQ(settings.getMQTTLoginUserAsString(), settings.getRESTUserAsString());
 }
+
+TEST_F(ClientSettingsTest, TlsIsOffByDefaultAndHasNoCaFile) {
+    DigitalTwinClientSettings settings;
+    EXPECT_FALSE(settings.getMQTTUseTLS());
+    EXPECT_TRUE(settings.getMQTTCaFile().isEmpty());
+}
+
+TEST_F(ClientSettingsTest, TlsSettingsSurviveSavingAndLoading) {
+    {
+        DigitalTwinClientSettings settings;
+        settings.setMQTTUseTLS(true);
+        settings.setMQTTCaFile("  C:/certs/private-ca.pem ");
+    }
+
+    DigitalTwinClientSettings settings;
+    EXPECT_TRUE(settings.getMQTTUseTLS());
+    EXPECT_EQ(settings.getMQTTCaFile(), "C:/certs/private-ca.pem");
+
+    settings.setMQTTUseTLS(false);
+    EXPECT_FALSE(settings.getMQTTUseTLS());
+}
+
+TEST_F(ClientSettingsTest, OldConfigurationWithoutTheTlsKeysConnectsWithoutTls) {
+    {
+        // A configuration of a version without TLS: all other MQTT settings exist.
+        QSettings old(configFile(), QSettings::IniFormat);
+        old.beginGroup("Connection Settings");
+        old.setValue("RESTServer", "example.org");
+        old.setValue("RESTPort", "9090");
+        old.setValue("RESTLogin", "old@example.org");
+        old.setValue("RESTPassword", "old-secret");
+        old.setValue("RESTFolder", "/agila-server/");
+        old.setValue("MQTTServer", "mqtt.example.org");
+        old.setValue("MQTTPort", "1883");
+        old.setValue("MQTTProtocolVersion", "5");
+        old.setValue("MQTTUseRESTLogin", false);
+        old.setValue("MQTTLogin", "mqtt-user");
+        old.setValue("MQTTPassword", "mqtt-secret");
+        old.endGroup();
+        old.sync();
+        ASSERT_FALSE(old.contains("Connection Settings/MQTTUseTLS"));
+        ASSERT_FALSE(old.contains("Connection Settings/MQTTCaFile"));
+    }
+
+    DigitalTwinClientSettings settings;
+    EXPECT_FALSE(settings.getMQTTUseTLS());
+    EXPECT_TRUE(settings.getMQTTCaFile().isEmpty());
+    // the rest of the old file is untouched
+    EXPECT_EQ(settings.getMQTTServer(), "mqtt.example.org");
+    EXPECT_EQ(settings.getMQTTPort(), "1883");
+    EXPECT_EQ(settings.getMQTTProtocolVersionAsText(), "5");
+    EXPECT_FALSE(settings.getMQTTUseRESTLogin());
+    EXPECT_EQ(settings.getMQTTLoginUserAsString(), "mqtt-user");
+}
+
+TEST_F(ClientSettingsTest, ResetToDefaultTurnsTlsOffAndForgetsTheCaFile) {
+    DigitalTwinClientSettings settings;
+    settings.setMQTTUseTLS(true);
+    settings.setMQTTCaFile("C:/certs/private-ca.pem");
+
+    settings.resetToDefault();
+
+    EXPECT_FALSE(settings.getMQTTUseTLS());
+    EXPECT_TRUE(settings.getMQTTCaFile().isEmpty());
+}

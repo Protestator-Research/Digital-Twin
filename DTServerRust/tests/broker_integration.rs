@@ -599,7 +599,13 @@ async fn slow_client_is_dropped_and_others_are_not_affected() {
     // 300 x 100 KB = 30 MB, far more than the socket buffers of the stalled client can hold
     let payload = vec![b'z'; 100_000];
     for sent in 0..300usize {
+        let wait_until = tokio::time::Instant::now() + Duration::from_secs(30);
         while sent - received.load(Ordering::SeqCst) > 8 {
+            assert!(
+                tokio::time::Instant::now() < wait_until,
+                "the healthy client stopped receiving at message {sent} (received {})",
+                received.load(Ordering::SeqCst)
+            );
             tokio::time::sleep(Duration::from_millis(1)).await;
         }
         hub.publish("big", payload.clone()).unwrap();

@@ -3,7 +3,8 @@
 add_executable(PhysicalTwinCommunicationServiceLibTests
         main.cpp
         entities/SerializationTests.cpp
-        services/MqttClientServiceLoginTests.cpp)
+        services/MqttClientServiceLoginTests.cpp
+        services/MqttClientServiceTlsTests.cpp)
 
 target_include_directories(PhysicalTwinCommunicationServiceLibTests PRIVATE
                                     ../src/)

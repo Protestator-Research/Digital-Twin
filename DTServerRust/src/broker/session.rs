@@ -11,9 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use bytes::{Bytes, BytesMut};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::tcp::OwnedWriteHalf;
-use tokio::net::TcpStream;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::sync::{mpsc, oneshot, watch, Notify};
 use tokio::time::{sleep_until, timeout, Instant};
 use tracing::{debug, info, warn};
@@ -245,13 +243,31 @@ impl SessionOut {
     }
 }
 
-async fn writer_task(
-    mut wr: OwnedWriteHalf,
+async fn writer_task<W: AsyncWrite + Unpin>(
+    mut wr: W,
     mut rx: mpsc::UnboundedReceiver<Outgoing>,
     out: Arc<SessionOut>,
 ) {
     let mut buf = BytesMut::with_capacity(1024);
-    while let Some(msg) = rx.recv().await {
+    loop {
+        let msg = match rx.try_recv() {
+            Ok(msg) => msg,
+            Err(mpsc::error::TryRecvError::Empty) => {
+                // everything queued so far is written: push it out before waiting for more, otherwise the tail
+                // of a burst can sit in the TLS buffer until another packet is sent. The bytes are released from
+                // `pending` after the write, not the flush: what a TLS stream still holds is bounded by its own
+                // send buffer, which blocks the write when full, so a peer that does not read stalls the writer
+                // and the counted queue behind it grows to the limit.
+                if wr.flush().await.is_err() {
+                    break;
+                }
+                match rx.recv().await {
+                    Some(msg) => msg,
+                    None => break,
+                }
+            }
+            Err(mpsc::error::TryRecvError::Disconnected) => break,
+        };
         let result = match msg {
             Outgoing::Publish(message) => {
                 buf.clear();
@@ -377,18 +393,23 @@ struct State {
     peer_ip: std::net::IpAddr,
 }
 
-/// Runs a connection until it ends. `_alive` is dropped at the end so the broker can wait for all sessions.
-pub(crate) async fn run_session(
-    stream: TcpStream,
+/// Runs a connection until it ends. `stream` is a plain TCP stream or a TLS stream whose handshake is done.
+/// `connect_deadline` is the end of the time the connection has to send CONNECT; it started when the connection
+/// was accepted, so a TLS handshake uses up part of it. `_alive` is dropped at the end so the broker can wait for
+/// all sessions.
+pub(crate) async fn run_session<S>(
+    stream: S,
     peer: SocketAddr,
     core: Arc<Core>,
     permit: ConnectionPermit,
+    connect_deadline: Instant,
     shutdown: watch::Receiver<bool>,
     _alive: mpsc::Sender<()>,
-) {
-    let _ = stream.set_nodelay(true);
+) where
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+{
     let conn_id = core.next_conn_id();
-    let (mut rd, wr) = stream.into_split();
+    let (mut rd, wr) = tokio::io::split(stream);
     let (out, rx) = SessionOut::new(
         core.limits.max_pending_send_bytes,
         core.limits.max_consecutive_send_overflows,
@@ -403,7 +424,16 @@ pub(crate) async fn run_session(
         version: ProtocolVersion::V311,
         peer_ip: super::tracker::peer_key(peer),
     };
-    let end = drive(&mut rd, &core, conn_id, &out, shutdown, &mut state).await;
+    let end = drive(
+        &mut rd,
+        &core,
+        conn_id,
+        &out,
+        connect_deadline,
+        shutdown,
+        &mut state,
+    )
+    .await;
 
     // First stop deliveries (and destroy the session if it ends with the connection), then say goodbye and
     // close. A connection whose session was taken over leaves the session alone.
@@ -478,18 +508,17 @@ async fn wait_for_acks(
     }
 }
 
-async fn drive(
-    rd: &mut tokio::net::tcp::OwnedReadHalf,
+async fn drive<R: AsyncRead + Unpin>(
+    rd: &mut R,
     core: &Arc<Core>,
     conn_id: u64,
     out: &Arc<SessionOut>,
+    connect_deadline: Instant,
     mut shutdown: watch::Receiver<bool>,
     state: &mut State,
 ) -> End {
     let limits = &core.limits;
     let mut buf = BytesMut::with_capacity(4096);
-    let connect_deadline =
-        Instant::now() + Duration::from_secs(u64::from(limits.connect_timeout_s));
     let mut deadline = Some(connect_deadline);
     let deferred_limit = 2 * usize::from(limits.receive_maximum) + 16;
 
@@ -547,6 +576,10 @@ async fn drive(
                     if state.connected {
                         deadline = state.keep_alive.map(|d| Instant::now() + d);
                     }
+                }
+                // a TLS peer that closes the TCP connection without close_notify
+                Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                    return End::closed("closed by peer")
                 }
                 Err(_) => return End::closed("read error"),
             },
@@ -1192,6 +1225,152 @@ mod tests {
         assert_eq!(out.offer_publish(&msg(big.clone())), Offer::Dropped);
     }
 
+    /// A writer like a TLS stream: `poll_write` accepts the bytes into a buffer, they are only "sent" by
+    /// `poll_flush` (or `poll_shutdown`), and the flush can be held back like a socket that is full.
+    #[derive(Default)]
+    struct BufferedWriter {
+        shared: Arc<std::sync::Mutex<Shared>>,
+    }
+
+    #[derive(Default)]
+    struct Shared {
+        buffered: Vec<u8>,
+        sent: Vec<u8>,
+        /// While true `poll_flush` stays pending.
+        hold: bool,
+        /// While true `poll_write` stays pending (a peer that does not read).
+        block_writes: bool,
+        /// Queues `refills_left` more packets of this kind, one per write.
+        refill: Option<(Arc<SessionOut>, Bytes)>,
+        refills_left: usize,
+        /// A refill was refused by the pending limit.
+        refused: bool,
+        waker: Option<std::task::Waker>,
+    }
+
+    impl AsyncWrite for BufferedWriter {
+        fn poll_write(
+            self: std::pin::Pin<&mut Self>,
+            _cx: &mut std::task::Context<'_>,
+            buf: &[u8],
+        ) -> std::task::Poll<std::io::Result<usize>> {
+            let mut shared = self.shared.lock().unwrap();
+            if shared.block_writes {
+                return std::task::Poll::Pending;
+            }
+            shared.buffered.extend_from_slice(buf);
+            if shared.refills_left > 0 {
+                shared.refills_left -= 1;
+                if let Some((out, packet)) = &shared.refill {
+                    let refused = !out.send_control(packet.clone());
+                    shared.refused |= refused;
+                }
+            }
+            std::task::Poll::Ready(Ok(buf.len()))
+        }
+
+        fn poll_flush(
+            self: std::pin::Pin<&mut Self>,
+            cx: &mut std::task::Context<'_>,
+        ) -> std::task::Poll<std::io::Result<()>> {
+            let mut shared = self.shared.lock().unwrap();
+            if shared.hold {
+                shared.waker = Some(cx.waker().clone());
+                return std::task::Poll::Pending;
+            }
+            let buffered = std::mem::take(&mut shared.buffered);
+            shared.sent.extend(buffered);
+            std::task::Poll::Ready(Ok(()))
+        }
+
+        fn poll_shutdown(
+            self: std::pin::Pin<&mut Self>,
+            cx: &mut std::task::Context<'_>,
+        ) -> std::task::Poll<std::io::Result<()>> {
+            self.poll_flush(cx)
+        }
+    }
+
+    #[tokio::test]
+    async fn writer_flushes_what_it_wrote_before_it_waits() {
+        // Without the flush the bytes stay in the buffer of a TLS stream until the next packet is sent
+        let (out, rx) = SessionOut::new(1000, 3);
+        let writer = BufferedWriter::default();
+        let shared = Arc::clone(&writer.shared);
+        let task = tokio::spawn(writer_task(writer, rx, Arc::clone(&out)));
+        let ping = codec::encode_pingresp();
+        for _ in 0..3 {
+            assert!(out.send_control(ping.clone()));
+        }
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while shared.lock().unwrap().sent.len() < 3 * ping.len() {
+            assert!(
+                Instant::now() < deadline,
+                "the written bytes were not flushed"
+            );
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        // the writer is still alive and waiting: nothing else triggered the flush
+        assert!(!task.is_finished());
+        assert_eq!(out.pending(), 0);
+        out.close(None);
+        task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn peer_that_takes_every_write_with_a_small_backlog_is_never_refused() {
+        // Every write is accepted at once and one new packet is queued per write, so the queue is never empty and
+        // always holds 4 packets. The backlog is small, however many bytes have been written in total.
+        let (out, rx) = SessionOut::new(64_000, 3);
+        let writer = BufferedWriter::default();
+        let shared = Arc::clone(&writer.shared);
+        let packet = Bytes::from(vec![7u8; 1000]);
+        {
+            let mut s = shared.lock().unwrap();
+            s.refill = Some((Arc::clone(&out), packet.clone()));
+            s.refills_left = 300;
+        }
+        for _ in 0..4 {
+            assert!(out.send_control(packet.clone()));
+        }
+        let task = tokio::spawn(writer_task(writer, rx, Arc::clone(&out)));
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while shared.lock().unwrap().sent.len() < 304 * 1000 {
+            assert!(
+                Instant::now() < deadline,
+                "the writer did not finish the stream"
+            );
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(
+            !shared.lock().unwrap().refused,
+            "a healthy client was refused as a slow one"
+        );
+        assert!(out.kicked().is_none(), "a healthy client was kicked");
+        out.close(None);
+        task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn peer_whose_writes_block_is_refused_through_the_queue_limit() {
+        // The writer cannot make progress (the first write never completes), so the queue grows until the limit
+        // refuses the next packet and kicks the session.
+        let (out, rx) = SessionOut::new(5000, 3);
+        let writer = BufferedWriter::default();
+        writer.shared.lock().unwrap().block_writes = true;
+        let task = tokio::spawn(writer_task(writer, rx, Arc::clone(&out)));
+        let packet = Bytes::from(vec![7u8; 1000]);
+        let accepted = (0..10)
+            .take_while(|_| out.send_control(packet.clone()))
+            .count();
+        assert!(
+            accepted <= 6,
+            "the queue limit did not apply ({accepted} accepted)"
+        );
+        assert!(out.kicked().is_some());
+        task.abort();
+    }
+
     #[test]
     fn closed_queue_does_not_leak_pending_bytes() {
         let (out, rx) = SessionOut::new(100, 3);
@@ -1335,7 +1514,7 @@ mod tests {
     use crate::auth::ThrottleConfig;
     use crate::broker::limits::BrokerLimits;
     use crate::broker::protocol::ProtocolMode;
-    use tokio::net::TcpListener;
+    use tokio::net::{TcpListener, TcpStream};
 
     const SHORT: Duration = Duration::from_millis(400);
     const LONG: Duration = Duration::from_secs(5);
@@ -1368,11 +1547,14 @@ mod tests {
                     .tracker
                     .acquire_permit(crate::broker::tracker::peer_key(peer))
                     .expect("a connection permit");
+                let _ = stream.set_nodelay(true);
                 tokio::spawn(run_session(
                     stream,
                     peer,
                     Arc::clone(&accept_core),
                     permit,
+                    Instant::now()
+                        + Duration::from_secs(u64::from(accept_core.limits.connect_timeout_s)),
                     stop_rx.clone(),
                     alive.clone(),
                 ));

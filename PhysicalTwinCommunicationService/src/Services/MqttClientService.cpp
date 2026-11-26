@@ -34,13 +34,6 @@ namespace DigitalTwin::Communication {
             return stream.str();
         }
 
-        std::string makeServerUri(const std::string& server, const std::string& port) {
-            std::string uri = server.find("://") == std::string::npos ? "tcp://" + server : server;
-            if (!port.empty())
-                uri += ":" + port;
-            return uri;
-        }
-
         mqtt::create_options makeCreateOptions(MqttProtocolVersion version) {
             if (version == MqttProtocolVersion::V5)
                 return mqtt::create_options(MQTTVERSION_5);
@@ -108,15 +101,20 @@ namespace DigitalTwin::Communication {
     };
 
     MqttClientService::MqttClientService(std::string server, std::string port, std::string clientId,
-                                         MqttProtocolVersion version, std::string username, std::string password) :
+                                         MqttProtocolVersion version, std::string username, std::string password,
+                                         MqttTlsOptions tls) :
         Version(version),
         ClientId(makeClientId(std::move(clientId))),
         Username(std::move(username)),
         Password(std::move(password)),
         Started(false),
         AuthenticationFailed(false),
+        Tls(std::move(tls)),
+        Endpoint(makeMqttEndpoint(server, port, Tls.Enabled)),
         Listener(std::make_unique<ConnectListener>([this](const mqtt::token& token) { onConnectFailed(token); })),
-        Client(makeServerUri(server, port), ClientId, makeCreateOptions(version)) {
+        Client(Endpoint.Uri, ClientId, makeCreateOptions(version)) {
+        if (!Endpoint.Notice.empty())
+            std::cerr << "MQTT: " << Endpoint.Notice << std::endl;
         Client.set_connected_handler([this](const std::string&) {
             onConnected();
         });
@@ -140,6 +138,7 @@ namespace DigitalTwin::Communication {
         if (Started.exchange(true))
             return;
         AuthenticationFailed = false;
+        TlsConfigurationFailed = false;
         {
             std::lock_guard<std::mutex> lock(RetryMutex);
             Stopping = false;
@@ -168,8 +167,39 @@ namespace DigitalTwin::Communication {
 
     void MqttClientService::attemptConnect() {
         try {
+            auto options = makeConnectOptions(Version, Username, Password);
+            if (Endpoint.Tls) {
+                // Trusted certificates that cannot be used do not get better by trying again: report it and stop. Without
+                // a CA file Paho would use the default verify paths of OpenSSL, which trust nothing in the Conan build.
+                std::string problem = Tls.SetupError;
+                if (problem.empty())
+                    problem = Tls.CaFile.empty() ? "No trusted CA certificates are configured (no CA file)." : checkMqttCaFile(Tls.CaFile);
+                if (!problem.empty()) {
+                    if (EverConnected) {
+                        // It worked before, so the file is probably only unavailable for a moment: try again later.
+                        reportError("TLS: the trusted CA certificates cannot be used at the moment: " + problem +
+                                    " The connection is tried again.");
+                        scheduleRetry();
+                        return;
+                    }
+                    {
+                        std::lock_guard<std::mutex> lock(RetryMutex);
+                        TlsConfigurationFailed = true;
+                        AttemptWanted = false;
+                    }
+                    reportTlsError("TLS configuration problem: " + problem + " The MQTT connection is not retried.");
+                    return;
+                }
+                {
+                    std::lock_guard<std::mutex> lock(TlsDetailMutex);
+                    TlsDetail.clear();
+                }
+                auto ssl = makeMqttSslOptions(Tls);
+                ssl.set_error_handler([this](const std::string& detail) { recordTlsDetail(detail); });
+                options.set_ssl(std::move(ssl));
+            }
             // Every attempt gets the listener, so that every refusal is seen.
-            Client.connect(makeConnectOptions(Version, Username, Password), nullptr, *Listener);
+            Client.connect(std::move(options), nullptr, *Listener);
         } catch (const std::exception& e) {
             reportError(std::string("MQTT connect failed: ") + e.what());
             scheduleRetry();
@@ -178,7 +208,7 @@ namespace DigitalTwin::Communication {
 
     void MqttClientService::scheduleRetry() {
         std::lock_guard<std::mutex> lock(RetryMutex);
-        if (Stopping || AuthenticationFailed)
+        if (Stopping || AuthenticationFailed || TlsConfigurationFailed)
             return;
         AttemptDue = std::chrono::steady_clock::now() + Backoff;
         Backoff = std::min(Backoff * 2, MAX_RETRY_DELAY);
@@ -243,6 +273,22 @@ namespace DigitalTwin::Communication {
         return AuthenticationFailed;
     }
 
+    bool MqttClientService::isTlsConfigurationFailed() const {
+        return TlsConfigurationFailed;
+    }
+
+    bool MqttClientService::hasTlsProblem() const {
+        return TlsProblem;
+    }
+
+    bool MqttClientService::usesTls() const {
+        return Endpoint.Tls;
+    }
+
+    std::string MqttClientService::serverUri() const {
+        return Endpoint.Uri;
+    }
+
     MqttProtocolVersion MqttClientService::protocolVersion() const {
         return Version;
     }
@@ -269,6 +315,8 @@ namespace DigitalTwin::Communication {
                         std::to_string(token.get_return_code()) + ")");
             return;
         }
+        if (Endpoint.Tls && onTlsConnectFailed(token))
+            return;
         reportError("MQTT connect failed: " + token.get_error_message() + " (return code " +
                     std::to_string(token.get_return_code()) + ")");
         scheduleRetry();
@@ -284,6 +332,50 @@ namespace DigitalTwin::Communication {
         }
     }
 
+    /**
+     * Paho reports every failure of a connect over TLS (TCP not reachable, handshake, certificate, host name) as
+     * "TCP/TLS connect failure" with return code -1. The messages of OpenSSL that Paho hands to the SSL error callback
+     * tell what went wrong in the handshake. A host name that is not in the certificate is checked after the handshake
+     * and leaves no OpenSSL message at all, and a refused TCP connection does not either, so without a message the
+     * possible causes are named and none is claimed. (The failure callback runs while Paho holds its global lock, so
+     * nothing is done here that blocks.) Every TLS failure is retried with the usual pauses.
+     */
+    bool MqttClientService::onTlsConnectFailed(const mqtt::token& token) {
+        std::string detail;
+        {
+            std::lock_guard<std::mutex> lock(TlsDetailMutex);
+            detail = TlsDetail;
+        }
+        if (!detail.empty()) {
+            reportTlsError(describeTlsError(detail).Text);
+            scheduleRetry();
+            return true;
+        }
+        // After a successful connect this is an outage (server restarted, network down), not a TLS problem: the normal
+        // error path reports it and retries.
+        if (!EverConnected && token.get_error_message() == "TCP/TLS connect failure") {
+            reportTlsError("TLS connect to " + Endpoint.Uri + " failed. Possible causes: the server cannot be reached, "
+                           "the certificate of the server does not match the host name or IP address the client connects by "
+                           "(the certificate has to contain exactly that name; an IP address only works if the certificate "
+                           "has it as an IP entry), or the connection was closed during the TLS handshake.");
+            scheduleRetry();
+            return true;
+        }
+        return false;
+    }
+
+    void MqttClientService::reportTlsError(const std::string& message) {
+        TlsProblem = true;
+        reportError(message);
+    }
+
+    void MqttClientService::recordTlsDetail(const std::string& detail) {
+        std::lock_guard<std::mutex> lock(TlsDetailMutex);
+        if (!TlsDetail.empty())
+            TlsDetail += "; ";
+        TlsDetail += detail;
+    }
+
     void MqttClientService::subscribeOnServer(const std::string& topic) {
         try {
             // Does not wait for the SUBACK, this is also called from the Paho callback thread.
@@ -296,6 +388,8 @@ namespace DigitalTwin::Communication {
     void MqttClientService::onConnected() {
         // Called after every successful connect (the session is clean, so the server has forgotten the
         // subscriptions).
+        TlsProblem = false;
+        EverConnected = true;
         {
             std::lock_guard<std::mutex> lock(RetryMutex);
             Backoff = FIRST_RETRY_DELAY;

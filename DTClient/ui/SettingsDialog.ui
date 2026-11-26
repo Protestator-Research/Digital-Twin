@@ -186,6 +186,44 @@
            </layout>
           </item>
           <item>
+           <widget class="QCheckBox" name="UseTlsCheckBox">
+            <property name="toolTip">
+             <string>Encrypts the connection. The certificate of the server and its host name are always verified. A server that is run with Let's Encrypt certificates usually listens on port 8883 and has to be addressed by the host name of its certificate, not by IP address. A scheme in the server field (ssl://, mqtts://, tls://) also turns TLS on, and then the CA file below is used as well. IPv6 addresses in brackets do not work with TLS.</string>
+            </property>
+            <property name="text">
+             <string>Use TLS (encrypted, certificate verified)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_cafile">
+            <item>
+             <widget class="QLabel" name="label_cafile">
+              <property name="text">
+               <string>CA file</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="CaFileLineEdit">
+              <property name="toolTip">
+               <string>Optional PEM file with the certificates of the CA that signed the server certificate (a private CA). It is used whenever the connection uses TLS: with the checkbox above or with a TLS scheme (ssl://, mqtts://, tls://) in the server field. If it is set, only these certificates are trusted, not the certificates of the system. Empty: the certificates of the system.</string>
+              </property>
+              <property name="placeholderText">
+               <string>empty: certificates of the system</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="CaFileBrowseButton">
+              <property name="text">
+               <string>...</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
            <widget class="QCheckBox" name="SameLoginCheckBox">
             <property name="text">
              <string>Same login as SysML v2 REST Server</string>

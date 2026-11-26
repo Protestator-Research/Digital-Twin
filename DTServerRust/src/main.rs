@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use dt_server::api::{ApiService, BasicAuth};
 use dt_server::auth::{redact_url, AuthMode, Authenticator, SysmlAuthOptions, SysmlAuthenticator};
-use dt_server::broker::{Broker, BrokerOptions, SessionDatabase};
+use dt_server::broker::{Broker, BrokerOptions, BrokerTls, SessionDatabase};
 use dt_server::config::Config;
 use dt_server::twin::{StoreSettings, StoreStats, TwinBackend, TwinOptions, TwinService};
 use tracing::{error, info, warn};
@@ -56,6 +56,24 @@ async fn run() -> std::process::ExitCode {
     };
     // Debug output of the configuration redacts passwords.
     info!(?config, "configuration loaded");
+
+    // Certificate and key are read now, so a wrong path stops the start before anything else is set up.
+    let tls = match BrokerTls::from_options(&config.mqtt.cert_chain, &config.mqtt.cert_private_key)
+    {
+        Ok(tls) => tls,
+        Err(e) => {
+            error!("cannot set up TLS for the MQTT broker: {e}");
+            return std::process::ExitCode::FAILURE;
+        }
+    };
+    if tls.is_some() {
+        info!(
+            cert_chain = %config.mqtt.cert_chain,
+            "MQTT broker runs with TLS: clients have to connect with TLS (certificate and key are read at start only)"
+        );
+    } else {
+        info!("MQTT broker runs in plain text (no TLS): set instance.mqtt.cert_chain and instance.mqtt.cert_private_key to enable TLS");
+    }
 
     let authenticator: Option<Arc<dyn Authenticator>> = match config.mqtt.authentication {
         AuthMode::None => {
@@ -120,6 +138,7 @@ async fn run() -> std::process::ExitCode {
             authenticator: authenticator.clone(),
             throttle: config.mqtt.auth_throttle.clone(),
             sessions,
+            tls,
         },
     )
     .await

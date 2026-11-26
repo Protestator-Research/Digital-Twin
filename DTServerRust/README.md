@@ -3,7 +3,7 @@
 Port described in `Markdownfiles/Rust_Server_Portierung_Implementierungsplan.md`: configuration/CLI, embedded
 MQTT broker (3.1.1 and 5, selectable; QoS 0, 1 and 2; resumable sessions that can be kept in PostgreSQL), in-process hub and payload types (first increment), twin logic with the FFI bridge to the C++
 libraries (phase 3), and a read-only REST API over the history database. The history itself is written by the
-C++ core (feature `ffi`), see "History and REST API". Not included: TLS, removal of the C++ server. MQTT clients log in with their SysML credentials, see "Authentication".
+C++ core (feature `ffi`), see "History and REST API". Not included: TLS for the REST API, removal of the C++ server. The MQTT broker can run with TLS, see "TLS and Let's Encrypt". MQTT clients log in with their SysML credentials, see "Authentication".
 
 ## Build and test
 
@@ -112,12 +112,54 @@ reconnect itself (pauses of 1 s growing to 60 s) instead of using Paho's automat
 CONNACK `0x04` / `0x05` (3.1.1) or `0x86` / `0x87` (MQTT 5), so a wrong password does not make it ask the backend again
 and again.
 
-Notes: the broker has no TLS yet, so **passwords travel in clear text over MQTT**. Physical twin devices and test
+Notes: without TLS (see "TLS and Let's Encrypt") **passwords travel in clear text over MQTT**. Physical twin devices and test
 tools (`mosquitto_pub`, ...) now need SysML credentials in their CONNECT as well, or the broker has to run with
 `authentication: "none"`. The SysML credentials of the broker itself (`sysml.username` / `sysml.password`) are not
 related to the login of the clients. With authentication a session (see "QoS and sessions") belongs to the user name
 that created it.
 Log level via `RUST_LOG` (default `info`). Output goes to `target/` (ignored by `.gitignore`).
+
+### TLS and Let's Encrypt
+
+The MQTT broker speaks TLS if both options are set: `--instance.mqtt.cert_chain <file>` and
+`--instance.mqtt.cert_private_key <file>`, or `run.mqtt.cert_chain` and `run.mqtt.cert_private_key` in the
+configuration file (the file wins). Both are PEM files. The listener on `instance.mqtt.port` then accepts **only TLS**
+(TLS 1.2 and 1.3, no client certificates): a client that connects in plain text is disconnected. Neither option set:
+plain TCP as before. The server logs at startup whether the broker runs with TLS or in plain text. Only one option set,
+a file that cannot be read, or a file without certificate or key stops the start with an error that names the option
+and the path (key material is never logged). The key may be PKCS#8 (`BEGIN PRIVATE KEY`), RSA PKCS#1 (`BEGIN RSA PRIVATE
+KEY`) or SEC1 EC (`BEGIN EC PRIVATE KEY`); the whole chain of the certificate file is sent to the client.
+
+The TLS handshake runs in the task of the connection, not in the accept loop, and counts against the CONNECT timeout
+(`run.mqtt.limits.connect_timeout_s`, default 10 s): a client that does not finish the handshake and its CONNECT in this
+time is disconnected. A failed handshake is logged at `debug` level and releases its slot of the connection limits.
+
+With Let's Encrypt (certbot) the files are in `/etc/letsencrypt/live/<host name>/`:
+
+| Option | File |
+|---|---|
+| `instance.mqtt.cert_chain` | `fullchain.pem` (certificate and intermediate certificates; not `cert.pem`) |
+| `instance.mqtt.cert_private_key` | `privkey.pem` |
+
+```
+dt-server --instance.mqtt.port 8883 \
+  --instance.mqtt.cert_chain /etc/letsencrypt/live/mqtt.example.org/fullchain.pem \
+  --instance.mqtt.cert_private_key /etc/letsencrypt/live/mqtt.example.org/privkey.pem
+```
+
+- The server process must be able to read these files, and by default it cannot: `/etc/letsencrypt/live` and
+  `/etc/letsencrypt/archive` are directories of root only (mode 0700), and `privkey.pem` is a link into `archive/`.
+  The usual way is a certbot deploy hook that copies the files to a directory that belongs to the user of the server
+  (`/etc/dt-server/tls/`, mode 0750, `privkey.pem` mode 0640 or 0600) and restarts the server, see below. The
+  direct way is to give the server's group execute permission on `live/` and `archive/` and read permission on
+  the key file in `archive/` (the link in `live/` points there); that also lets that group read all other keys that
+  certbot manages, so the copy is the safer choice.
+- Clients must connect by the host name that is in the certificate (`mqtt.example.org`), not by IP address or another
+  name, or the verification of the certificate fails. The usual port for MQTT over TLS is 8883.
+- The files are read at startup only. After a renewal the server has to be restarted to use the new certificate, for
+  example with a certbot deploy hook (`--deploy-hook "systemctl restart dt-server"`).
+- This is for the MQTT broker only. The REST API has no TLS, `rest.cert_chain` and `rest.cert_private_key` are still
+  not used, see "REST API".
 
 ## Features, build and run
 
@@ -545,7 +587,7 @@ are the expected six).
 |---|---|
 | `src/auth/` | MQTT login: `Authenticator` trait, `SysmlAuthenticator` (`POST /login`, cache, concurrency limit) |
 | `src/config.rs` | CLI keys, defaults and JSON file layout, compatible with `DigitalTwinServerInstanceManager` |
-| `src/broker/` | `codec` (MQTT 3.1.1 and 5 packets), `protocol` (protocol versions, QoS and the configurable mode), `topic` (matching, limits), `subscriptions` (store, with the granted QoS), `tracker` (connection limits), `session` (one connection: reader, writer, the login check of the CONNECT, ordered and deferred acknowledgements), `client` (one client session: queue of QoS 1/2 messages, handshakes, packet identifiers), `core` (registry of the sessions, delivery, take-over, expiry), `persist` (interface and PostgreSQL implementation of the session store), `limits` |
+| `src/broker/` | `tls` (certificate and key of the TLS listener), `codec` (MQTT 3.1.1 and 5 packets), `protocol` (protocol versions, QoS and the configurable mode), `topic` (matching, limits), `subscriptions` (store, with the granted QoS), `tracker` (connection limits), `session` (one connection: reader, writer, the login check of the CONNECT, ordered and deferred acknowledgements), `client` (one client session: queue of QoS 1/2 messages, handshakes, packet identifiers), `core` (registry of the sessions, delivery, take-over, expiry), `persist` (interface and PostgreSQL implementation of the session store), `limits` |
 | `sql/` | `0001_mqtt_session.sql`: the tables of the MQTT sessions (applied by the broker if they are missing, see "Session persistence (PostgreSQL)") |
 | `src/hub.rs` | in-process hub: `subscribe(filter, capacity)` and `publish(topic, payload)`; messages carry their `Origin` |
 | `src/twin/` | `TwinBackend` trait, twin service (`mod.rs`), `ffi.rs` (feature `ffi`, cxx bridge) |
